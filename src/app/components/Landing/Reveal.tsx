@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import styles from '@/app/pages/landing/landing.module.css';
 
 interface RevealProps {
   children: React.ReactNode;
@@ -25,7 +24,7 @@ export default function Reveal({ children, className = '', delayMs = 0 }: Reveal
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add(styles['revealed']);
+            entry.target.classList.add("opacity-100", "translate-y-0");
             obs.unobserve(entry.target);
           }
         });
@@ -38,7 +37,7 @@ export default function Reveal({ children, className = '', delayMs = 0 }: Reveal
   }, []);
 
   return (
-    <div ref={ref} className={`${styles['reveal']} ${className}`} style={{ transitionDelay: `${delayMs}ms` }}>
+    <div ref={ref} className={`translate-y-6 opacity-0 transition duration-500 ${className}`} style={{ transitionDelay: `${delayMs}ms` }}>
       {children}
     </div>
   );

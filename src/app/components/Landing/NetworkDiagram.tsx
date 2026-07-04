@@ -1,4 +1,3 @@
-import styles from '@/app/pages/landing/landing.module.css';
 export default function NetworkDiagram() {
   return (
             <svg id="networkSvg" viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg" aria-label="Animated hospital supply network showing vials moving between facilities">

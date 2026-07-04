@@ -1,5 +1,4 @@
 import Reveal from './Reveal';
-import styles from '@/app/pages/landing/landing.module.css';
 const REGS = [
   {
     tone: 'blue',
@@ -27,24 +26,30 @@ const REGS = [
   },
 ];
 
+const toneClasses: Record<string, string> = {
+  blue: 'bg-blue-50 text-blue-500',
+  green: 'bg-emerald-50 text-emerald-500',
+  amber: 'bg-amber-50 text-amber-500',
+};
+
 export default function Regulatory() {
   return (
-    <section className={styles['section'] + ' ' + styles['regs']} id="regulatory">
-      <div className={styles['section-inner']}>
+    <section className={"px-5 py-20 md:px-10 md:py-24" + ' ' + "bg-white"} id="regulatory">
+      <div className={"mx-auto max-w-[1100px]"}>
         <div style={{ textAlign: 'center', maxWidth: '560px', margin: '0 auto 3rem' }}>
-          <div className={styles['section-eyebrow']} style={{ justifyContent: 'center' }}>2026 Regulatory Tailwinds</div>
-          <h2 className={styles['section-h2']} style={{ textAlign: 'center' }}>Built for the regulatory moment Nigeria is entering.</h2>
-          <p className={styles['section-p']} style={{ margin: '0 auto', textAlign: 'center' }}>
+          <div className={"mb-4 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[1.2px] text-sky-500 before:h-0.5 before:w-5 before:rounded-full before:bg-gradient-to-r before:from-sky-500 before:to-cyan-500 before:content-[\"\"]"} style={{ justifyContent: 'center' }}>2026 Regulatory Tailwinds</div>
+          <h2 className={"mb-4 text-[clamp(1.8rem,3.5vw,2.8rem)] font-extrabold leading-[1.15] text-[#050e1f] [font-family:'Plus_Jakarta_Sans',sans-serif]"} style={{ textAlign: 'center' }}>Built for the regulatory moment Nigeria is entering.</h2>
+          <p className={"max-w-[560px] text-base leading-8 text-slate-500"} style={{ margin: '0 auto', textAlign: 'center' }}>
             Three converging forces make this the right platform at the right time.
           </p>
         </div>
-        <div className={styles['reg-grid']}>
+        <div className={"mt-12 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-6"}>
           {REGS.map((r) => (
-            <Reveal className={styles['reg-card']} key={r.title}>
-              <div className={styles['reg-ico'] + ' ' + r.tone}><svg viewBox="0 0 24 24">{r.icon}</svg></div>
+            <Reveal className={"flex items-start gap-3.5 rounded-xl border border-slate-200 p-6 transition duration-500 hover:border-sky-200 hover:shadow-lg hover:shadow-sky-500/10"} key={r.title}>
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] [&_svg]:h-5 [&_svg]:w-5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 ${toneClasses[r.tone]}`}><svg viewBox="0 0 24 24">{r.icon}</svg></div>
               <div>
-                <div className={styles['reg-title']}>{r.title}</div>
-                <div className={styles['reg-body']}>{r.body}</div>
+                <div className={"mb-1 text-sm font-bold text-[#050e1f] [font-family:'Plus_Jakarta_Sans',sans-serif]"}>{r.title}</div>
+                <div className={"text-[13px] leading-7 text-slate-500"}>{r.body}</div>
               </div>
             </Reveal>
           ))}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import styles from '@/app/pages/landing/landing.module.css';
 
 export default function BackToTop() {
   const [visible, setVisible] = useState(false);
@@ -14,7 +13,7 @@ export default function BackToTop() {
 
   return (
     <button
-      className={styles['back-to-top'] + (visible ? ' ' + styles.visible : '')}
+      className={"invisible fixed bottom-8 right-8 z-[850] flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-0 bg-gradient-to-br from-sky-500 to-cyan-500 text-white opacity-0 shadow-lg shadow-sky-500/40 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-500/50 [&_svg]:h-5 [&_svg]:w-5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-[2.5]" + (visible ? ' ' + "visible opacity-100" : '')}
       id="backToTop"
       aria-label="Back to top"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

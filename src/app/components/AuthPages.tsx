@@ -209,7 +209,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center flex items-center justify-between pt-1">
                 <label className={`flex items-center gap-2 text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                   <input type="checkbox" className={`h-4 w-4 rounded ${isDark ? 'border-slate-600 bg-slate-800 text-blue-500' : 'border-slate-300 text-blue-600'} focus:ring-blue-500`} />
                   Remember me

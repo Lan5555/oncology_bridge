@@ -41,16 +41,16 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
 
   if (!isAuthed) {
     return (
-      <div className="page active">
-        <div className="ph">
-          <div className="ph-left"><h1>Admin Sign In</h1><p>Enter administrator credentials to continue</p></div>
+      <div className="block active">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3 max-[768px]:flex-col max-[768px]:items-stretch max-[768px]:gap-4">
+          <div className="[&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-slate-950 [&_p]:mt-1 [&_p]:text-[12.5px] [&_p]:text-slate-500"><h1>Admin Sign In</h1><p>Enter administrator credentials to continue</p></div>
         </div>
-        <div className="card" style={{maxWidth:420, marginTop:12}}>
-          <div className="form-group"><label>Username</label><input value={adminUser} onChange={(e) => setAdminUser(e.target.value)} placeholder="admin" /></div>
-          <div className="form-group"><label>Password</label><input type="password" value={adminPass} onChange={(e) => setAdminPass(e.target.value)} placeholder="••••••••" /></div>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5" style={{maxWidth:420, marginTop:12}}>
+          <div className="mb-4 [&_label]:mb-1.5 [&_label]:block [&_label]:text-xs [&_label]:font-semibold [&_label]:text-slate-600 [&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:border-slate-200 [&_input]:bg-white [&_input]:px-3 [&_input]:py-2 [&_input]:text-[13px] [&_input]:text-slate-800 [&_input]:outline-none [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-slate-200 [&_select]:bg-white [&_select]:px-3 [&_select]:py-2 [&_select]:text-[13px] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-slate-200 [&_textarea]:bg-white [&_textarea]:px-3 [&_textarea]:py-2 [&_textarea]:text-[13px]"><label>Username</label><input value={adminUser} onChange={(e) => setAdminUser(e.target.value)} placeholder="admin" /></div>
+          <div className="mb-4 [&_label]:mb-1.5 [&_label]:block [&_label]:text-xs [&_label]:font-semibold [&_label]:text-slate-600 [&_input]:w-full [&_input]:rounded-lg [&_input]:border [&_input]:border-slate-200 [&_input]:bg-white [&_input]:px-3 [&_input]:py-2 [&_input]:text-[13px] [&_input]:text-slate-800 [&_input]:outline-none [&_select]:w-full [&_select]:rounded-lg [&_select]:border [&_select]:border-slate-200 [&_select]:bg-white [&_select]:px-3 [&_select]:py-2 [&_select]:text-[13px] [&_textarea]:w-full [&_textarea]:rounded-lg [&_textarea]:border [&_textarea]:border-slate-200 [&_textarea]:bg-white [&_textarea]:px-3 [&_textarea]:py-2 [&_textarea]:text-[13px]"><label>Password</label><input type="password" value={adminPass} onChange={(e) => setAdminPass(e.target.value)} placeholder="••••••••" /></div>
           <div style={{display:'flex',gap:8,marginTop:12}}>
-            <button className="btn btn-primary" onClick={handleAdminLogin}>Sign In</button>
-            <button className="btn btn-ghost" onClick={() => router.push('/')}>Back</button>
+            <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-blue-800 text-white hover:bg-blue-900" onClick={handleAdminLogin}>Sign In</button>
+            <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-800" onClick={() => router.push('/')}>Back</button>
           </div>
         </div>
       </div>
@@ -58,19 +58,19 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   }
 
   return (
-    <div className="page active">
-      <div className="ph">
-        <div className="ph-left">
+    <div className="block active">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3 max-[768px]:flex-col max-[768px]:items-stretch max-[768px]:gap-4">
+        <div className="[&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-slate-950 [&_p]:mt-1 [&_p]:text-[12.5px] [&_p]:text-slate-500">
           <h1>Administration Console</h1>
           <p>System-wide settings, roles and integrations</p>
         </div>
-        <div className="ph-actions">
-          <button className="btn btn-ghost" onClick={handleAdminLogout}>Sign out</button>
+        <div className="flex flex-wrap gap-2 max-[768px]:w-full [&_.btn]:max-[768px]:w-full [&_.btn]:max-[768px]:justify-center">
+          <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-800" onClick={handleAdminLogout}>Sign out</button>
         </div>
       </div>
 
-      <div className="g-main" style={{gap: '1rem'}}>
-        <div className="card" style={{padding: '1rem'}}>
+      <div className="grid grid-cols-[1.55fr_1fr] gap-4 max-[960px]:grid-cols-1" style={{gap: '1rem'}}>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5" style={{padding: '1rem'}}>
           <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '1rem'}}>
               <div style={{display:'flex',gap: '8px',flexWrap:'wrap'}}>
                 <button className={`tab-btn ${section === 'overview' ? 'on' : ''}`} onClick={() => setSection('overview')}>Overview</button>
@@ -82,26 +82,26 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
               </div>
             <div style={{display:'flex',alignItems:'center',gap:8}}>
               <input placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} style={{padding:'8px 10px',borderRadius:8,border:'1px solid var(--g200)'}} />
-              <button className="btn btn-outline" onClick={() => onNav && onNav('pg-settings')}>Go to Settings</button>
+              <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-white text-slate-700 hover:border-blue-800 hover:text-blue-800" onClick={() => onNav && onNav('pg-settings')}>Go to Settings</button>
             </div>
           </div>
 
           {section === 'overview' && (
             <div>
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
-                <div className="summary-card">
+                <div className="rounded-lg border border-slate-100 bg-slate-100 p-4 [&_strong]:block [&_strong]:text-lg [&_strong]:font-bold [&_strong]:text-slate-950 [&_span]:mt-1 [&_span]:block [&_span]:text-[11.5px] [&_span]:text-slate-500">
                   <strong>24</strong>
                   <span>Facilities</span>
                 </div>
-                <div className="summary-card">
+                <div className="rounded-lg border border-slate-100 bg-slate-100 p-4 [&_strong]:block [&_strong]:text-lg [&_strong]:font-bold [&_strong]:text-slate-950 [&_span]:mt-1 [&_span]:block [&_span]:text-[11.5px] [&_span]:text-slate-500">
                   <strong>821</strong>
                   <span>Verified Vials</span>
                 </div>
-                <div className="summary-card">
+                <div className="rounded-lg border border-slate-100 bg-slate-100 p-4 [&_strong]:block [&_strong]:text-lg [&_strong]:font-bold [&_strong]:text-slate-950 [&_span]:mt-1 [&_span]:block [&_span]:text-[11.5px] [&_span]:text-slate-500">
                   <strong>7</strong>
                   <span>Near Expiry</span>
                 </div>
-                <div className="summary-card">
+                <div className="rounded-lg border border-slate-100 bg-slate-100 p-4 [&_strong]:block [&_strong]:text-lg [&_strong]:font-bold [&_strong]:text-slate-950 [&_span]:mt-1 [&_span]:block [&_span]:text-[11.5px] [&_span]:text-slate-500">
                   <strong>1</strong>
                   <span>Quarantined</span>
                 </div>
@@ -109,17 +109,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
               <div style={{marginTop:12}}>
                 <h3 style={{marginBottom:8}}>Quick Actions</h3>
                 <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                  <button className="btn btn-primary">Run Health Check</button>
-                  <button className="btn btn-outline">Sync All Facilities</button>
-                  <button className="btn btn-ghost">Export Audit</button>
+                  <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-blue-800 text-white hover:bg-blue-900">Run Health Check</button>
+                  <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-white text-slate-700 hover:border-blue-800 hover:text-blue-800">Sync All Facilities</button>
+                  <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-800">Export Audit</button>
                 </div>
               </div>
               <div style={{marginTop:16}}>
                 <h3 style={{marginBottom:8}}>Jump to Dashboard</h3>
                 <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                  <button className="btn btn-outline" onClick={() => goToDashboard('pg-facilities')}>Facility Access</button>
-                  <button className="btn btn-outline" onClick={() => goToDashboard('pg-users')}>User Management</button>
-                  <button className="btn btn-outline" onClick={() => goToDashboard('pg-audit')}>Audit Log</button>
+                  <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-white text-slate-700 hover:border-blue-800 hover:text-blue-800" onClick={() => goToDashboard('pg-facilities')}>Facility Access</button>
+                  <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-white text-slate-700 hover:border-blue-800 hover:text-blue-800" onClick={() => goToDashboard('pg-users')}>User Management</button>
+                  <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-white text-slate-700 hover:border-blue-800 hover:text-blue-800" onClick={() => goToDashboard('pg-audit')}>Audit Log</button>
                 </div>
               </div>
             </div>
@@ -146,15 +146,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
           {section === 'roles' && (
             <div>
               <h3 style={{marginBottom:8}}>Roles & Permissions</h3>
-              <div className="card" style={{padding:12}}>
+              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5" style={{padding:12}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div>
                     <div style={{fontWeight:700}}>Network Admin</div>
                     <div style={{fontSize:12,color:'var(--g400)'}}>Full access across all modules</div>
                   </div>
                   <div style={{display:'flex',gap:8}}>
-                    <button className="btn btn-outline">Edit</button>
-                    <button className="btn btn-danger">Remove</button>
+                    <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-white text-slate-700 hover:border-blue-800 hover:text-blue-800">Edit</button>
+                    <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-red-200 bg-red-50 text-red-800">Remove</button>
                   </div>
                 </div>
               </div>
@@ -164,15 +164,15 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
           {section === 'integrations' && (
             <div>
               <h3 style={{marginBottom:8}}>External Integrations</h3>
-              <div className="card" style={{padding:12}}>
+              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5" style={{padding:12}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <div>
                     <div style={{fontWeight:700}}>HMO Sync</div>
                     <div style={{fontSize:12,color:'var(--g400)'}}>Active — Last sync 12m ago</div>
                   </div>
                   <div style={{display:'flex',gap:8}}>
-                    <button className="btn btn-primary">Manual Sync</button>
-                    <button className="btn btn-outline">Settings</button>
+                    <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-blue-800 text-white hover:bg-blue-900">Manual Sync</button>
+                    <button className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-white text-slate-700 hover:border-blue-800 hover:text-blue-800">Settings</button>
                   </div>
                 </div>
               </div>
@@ -180,9 +180,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
           )}
         </div>
 
-        <div className="card" style={{padding: '1rem'}}>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5" style={{padding: '1rem'}}>
           <h3 style={{marginBottom:8}}>Activity Feed</h3>
-          <div className="log-item"><div className="log-dot" style={{background: 'var(--p)'}}></div><div className="log-content"><div className="log-action">User Dr. Musa updated facility settings</div><div className="log-meta">5m ago · Network Admin</div></div></div>
+          <div className="flex gap-3 border-b border-slate-100 p-3 transition hover:bg-slate-50 last:border-b-0"><div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full ring-4 ring-slate-100" style={{background: 'var(--p)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-slate-800">User Dr. Musa updated facility settings</div><div className="mt-0.5 text-[11px] text-slate-400">5m ago · Network Admin</div></div></div>
         </div>
       </div>
     </div>

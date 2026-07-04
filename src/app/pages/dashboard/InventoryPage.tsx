@@ -147,14 +147,14 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
   );
 
   return (
-    <div className="page active">
-      <div className="ph">
-        <div className="ph-left">
+    <div className="block active">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3 max-[768px]:flex-col max-[768px]:items-stretch max-[768px]:gap-4">
+        <div className="[&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-slate-950 [&_p]:mt-1 [&_p]:text-[12.5px] [&_p]:text-slate-500">
           <h1>Inventory Ledger</h1>
           <p>GS1-verified stock across all network facilities</p>
         </div>
-        <div className="ph-actions">
-          <button type="button" className="btn btn-outline">
+        <div className="flex flex-wrap gap-2 max-[768px]:w-full [&_.btn]:max-[768px]:w-full [&_.btn]:max-[768px]:justify-center">
+          <button type="button" className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 border-slate-200 bg-white text-slate-700 hover:border-blue-800 hover:text-blue-800">
             <svg viewBox="0 0 24 24" role="img" aria-label="Export CSV">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
               <polyline points="7,10 12,15 17,10" />
@@ -164,7 +164,7 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
           </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-transparent px-3.5 py-2 text-[12.5px] font-semibold transition max-[768px]:w-full max-[768px]:justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-blue-800 text-white hover:bg-blue-900"
             onClick={() => onNav("pg-scan")}
           >
             <svg viewBox="0 0 24 24" role="img" aria-label="Log New Stock">
@@ -177,67 +177,67 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
       </div>
 
       <div
-        className="stat-grid"
+        className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3 max-[768px]:grid-cols-1"
         style={{ gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))" }}
       >
-        <div className="stat-card">
-          <div className="stat-top">
-            <span className="stat-lbl">Total Vials</span>
-            <div className="stat-ico b">
+        <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-900/5 transition hover:-translate-y-0.5 hover:border-blue-800">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Total Vials</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-blue-100 text-blue-900">
               <svg viewBox="0 0 24 24" role="img" aria-label="Vials">
                 <path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
               </svg>
             </div>
           </div>
-          <div className="stat-val">829</div>
-          <div className="stat-delta up">
+          <div className="text-2xl font-bold text-slate-950">829</div>
+          <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
             <svg viewBox="0 0 24 24" role="img" aria-label="Increase">
               <polyline points="18,15 12,9 6,15" />
             </svg>
             +42 today
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-top">
-            <span className="stat-lbl">Verified GS1</span>
-            <div className="stat-ico g">
+        <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-900/5 transition hover:-translate-y-0.5 hover:border-blue-800">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Verified GS1</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-emerald-50 text-emerald-700">
               <svg viewBox="0 0 24 24" role="img" aria-label="Verified">
                 <polyline points="20,6 9,17 4,12" />
               </svg>
             </div>
           </div>
-          <div className="stat-val">821</div>
-          <div className="stat-delta up">
+          <div className="text-2xl font-bold text-slate-950">821</div>
+          <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
             <svg viewBox="0 0 24 24" role="img" aria-label="Increase">
               <polyline points="18,15 12,9 6,15" />
             </svg>
             99.0% of stock
           </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-top">
-            <span className="stat-lbl">Near Expiry</span>
-            <div className="stat-ico a">
+        <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-900/5 transition hover:-translate-y-0.5 hover:border-blue-800">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Near Expiry</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-amber-50 text-amber-700">
               <svg viewBox="0 0 24 24" role="img" aria-label="Clock">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 8v4l3 3" />
               </svg>
             </div>
           </div>
-          <div className="stat-val">7</div>
-          <div className="stat-delta neutral">&lt;60 days remaining</div>
+          <div className="text-2xl font-bold text-slate-950">7</div>
+          <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400">&lt;60 days remaining</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-top">
-            <span className="stat-lbl">Quarantined</span>
-            <div className="stat-ico r">
+        <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-900/5 transition hover:-translate-y-0.5 hover:border-blue-800">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Quarantined</span>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-red-50 text-red-700">
               <svg viewBox="0 0 24 24" role="img" aria-label="Shield">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
             </div>
           </div>
-          <div className="stat-val">1</div>
-          <div className="stat-delta down">
+          <div className="text-2xl font-bold text-slate-950">1</div>
+          <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-red-600">
             <svg viewBox="0 0 24 24" role="img" aria-label="Drop">
               <polyline points="6,9 12,15 18,9" />
             </svg>
@@ -246,8 +246,8 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
         </div>
       </div>
 
-      <div className="card">
-        <div className="tabs">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5">
+        <div className="mb-5 flex gap-2 overflow-x-auto rounded-full bg-slate-100 p-1">
           {TAB_OPTIONS.map((tab) => (
             <button
               key={tab.id}
@@ -259,7 +259,7 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
             </button>
           ))}
         </div>
-        <div className="tbl-wrap">
+        <div className="overflow-x-auto rounded-xl border border-slate-100 bg-white shadow-lg shadow-slate-900/10 [&_table]:w-full [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:text-[13px] [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-slate-200 [&_th]:bg-slate-100 [&_th]:px-4 [&_th]:py-3.5 [&_th]:text-left [&_th]:text-[11px] [&_th]:font-bold [&_th]:uppercase [&_th]:tracking-[0.5px] [&_th]:text-slate-400 [&_td]:border-b [&_td]:border-slate-100 [&_td]:px-4 [&_td]:py-3.5 [&_td]:align-middle [&_td]:text-slate-700 [&_tr:hover_td]:bg-slate-100 [&_tr:last-child_td]:border-b-0">
           <table>
             <thead>
               <tr>
@@ -277,8 +277,8 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
               {visibleRows.map((row) => (
                 <tr key={row.id}>
                   <td data-label="Drug / GTIN">
-                    <div className="drug-name">{row.drug}</div>
-                    <div className="drug-meta">{row.gtin}</div>
+                    <div className="text-[13px] font-bold text-slate-950">{row.drug}</div>
+                    <div className="mt-0.5 text-[11px] text-slate-400">{row.gtin}</div>
                   </td>
                   <td
                     data-label="Lot Number"

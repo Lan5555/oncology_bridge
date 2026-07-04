@@ -42,24 +42,24 @@ const STEPS = [
 
 export default function Workflow() {
   return (
-    <section className={styles['section']} id="workflow">
-      <div className={styles['section-inner']}>
+    <section className={"px-5 py-20 md:px-10 md:py-24"} id="workflow">
+      <div className={"mx-auto max-w-[1100px]"}>
         <div style={{ maxWidth: '560px', marginBottom: 0 }}>
-          <div className={styles['section-eyebrow']}>How It Works</div>
-          <h2 className={styles['section-h2']}>From pharmacy shelf to treatment chair — verified every step.</h2>
-          <p className={styles['section-p']}>
+          <div className={"mb-4 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[1.2px] text-sky-500 before:h-0.5 before:w-5 before:rounded-full before:bg-gradient-to-r before:from-sky-500 before:to-cyan-500 before:content-[\"\"]"}>How It Works</div>
+          <h2 className={"mb-4 text-[clamp(1.8rem,3.5vw,2.8rem)] font-extrabold leading-[1.15] text-[#050e1f] [font-family:'Plus_Jakarta_Sans',sans-serif]"}>From pharmacy shelf to treatment chair — verified every step.</h2>
+          <p className={"max-w-[560px] text-base leading-8 text-slate-500"}>
             Six integrated stages ensure a vial&rsquo;s journey is tracked, authenticated, and
             cold-chain-secured before it reaches a patient.
           </p>
         </div>
 
-        <div className={styles['workflow-steps']}>
+        <div className={"mt-12 grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-6"}>
           {STEPS.map((s, i) => (
-            <Reveal className={styles['wf-card']} key={s.num} delayMs={i * 80}>
-              <div className={styles['wf-step-num']}>{s.num}</div>
-              <div className={styles['wf-icon']}><svg viewBox="0 0 24 24">{s.icon}</svg></div>
-              <div className={styles['wf-title']}>{s.title}</div>
-              <div className={styles['wf-body']}>{s.body}</div>
+            <Reveal className={"relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-7 transition duration-500 before:absolute before:left-0 before:right-0 before:top-0 before:h-1 before:bg-gradient-to-r before:from-sky-500 before:to-cyan-500 before:content-[\"\"] hover:-translate-y-1 hover:shadow-xl hover:shadow-sky-500/10"} key={s.num} delayMs={i * 80}>
+              <div className={"absolute right-5 top-4 text-4xl font-extrabold text-sky-500/10 [font-family:'Plus_Jakarta_Sans',sans-serif]"}>{s.num}</div>
+              <div className={"mb-4 flex h-[38px] w-[38px] items-center justify-center rounded-[9px] bg-sky-50 text-sky-500 [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2"}><svg viewBox="0 0 24 24">{s.icon}</svg></div>
+              <div className={"mb-1.5 text-sm font-bold text-[#050e1f] [font-family:'Plus_Jakarta_Sans',sans-serif]"}>{s.title}</div>
+              <div className={"text-[13px] leading-7 text-slate-500"}>{s.body}</div>
             </Reveal>
           ))}
         </div>

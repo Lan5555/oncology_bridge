@@ -1,5 +1,4 @@
 import Reveal from './Reveal';
-import styles from '@/app/pages/landing/landing.module.css';
 
 const FEATURES = [
   {
@@ -42,19 +41,19 @@ const FEATURES = [
 
 export default function Solution() {
   return (
-    <section className={styles['section'] + ' ' + styles['solution']} id="solution">
-      <div className={styles['section-inner']}>
+    <section className={"px-5 py-20 md:px-10 md:py-24" + ' ' + "bg-[#050e1f]"} id="solution">
+      <div className={"mx-auto max-w-[1100px]"}>
         <div style={{ maxWidth: '560px' }}>
-          <div className={styles['section-eyebrow']}>The Platform</div>
-          <h2 className={styles['section-h2'] + ' ' + styles['light']}>A verified visibility layer for every vial in the network.</h2>
-          <p className={styles['section-p'] + ' ' + styles['light']}>
+          <div className={"mb-4 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[1.2px] text-sky-500 before:h-0.5 before:w-5 before:rounded-full before:bg-gradient-to-r before:from-sky-500 before:to-cyan-500 before:content-[\"\"]"}>The Platform</div>
+          <h2 className={"mb-4 text-[clamp(1.8rem,3.5vw,2.8rem)] font-extrabold leading-[1.15] text-[#050e1f] [font-family:'Plus_Jakarta_Sans',sans-serif]" + ' ' + "text-white"}>A verified visibility layer for every vial in the network.</h2>
+          <p className={"max-w-[560px] text-base leading-8 text-slate-500" + ' ' + "text-white"}>
             Oncology Bridge turns fragmented hospital inventory into a real-time, GS1-verified
             network — connecting surplus to shortage before a patient misses a dose.
           </p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '3rem' }}>
-          <div className={styles['img-frame']} style={{ height: '300px' }}>
+          <div className={"overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-slate-950/20 [&_img]:transition [&_img]:duration-500 hover:[&_img]:scale-105"} style={{ height: '300px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=800"
@@ -62,7 +61,7 @@ export default function Solution() {
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
-          <div className={styles['img-frame']} style={{ height: '300px' }}>
+          <div className={"overflow-hidden rounded-2xl border border-white/10 shadow-2xl shadow-slate-950/20 [&_img]:transition [&_img]:duration-500 hover:[&_img]:scale-105"} style={{ height: '300px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=800"
@@ -72,13 +71,13 @@ export default function Solution() {
           </div>
         </div>
 
-        <div className={styles['feat-grid']}>
+        <div className={"mt-12 grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/5"}>
           {FEATURES.map((f, i) => (
-            <Reveal className={styles['feat-card']} key={f.title} delayMs={i * 80}>
-              <div className={styles['feat-icon']}><svg viewBox="0 0 24 24">{f.icon}</svg></div>
-              <div className={styles['feat-title']}>{f.title}</div>
-              <div className={styles['feat-body']}>{f.body}</div>
-              <div className={styles['feat-tag']}>{f.tag}</div>
+            <Reveal className={"bg-[#050e1f]/60 p-8 transition duration-500 hover:bg-sky-500/5"} key={f.title} delayMs={i * 80}>
+              <div className={"mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-sky-400/20 bg-sky-500/10 text-sky-500 [&_svg]:h-5 [&_svg]:w-5 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2"}><svg viewBox="0 0 24 24">{f.icon}</svg></div>
+              <div className={"mb-2 text-[15px] font-bold text-white [font-family:'Plus_Jakarta_Sans',sans-serif]"}>{f.title}</div>
+              <div className={"text-[13.5px] leading-7 text-white/45"}>{f.body}</div>
+              <div className={"mt-3 inline-block rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-[10.5px] font-bold tracking-[0.5px] text-cyan-400"}>{f.tag}</div>
             </Reveal>
           ))}
         </div>

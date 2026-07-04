@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import styles from '@/app/pages/landing/landing.module.css';
 
 interface CounterProps {
   target: number;
@@ -44,5 +43,5 @@ export default function Counter({ target, durationMs = 1800 }: CounterProps) {
     return () => obs.disconnect();
   }, [target, durationMs]);
 
-  return <span ref={ref} className={styles.count}>{value.toLocaleString()}</span>;
+  return <span ref={ref} className={"tabular-nums"}>{value.toLocaleString()}</span>;
 }

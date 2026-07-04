@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import styles from '@/app/pages/landing/landing.module.css';
 
 interface Bar {
   label: string;
@@ -17,9 +16,9 @@ const BARS: Bar[] = [
 ];
 
 const toneClass: Record<Bar['tone'], string> = {
-  red: 'crisis-bar-fill red',
-  amber: 'crisis-bar-fill amber',
-  green: 'crisis-bar-fill',
+  red: 'h-full rounded-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-1000',
+  amber: 'h-full rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-1000',
+  green: 'h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-1000',
 };
 
 export default function CrisisCard() {
@@ -45,21 +44,21 @@ export default function CrisisCard() {
   }, []);
 
   return (
-    <div ref={ref} className={styles['crisis-card']}>
-      <div className={styles['crisis-stat-big']}>50%</div>
-      <div className={styles['crisis-stat-label']}>of patients experience stock-outs</div>
+    <div ref={ref} className={"relative w-full overflow-hidden rounded-2xl bg-[#050e1f] p-8 before:absolute before:inset-0 before:bg-gradient-to-br before:from-sky-500/10 before:to-transparent before:content-[\"\"]"}>
+      <div className={"mb-1 bg-gradient-to-br from-red-500 to-orange-500 bg-clip-text text-7xl font-extrabold leading-none text-transparent [font-family:'Plus_Jakarta_Sans',sans-serif]"}>50%</div>
+      <div className={"mb-8 text-sm text-white/55"}>of patients experience stock-outs</div>
 
-      <div className={styles['crisis-bars']}>
+      <div className={"flex flex-col gap-2.5"}>
         {BARS.map((bar) => (
-          <div className={styles['crisis-bar-row']} key={bar.label}>
-            <div className={styles['crisis-bar-label']}>{bar.label}</div>
-            <div className={styles['crisis-bar-track']}>
+          <div className={"flex items-center gap-2.5"} key={bar.label}>
+            <div className={"w-[110px] shrink-0 text-[11.5px] text-white/45"}>{bar.label}</div>
+            <div className={"h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"}>
               <div
                 className={toneClass[bar.tone]}
                 style={{ width: visible ? `${bar.pct}%` : '0%' }}
               />
             </div>
-            <div className={styles['crisis-bar-pct']}>{bar.pct}%</div>
+            <div className={"w-[30px] text-right text-[11.5px] font-semibold text-white/40"}>{bar.pct}%</div>
           </div>
         ))}
       </div>
@@ -77,18 +76,18 @@ export default function CrisisCard() {
         >
           After Oncology Bridge
         </div>
-        <div className="crisis-bar-row">
-          <div className="crisis-bar-label" style={{ color: 'rgba(255,255,255,.5)' }}>Stock-out rate</div>
-          <div className="crisis-bar-track">
+        <div className="flex items-center gap-2.5">
+          <div className="w-[110px] shrink-0 text-[11.5px] text-white/50">Stock-out rate</div>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
             <div
-              className="crisis-bar-fill"
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-1000"
               style={{
                 width: visible ? '28%' : '0%',
                 background: 'linear-gradient(90deg,#10B981,#34D399)',
               }}
             />
           </div>
-          <div className="crisis-bar-pct" style={{ color: '#10B981' }}>28%</div>
+          <div className="w-[30px] text-right text-[11.5px] font-semibold text-emerald-500">28%</div>
         </div>
         <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.25)', marginTop: '8px' }}>
           ↓ 44% reduction from baseline

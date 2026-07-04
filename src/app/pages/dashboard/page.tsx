@@ -100,10 +100,10 @@ const DashboardView: React.FC = () => {
         onToggleTheme={toggleTheme}
       />
 
-      <div className="shell active">
+      <div className="flex min-h-[calc(100vh-64px)] active">
         <Sidebar sidebarOpen={sidebarOpen} activePage={activePage} onNav={handleNav} />
 
-        <main className="main">{pageComponents[activePage]}</main>
+        <main className="max-w-[calc(100vw-232px)] flex-1 overflow-x-hidden p-8 max-[960px]:w-full max-[960px]:max-w-[100vw] max-[960px]:p-5 max-[768px]:p-4">{pageComponents[activePage]}</main>
       </div>
 
       <Modals openModalId={openModalId} onCloseModal={() => setOpenModalId(null)} />
