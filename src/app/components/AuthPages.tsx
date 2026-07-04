@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AuthView } from "../lib/types";
+import { Toolbox, ToolCase, User2, UserCogIcon, } from 'lucide-react';
 
 interface AuthPagesProps {
   view: AuthView;
@@ -42,8 +43,8 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
     : 'border-slate-200/80 bg-white/80 shadow-2xl shadow-slate-900/10 backdrop-blur-sm';
   
   const sidePanelClasses = isDark
-    ? 'bg-gradient-to-br from-slate-950 via-blue-950 to-blue-900'
-    : 'bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700';
+    ? 'bg-navy text-slate-100'
+    : 'bg-navy-2 text-slate-100';
   
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-500';
   const headingText = isDark ? 'text-slate-100' : 'text-slate-900';
@@ -367,7 +368,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
               <button
                 type="submit"
                 disabled={submitting}
-                className="group relative w-full overflow-hidden rounded-xl bg-linear-to-r from-blue-900 via-blue-800 to-blue-700 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/25 transition-all duration-300 hover:shadow-blue-900/40 hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100"
+                className="group relative w-full overflow-hidden rounded-xl bg-blue-950 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/25 transition-all duration-300 hover:shadow-blue-900/40 hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100"
               >
                 <span className="relative flex items-center justify-center gap-2">
                   {submitting && (
@@ -544,7 +545,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
               <button
                 type="submit"
                 disabled={submitting}
-                className="group relative w-full overflow-hidden rounded-xl bg-linear-to-r from-blue-900 via-blue-800 to-blue-700 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/25 transition-all duration-300 hover:shadow-blue-900/40 hover:scale-[1.02] disabled:opacity-70"
+                className="group relative w-full overflow-hidden rounded-xl bg-blue-950 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/25 transition-all duration-300 hover:shadow-blue-900/40 hover:scale-[1.02] disabled:opacity-70"
               >
                 <span className="relative flex items-center justify-center gap-2">
                   {submitting && (
@@ -590,12 +591,9 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
       <Link
         href="/pages/admin"
         aria-label="Open Admin Console"
-        className="group fixed bottom-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-r from-blue-900 to-blue-700 text-white shadow-lg shadow-blue-900/30 transition-all duration-300 hover:scale-110 hover:shadow-blue-900/50"
+        className="group fixed bottom-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-gray text-white shadow-lg shadow-blue-900/30 transition-all duration-300 hover:scale-110 hover:shadow-blue-900/50"
       >
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-          <path d="M12 2v20M2 12h20" />
-        </svg>
-        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-400 ring-2 ring-white dark:ring-slate-950 animate-pulse" />
+        <UserCogIcon className='text-gray-400'/>
       </Link>
     </div>
   );
