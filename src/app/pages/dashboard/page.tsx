@@ -1,6 +1,4 @@
 'use client';
-
-import AuthPages from "@/app/components/AuthPages";
 import Modals from "@/app/components/Modals";
 import Sidebar from "@/app/components/Sidebar";
 import TopNav from "@/app/components/TopNav";
@@ -20,7 +18,6 @@ import UsersPage from "./UsersPage";
 import DashboardPage from "./DashboardPage";
 
 const DashboardView: React.FC = () => {
-  const [authView, setAuthView] = useState<AuthView>('login');
   const [activePage, setActivePage] = useState<PageId>('pg-dashboard');
   const [theme, setTheme] = useState<Theme>('light');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -44,12 +41,22 @@ const DashboardView: React.FC = () => {
     window.localStorage.setItem('theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const target = window.localStorage.getItem('adminTarget');
+    if (target) {
+      const valid = ['pg-dashboard','pg-inventory','pg-scan','pg-transfers','pg-prescriptions','pg-coldchain','pg-expiry','pg-network','pg-facilities','pg-users','pg-audit','pg-settings'];
+      if (valid.includes(target)) {
+        setActivePage(target as PageId);
+      }
+      window.localStorage.removeItem('adminTarget');
+    }
+  }, []);
+
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
   const toggleSidebar = () => setSidebarOpen((v) => !v);
 
-  const handleDoLogin = () => {
-    setAuthView('app');
-  };
+
 
   const handleNav = (id: PageId) => {
     setActivePage(id);
@@ -63,16 +70,7 @@ const DashboardView: React.FC = () => {
     window.setTimeout(() => setScanVisible(true), 600);
   };
 
-  if (authView !== 'app') {
-    return (
-      <AuthPages
-        view={authView}
-        onDoLogin={handleDoLogin}
-        onShowAuth={setAuthView}
-        onToggleTheme={toggleTheme}
-      />
-    );
-  }
+  // Dashboard no longer shows auth UI; authentication is handled on /auth route.
 
   const pageComponents: Record<PageId, React.ReactNode> = {
     'pg-dashboard': <DashboardPage onNav={handleNav} onOpenModal={setOpenModalId} />,
@@ -93,7 +91,7 @@ const DashboardView: React.FC = () => {
 
   return (
     <>
-    <div className='blue-overlay' />
+    <div className='blue-overlay'/>
       <TopNav
         activePage={activePage}
         onNav={handleNav}

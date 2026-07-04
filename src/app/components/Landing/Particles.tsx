@@ -100,5 +100,5 @@ export default function Particles() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} id="particles" />;
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none w-full h-full z-0" />;
 }

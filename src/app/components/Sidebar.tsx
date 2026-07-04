@@ -60,21 +60,7 @@ export default function Sidebar({ activePage, sidebarOpen, onNav }: SidebarProps
         </button>
       </div>
     
-      <div className="sb-section">
-        <div className="sb-label">Admin</div>
-        <button className={`sb-item ${activePage === 'pg-facilities' ? 'active' : ''}`} onClick={() => onNav('pg-facilities')}>
-          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Facility Access
-        </button>
-        <button className={`sb-item ${activePage === 'pg-users' ? 'active' : ''}`} onClick={() => onNav('pg-users')}>
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a6 6 0 0112 0v2"/></svg>
-          User Management
-        </button>
-        <button className={`sb-item ${activePage === 'pg-audit' ? 'active' : ''}`} onClick={() => onNav('pg-audit')}>
-          <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-          Audit Log
-        </button>
-      </div>
+      {/* Admin section removed — admin console is a top-level route */}
     
       <div className="sb-section sb-bottom">
         <div className="sb-divider"></div>

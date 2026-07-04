@@ -14,7 +14,7 @@ export default function CTA() {
           solution.
         </p>
         <div className={styles['cta-actions']}>
-          <button className={styles['btn-cta'] + ' ' + styles['primary']} onClick={() => router.push('/pages/dashboard')}>Apply for Facility Access</button>
+          <button className={styles['btn-cta'] + ' ' + styles['primary']} onClick={() => router.push('/auth')}>Apply for Facility Access</button>
           <button className={styles['btn-cta'] + ' ' + styles['outline']} onClick={() => router.push('/pages/demo')}>Schedule a Demo</button>
         </div>
       </div>

@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body className="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900 antialiased tracking-[-0.01em] [font-family:var(--font)]">
         {children}
       </body>
     </html>
