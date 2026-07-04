@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import styles from '@/app/pages/landing/landing.module.css';
 
 interface Bar {
   label: string;
@@ -17,9 +16,9 @@ const BARS: Bar[] = [
 ];
 
 const toneClass: Record<Bar['tone'], string> = {
-  red: 'crisis-bar-fill red',
-  amber: 'crisis-bar-fill amber',
-  green: 'crisis-bar-fill',
+  red: 'bg-gradient-to-r from-red-500 to-orange-500',
+  amber: 'bg-gradient-to-r from-amber-500 to-yellow-400',
+  green: 'bg-gradient-to-r from-emerald-500 to-green-400',
 };
 
 export default function CrisisCard() {
@@ -29,69 +28,93 @@ export default function CrisisCard() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
+    
+    const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setVisible(true);
-            obs.unobserve(entry.target);
+            observer.unobserve(entry.target);
           }
         });
       },
       { threshold: 0.2 }
     );
-    obs.observe(el);
-    return () => obs.disconnect();
+    
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   return (
-    <div ref={ref} className={styles['crisis-card']}>
-      <div className={styles['crisis-stat-big']}>50%</div>
-      <div className={styles['crisis-stat-label']}>of patients experience stock-outs</div>
+    <div 
+      ref={ref} 
+      className="bg-navy rounded-2xl p-8 w-full relative overflow-hidden"
+    >
+      {/* Background gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-500/10 via-transparent to-transparent pointer-events-none" />
 
-      <div className={styles['crisis-bars']}>
-        {BARS.map((bar) => (
-          <div className={styles['crisis-bar-row']} key={bar.label}>
-            <div className={styles['crisis-bar-label']}>{bar.label}</div>
-            <div className={styles['crisis-bar-track']}>
+      <div className="relative z-10">
+        <div className="font-display text-8xl font-extrabold tracking-[-3px] leading-none text-gradient-red mb-1">
+          50%
+        </div>
+        <div className="text-sm text-white/50 mb-8">
+          of patients experience stock-outs
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          {BARS.map((bar) => (
+            <div className="flex items-center gap-2.5" key={bar.label}>
+              <div className="text-[11.5px] text-white/40 w-[110px] flex-shrink-0">
+                {bar.label}
+              </div>
+              <div className="flex-1 h-1.5 bg-white/10 rounded-[3px] overflow-hidden">
+                <div
+                  className={`h-full rounded-[3px] transition-all duration-1000 ease-out ${toneClass[bar.tone]}`}
+                  style={{ 
+                    width: visible ? `${bar.pct}%` : '0%',
+                    transitionProperty: 'width',
+                    transitionDuration: '1000ms',
+                    transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+                  }}
+                />
+              </div>
+              <div className="text-[11.5px] font-semibold text-white/40 w-[30px] text-right">
+                {bar.pct}%
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* After Oncology Bridge Section */}
+        <div className="mt-7 pt-6 border-t border-white/10">
+          <div className="text-[11px] font-semibold text-white/30 uppercase tracking-[1px] mb-2.5">
+            After Oncology Bridge
+          </div>
+          
+          <div className="flex items-center gap-2.5">
+            <div className="text-[11.5px] text-white/50 w-[110px] flex-shrink-0">
+              Stock-out rate
+            </div>
+            <div className="flex-1 h-1.5 bg-white/10 rounded-[3px] overflow-hidden">
               <div
-                className={toneClass[bar.tone]}
-                style={{ width: visible ? `${bar.pct}%` : '0%' }}
+                className="h-full rounded-[3px] transition-all duration-1000 ease-out"
+                style={{
+                  width: visible ? '28%' : '0%',
+                  background: 'linear-gradient(90deg, #10B981, #34D399)',
+                  transitionProperty: 'width',
+                  transitionDuration: '1000ms',
+                  transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
               />
             </div>
-            <div className={styles['crisis-bar-pct']}>{bar.pct}%</div>
+            <div className="text-[11.5px] font-semibold text-emerald-500 w-[30px] text-right">
+              28%
+            </div>
           </div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: '1.75rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,.07)' }}>
-        <div
-          style={{
-            fontSize: '11px',
-            fontWeight: 600,
-            color: 'rgba(255,255,255,.3)',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            marginBottom: '10px',
-          }}
-        >
-          After Oncology Bridge
-        </div>
-        <div className="crisis-bar-row">
-          <div className="crisis-bar-label" style={{ color: 'rgba(255,255,255,.5)' }}>Stock-out rate</div>
-          <div className="crisis-bar-track">
-            <div
-              className="crisis-bar-fill"
-              style={{
-                width: visible ? '28%' : '0%',
-                background: 'linear-gradient(90deg,#10B981,#34D399)',
-              }}
-            />
+          
+          <div className="text-[11px] text-white/25 mt-2">
+            ↓ 44% reduction from baseline
           </div>
-          <div className="crisis-bar-pct" style={{ color: '#10B981' }}>28%</div>
-        </div>
-        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.25)', marginTop: '8px' }}>
-          ↓ 44% reduction from baseline
         </div>
       </div>
     </div>
