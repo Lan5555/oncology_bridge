@@ -1,5 +1,6 @@
+import type React from 'react';
 
-export default function SettingsPage() {
+const SettingsPage: React.FC = () => {
   return (
     <div className="page active">
       <div className="ph">
@@ -67,9 +68,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-      <div className="card" style={{background: 'var(--errl)', borderColor: '#FECACA'}}>
+      <div className="card" style={{background: 'var(--errl)', borderColor: 'var(--err)'}}>
         <div className="ch"><div className="ct" style={{color: 'var(--err)'}}>Danger Zone</div></div>
-        <p style={{fontSize: '12px', color: '#991B1B', marginBottom: '12px'}}>Actions here affect the entire Lagos–Ibadan network.</p>
+        <p style={{fontSize: '12px', color: 'var(--err)', marginBottom: '12px'}}>Actions here affect the entire Lagos–Ibadan network.</p>
         <button className="btn btn-danger" style={{width: '100%', justifyContent: 'center'}}>Purge Network Cache</button>
       </div>
     </div>
@@ -77,3 +78,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+export default SettingsPage;

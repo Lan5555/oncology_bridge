@@ -1,12 +1,14 @@
 import { ModalId, PageId } from "../../lib/types";
 
 
+
+import type React from 'react';
 interface UsersPageProps {
   onNav: (id: PageId) => void;
   onOpenModal: (id: ModalId) => void;
 }
 
-export default function UsersPage({ onNav, onOpenModal }: UsersPageProps) {
+const UsersPage: React.FC<UsersPageProps> = ({ onNav, onOpenModal }) => {
   return (
     <div className="page active">
       <div className="ph">
@@ -30,3 +32,5 @@ export default function UsersPage({ onNav, onOpenModal }: UsersPageProps) {
     </div>
   );
 }
+
+export default UsersPage;

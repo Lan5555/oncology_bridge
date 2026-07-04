@@ -1,3 +1,5 @@
+'use client';
+
 import AuthPages from "@/app/components/AuthPages";
 import Modals from "@/app/components/Modals";
 import Sidebar from "@/app/components/Sidebar";
@@ -26,7 +28,20 @@ const DashboardView: React.FC = () => {
   const [scanVisible, setScanVisible] = useState(false);
 
   useEffect(() => {
+    const storedTheme = window.localStorage.getItem('theme') as Theme | null;
+    if (storedTheme === 'dark' || storedTheme === 'light') {
+      setTheme(storedTheme);
+      return;
+    }
+
+    if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+    }
+  }, []);
+
+  useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    window.localStorage.setItem('theme', theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
@@ -78,6 +93,7 @@ const DashboardView: React.FC = () => {
 
   return (
     <>
+    <div className='blue-overlay' />
       <TopNav
         activePage={activePage}
         onNav={handleNav}

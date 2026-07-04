@@ -76,7 +76,7 @@ export default function Modals({ openModalId, onCloseModal }: ModalsProps) {
       <h3 style={{marginBottom: '8px'}}>Confirm Quarantine Action</h3>
       <p style={{fontSize: '14px', color: 'var(--g500)', lineHeight: '1.5'}}>You are flagging 7 vials of Rituximab (Lot RX-1044-E) for disposal due to a sustained temperature breach of 11.2°C. This action is irreversible.</p>
     </div>
-    <div className="modal-f" style={{justifyContent: 'center', background: 'white', paddingBottom: '1.5rem'}}>
+    <div className="modal-f" style={{justifyContent: 'center', background: 'var(--g50)', paddingBottom: '1.5rem'}}>
       <button className="btn btn-outline" onClick={() => onCloseModal('modal-breach')}>Cancel</button>
       <button className="btn btn-danger" onClick={() => onCloseModal('modal-breach')}>Confirm Disposal</button>
     </div>

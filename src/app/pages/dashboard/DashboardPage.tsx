@@ -2,12 +2,14 @@ import { DrugSplitChart, InventoryChart, RedistributionEfficiencyChart } from ".
 import { ModalId, PageId } from "../../lib/types";
 
 
+
+import type React from 'react';
 interface DashboardPageProps {
   onNav: (id: PageId) => void;
   onOpenModal: (id: ModalId) => void;
 }
 
-export default function DashboardPage({ onNav, onOpenModal }: DashboardPageProps) {
+const DashboardPage: React.FC<DashboardPageProps> = ({ onNav, onOpenModal }) => {
   return (
     <div className="page active">
       <div className="ph">
@@ -20,7 +22,7 @@ export default function DashboardPage({ onNav, onOpenModal }: DashboardPageProps
         <p style={{display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'}}>
           <span style={{color: 'var(--g800)', fontWeight: '600'}}>Lagos–Ibadan Corridor</span> 
           <span style={{color: 'var(--g300)'}}>•</span> June 2026 
-          <span style={{color: 'var(--g300)'}}>•</span> <span className="pill b" style={{background: 'var(--g800)', color: 'white', borderRadius: '4px', padding: '1px 6px'}}>Network Admin</span>
+          <span style={{color: 'var(--g300)'}}>•</span> <span className="pill b" style={{borderRadius: '4px', padding: '1px 6px'}}>Network Admin</span>
         </p>
       </div>
     </div>
@@ -31,13 +33,11 @@ export default function DashboardPage({ onNav, onOpenModal }: DashboardPageProps
   </div>
 
   <div className="alert warn expiry-banner">
-    <div style={{display: 'flex', alignItems: 'flex-start', gap: '12px', flex: '1', minWidth: '280px'}}>
-      <svg viewBox="0 0 24 24" style={{flexShrink: '0', marginTop: '2px'}}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <p style={{color: '#92400E', margin: '0', lineHeight: '1.5'}}><strong style={{color: '#78350F', fontSize: '14px'}}>7 near-expiry alerts:</strong> Trastuzumab (Lot TZ-2204-B) at LUTH expires in <span style={{color: 'var(--err)', fontWeight: '700'}}>38 days</span> — redistribution recommended.</p>
-    </div>
-    <div style={{display: 'flex', gap: '8px'}}>
+    <svg viewBox="0 0 24 24" style={{flexShrink: '0', marginTop: '2px'}}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <p style={{margin: '0', lineHeight: '1.5'}}><strong style={{fontSize: '14px'}}>7 near-expiry alerts:</strong> Trastuzumab (Lot TZ-2204-B) at LUTH expires in <span style={{color: 'var(--err)', fontWeight: '700'}}>38 days</span> — redistribution recommended.</p>
+    <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
       <button className="btn btn-primary" style={{background: 'var(--warn)', fontSize: '11px', padding: '5px 12px', border: 'none'}} onClick={() => onNav('pg-expiry')}>View All</button>
-      <button className="btn btn-outline" style={{fontSize: '11px', padding: '5px 12px', borderColor: '#FDE68A'}}>Dismiss</button>
+      <button className="btn btn-outline" style={{fontSize: '11px', padding: '5px 12px', borderColor: 'var(--warn)'}}>Dismiss</button>
     </div>
   </div>
 
@@ -152,3 +152,5 @@ export default function DashboardPage({ onNav, onOpenModal }: DashboardPageProps
     </div>
   );
 }
+
+export default DashboardPage;

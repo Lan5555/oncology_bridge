@@ -1,12 +1,14 @@
 import { MonthlyScansChart } from "../../components/Charts";
 
 
+
+import type React from 'react';
 interface ScanPageProps {
   scanVisible: boolean;
   onSimulateScan: () => void;
 }
 
-export default function ScanPage({ scanVisible, onSimulateScan }: ScanPageProps) {
+const ScanPage: React.FC<ScanPageProps> = ({ scanVisible, onSimulateScan }) => {
   return (
     <div className="page active">
       <div className="ph">
@@ -92,3 +94,5 @@ export default function ScanPage({ scanVisible, onSimulateScan }: ScanPageProps)
     </div>
   );
 }
+
+export default ScanPage;

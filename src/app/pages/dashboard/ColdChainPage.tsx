@@ -23,7 +23,7 @@ const ColdChainPage = () => {
         <div className="cc-unit"><div className="cc-name">EKO Hospital</div><div className="cc-temp ok">3.8°C</div><div className="cc-bar"><div className="cc-fill ok" style={{width: '47%'}}></div></div><div className="cc-range">Within 2°C–8°C ✓</div></div>
         <div className="cc-unit"><div className="cc-name">UCH Ibadan</div><div className="cc-temp ok">5.1°C</div><div className="cc-bar"><div className="cc-fill ok" style={{width: '63%'}}></div></div><div className="cc-range">Within 2°C–8°C ✓</div></div>
         <div className="cc-unit"><div className="cc-name">Lagos Island GH</div><div className="cc-temp ok">4.7°C</div><div className="cc-bar"><div className="cc-fill ok" style={{width: '58%'}}></div></div><div className="cc-range">Within 2°C–8°C ✓</div></div>
-        <div className="cc-unit" style={{borderColor: 'var(--err)', background: '#FFF5F5', boxShadow: '0 0 0 2px var(--errl)'}}><div className="cc-name" style={{color: 'var(--err)'}}>Transit T-07 ⚠</div><div className="cc-temp err">11.2°C</div><div className="cc-bar"><div className="cc-fill err pulse" style={{width: '100%'}}></div></div><div className="cc-range" style={{color: 'var(--err)', fontWeight: '600'}}>CRITICAL BREACH</div></div>
+        <div className="cc-unit" style={{borderColor: 'var(--err)', background: 'var(--errl)', boxShadow: '0 0 0 2px var(--errl)'}}><div className="cc-name" style={{color: 'var(--err)'}}>Transit T-07 ⚠</div><div className="cc-temp err">11.2°C</div><div className="cc-bar"><div className="cc-fill err pulse" style={{width: '100%'}}></div></div><div className="cc-range" style={{color: 'var(--err)', fontWeight: '600'}}>CRITICAL BREACH</div></div>
       </div>
     </div>
 

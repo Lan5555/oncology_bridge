@@ -1,21 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-// const geistSans = Geist({
-//   variable: "--font-geist-sans",
-//   subsets: ["latin"],
-// });
-
-// const geistMono = Geist_Mono({
-//   variable: "--font-geist-mono",
-//   subsets: ["latin"],
-// });
-
 export const metadata: Metadata = {
-  title: 'Oncology Bridge Platform',
+  title: "Oncology Bridge — Closing Nigeria's Cancer Drug Gap",
   description:
-    'GS1-verified biologic drug inventory visibility and redistribution system for the Lagos–Ibadan hospital corridor.',
+    'Oncology Bridge is a real-time inventory visibility and verification platform closing Nigeria\'s cancer drug access gap — one verified vial at a time.',
 };
 
 export default function RootLayout({
@@ -24,11 +13,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-    >
+    <html lang="en">
       <body>
-         <div className="blue-overlay" />
         {children}
       </body>
     </html>

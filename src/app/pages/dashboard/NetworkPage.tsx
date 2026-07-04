@@ -1,5 +1,6 @@
+import type React from 'react';
 
-export default function NetworkPage() {
+const NetworkPage: React.FC = () => {
   return (
     <div className="page active">
       <div className="ph">
@@ -9,8 +10,8 @@ export default function NetworkPage() {
     <div className="g-stack">
       <div className="card" style={{minHeight: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,var(--pll),var(--pl))', borderStyle: 'dashed', position: 'relative', overflow: 'hidden'}}>
         <div style={{position: 'absolute', top: '15px', right: '15px', display: 'flex', flexDirection: 'column', gap: '5px'}}>
-          <div className="badge g" style={{background: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'}}>● 18 Donor Hubs</div>
-          <div className="badge b" style={{background: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'}}>● 6 Recipient Hubs</div>
+          <div className="badge g" style={{boxShadow: '0 2px 4px rgba(0,0,0,0.05)'}}>● 18 Donor Hubs</div>
+          <div className="badge b" style={{boxShadow: '0 2px 4px rgba(0,0,0,0.05)'}}>● 6 Recipient Hubs</div>
         </div>
         <div style={{textAlign: 'center', color: 'var(--g400)', zIndex: '1'}}>
           <svg style={{width: '64px', height: '64px', fill: 'none', stroke: 'var(--p)', strokeWidth: '1', marginBottom: '16px', opacity: '0.6'}} viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -50,3 +51,5 @@ export default function NetworkPage() {
     </div>
   );
 }
+
+export default NetworkPage;

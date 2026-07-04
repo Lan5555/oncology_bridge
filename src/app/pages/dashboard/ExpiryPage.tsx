@@ -1,5 +1,6 @@
+import type React from 'react';
 
-export default function ExpiryPage() {
+const ExpiryPage: React.FC = () => {
   return (
     <div className="page active">
       <div className="ph">
@@ -29,3 +30,5 @@ export default function ExpiryPage() {
     </div>
   );
 }
+
+export default ExpiryPage;

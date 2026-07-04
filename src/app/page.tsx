@@ -1,5 +1,5 @@
 'use client';
-import DashboardView from "./pages/dashboard/page";
+import HomePage from "./pages/landing/page";
 
-const Home: React.FC = () =>  (<DashboardView/>);
+const Home: React.FC = () =>  (<HomePage/>);
 export default Home;
