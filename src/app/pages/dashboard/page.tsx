@@ -91,7 +91,6 @@ const DashboardView: React.FC = () => {
 
   return (
     <>
-    <div className='blue-overlay'/>
       <TopNav
         activePage={activePage}
         onNav={handleNav}
@@ -99,6 +98,7 @@ const DashboardView: React.FC = () => {
         onToggleSidebar={toggleSidebar}
         onToggleTheme={toggleTheme}
       />
+    <div className='blue-overlay'/>
 
       <div className="shell active">
         <Sidebar sidebarOpen={sidebarOpen} activePage={activePage} onNav={handleNav} />

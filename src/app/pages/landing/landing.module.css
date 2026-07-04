@@ -24,14 +24,14 @@
 }
 
 /* ── RESET ── */
-:global(*), :global(*::before), :global(*::after) { box-sizing: border-box; margin: 0; padding: 0; }
+/* :global(*), :global(*::before), :global(*::after) { box-sizing: border-box; margin: 0; padding: 0; }
 :global(html) { scroll-behavior: smooth; }
 :global(body) {
   font-family: var(--font-b);
   background: var(--white);
   color: var(--slate3);
   overflow-x: hidden;
-}
+} */
 :global(img) { display: block; max-width: 100%; }
 :global(a) { text-decoration: none; color: inherit; }
 
