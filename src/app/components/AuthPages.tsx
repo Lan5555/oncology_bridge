@@ -3,7 +3,25 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { AuthView } from "../lib/types";
-import { Toolbox, ToolCase, User2, UserCogIcon, } from 'lucide-react';
+import {
+  UserCogIcon,
+  Building2,
+  MapPin,
+  Phone,
+  Mail,
+  User,
+  ShieldCheck,
+  Check,
+  ChevronRight,
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  Info,
+  Clock,
+} from 'lucide-react';
+import { FACILITY_SERVICE } from '../services/facility-service/facility-service';
+import { toast } from 'sonner';
+import { AUTH_SERVICE } from '../services/auth-service/auth-service';
 
 interface AuthPagesProps {
   view: AuthView;
@@ -13,6 +31,12 @@ interface AuthPagesProps {
   onToggleTheme: () => void;
 }
 
+const STEPS = [
+  { id: 1, label: 'Facility Information' },
+  { id: 2, label: 'Administrator' },
+  { id: 3, label: 'Verification' },
+] as const;
+
 export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggleTheme }: AuthPagesProps) {
   const isLogin = view === 'login';
   const isDark = theme === 'dark';
@@ -20,12 +44,26 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Login
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+
+  // Registration — Step 1: Facility Information
+  const [registerStep, setRegisterStep] = useState<1 | 2 | 3>(1);
   const [facilityName, setFacilityName] = useState<string>('');
   const [facilityType, setFacilityType] = useState<string>('');
-  const [adminName, setAdminName] = useState<string>('');
+  const [facilityEmail, setFacilityEmail] = useState<string>('');
+  const [facilityPhone, setFacilityPhone] = useState<string>('');
+  const [facilityAddress, setFacilityAddress] = useState<string>('');
+  const [facilityCity, setFacilityCity] = useState<string>('');
+  const [facilityState, setFacilityState] = useState<string>('');
+
+  // Registration — Step 2: Primary Administrator
+  const [adminFirstName, setAdminFirstName] = useState<string>('');
+  const [adminLastName, setAdminLastName] = useState<string>('');
   const [workEmail, setWorkEmail] = useState<string>('');
+  const [adminPhone, setAdminPhone] = useState<string>('');
   const [registerPassword, setRegisterPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
 
@@ -34,51 +72,114 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
     setIsMounted(true);
   }, []);
 
+  // --- Theme tokens: white surfaces + dark navy/blue accent ---
   const shellClasses = isDark
-    ? 'min-h-screen w-full bg-slate-950 text-slate-100'
-    : 'min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-50 text-slate-900';
-  
-  const cardClasses = isDark
-    ? 'border-slate-800 bg-slate-900/80 shadow-2xl shadow-black/40 backdrop-blur-sm'
-    : 'border-slate-200/80 bg-white/80 shadow-2xl shadow-slate-900/10 backdrop-blur-sm';
-  
-  const sidePanelClasses = isDark
-    ? 'bg-navy text-slate-100'
-    : 'bg-navy-2 text-slate-100';
-  
-  const mutedText = isDark ? 'text-slate-400' : 'text-slate-500';
-  const headingText = isDark ? 'text-slate-100' : 'text-slate-900';
-  const labelText = isDark ? 'text-slate-300' : 'text-slate-700';
-  
-  const inputClasses = isDark
-    ? 'w-full rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 outline-none transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-slate-800'
-    : 'w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white';
-  
-  const secondaryButtonClasses = isDark
-    ? 'border-slate-700 bg-slate-800/50 text-slate-200 hover:border-slate-600 hover:bg-slate-700/50 backdrop-blur-sm'
-    : 'border-slate-200 bg-white/50 text-slate-700 hover:border-slate-300 hover:bg-white backdrop-blur-sm';
-  
-  const toggleButtonClasses = isDark
-    ? 'border-slate-700 bg-slate-900/50 text-slate-200 hover:border-blue-400 hover:text-blue-300 backdrop-blur-sm'
-    : 'border-slate-200 bg-white/50 text-slate-700 hover:border-blue-300 hover:text-blue-600 backdrop-blur-sm';
+    ? 'min-h-screen w-full bg-[#0A1628] text-[#EAF0FA]'
+    : 'min-h-screen w-full bg-[#EEF3FA] text-[#0B1E3D]';
 
-  const handleLogin = (e: React.FormEvent) => {
+  const cardClasses = isDark
+    ? 'border-[#1E3358] bg-[#0F2038]'
+    : 'border-[#E2E8F0] bg-white';
+
+  const sidePanelClasses = 'bg-gradient-to-br from-[#0B1E3D] via-[#122A4F] to-[#0A1628] text-[#EAF0FA]';
+
+  const mutedText = isDark ? 'text-[#8CA0BE]' : 'text-[#5B6B85]';
+  const headingText = isDark ? 'text-[#EAF0FA]' : 'text-[#0B1E3D]';
+  const labelText = isDark ? 'text-[#B7C4DA]' : 'text-[#334862]';
+  const borderColor = isDark ? 'border-[#1E3358]' : 'border-[#E2E8F0]';
+  const accent = isDark ? '#4C8DFF' : '#1B3A6B';
+
+  const inputClasses = isDark
+    ? 'w-full rounded-lg border border-[#23385C] bg-[#0B1E33] px-4 py-3 text-sm text-[#EAF0FA] placeholder:text-[#5D7396] outline-none transition-colors duration-150 focus:border-[#4C8DFF]'
+    : 'w-full rounded-lg border border-[#DCE3ED] bg-[#F8FAFC] px-4 py-3 text-sm text-[#0B1E3D] placeholder:text-[#94A3B8] outline-none transition-colors duration-150 focus:border-[#1B3A6B]';
+
+  const secondaryButtonClasses = isDark
+    ? 'border-[#1E3358] bg-[#0B1E33] text-[#EAF0FA] hover:border-[#4C8DFF]'
+    : 'border-[#E2E8F0] bg-white text-[#0B1E3D] hover:border-[#1B3A6B]';
+
+  const toggleButtonClasses = isDark
+    ? 'border-[#1E3358] bg-[#0F2038] text-[#EAF0FA] hover:border-[#4C8DFF]'
+    : 'border-[#E2E8F0] bg-white text-[#0B1E3D] hover:border-[#1B3A6B]';
+
+    function getOrCreateDeviceID() {
+    // Check if an ID already exists in localStorage
+    let deviceID = localStorage.getItem('web_device_id');
+    
+    if (!deviceID) {
+        // Generate a cryptographically secure random UUID
+        deviceID = crypto.randomUUID(); 
+        // Store it for future visits
+        localStorage.setItem('web_device_id', deviceID);
+    }
+    
+    return deviceID;
+}
+
+  const handleLogin = async(e: any) => {
     e.preventDefault();
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    const payload = {
+      email,
+      password
+    };
+    const res = await AUTH_SERVICE.signIn(payload);
+    if(res.success){
+      toast.success(res.message);
       onDoLogin();
-    }, 400);
+      setSubmitting(false);
+    }else{
+      toast.error(res.message);
+      setSubmitting(false);
+    }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async(e: any) => {
     e.preventDefault();
     setSubmitting(true);
-    setTimeout(() => {
+    const payload = {
+      facility: {
+      name: facilityName,
+      facility_type: facilityType,
+      email: facilityEmail,
+      phone: facilityPhone,
+      address: facilityAddress,
+      city: facilityCity,
+      state: facilityState
+      },
+      admin: {
+        first_name: adminFirstName,
+        last_name: adminLastName,
+        phone: adminPhone,
+        email: workEmail,
+        password: confirmPassword,
+        device_id: getOrCreateDeviceID()
+      }
+      
+    }
+    const res = await FACILITY_SERVICE.registerFacility(payload);
+    if(res.success){
       setSubmitting(false);
       onShowAuth('login');
-    }, 400);
+      toast.success(res.message);
+    }else{
+      toast.error(res.message);
+      setSubmitting(false);
+      console.log(res.message)
+    }
   };
+
+  const step1Valid = Boolean(
+    facilityName.trim() && facilityType && facilityEmail.trim() && facilityPhone.trim() &&
+    facilityAddress.trim() && facilityCity.trim() && facilityState.trim()
+  );
+  const passwordsMatch = registerPassword.length > 0 && registerPassword === confirmPassword;
+  const step2Valid = Boolean(
+    adminFirstName.trim() && adminLastName.trim() && workEmail.trim() && adminPhone.trim() &&
+    registerPassword && confirmPassword && passwordsMatch
+  );
+
+  const goNext = () => setRegisterStep((s) => (s < 3 ? ((s + 1) as 1 | 2 | 3) : s));
+  const goBack = () => setRegisterStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s));
 
   // Fixed particle positions - deterministic on server and client
   const particles = [
@@ -90,23 +191,31 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
     { size: 4, left: '10%', top: '45%', delay: '3s', duration: '13s' },
   ];
 
+  const networkBadges = [
+    'GS1 DataMatrix Verification',
+    'Cold Chain Monitoring',
+    'AES-256 Encryption',
+    'Role-Based Access Control',
+    'Audit Logging',
+    'Offline Sync',
+  ];
+
   // Prevent hydration mismatch by not rendering dynamic content until mounted
   if (!isMounted) {
     return (
       <div className={`${shellClasses} lg:flex`}>
-        {/* Static shell to prevent layout shift */}
-        <aside className={`relative hidden shrink-0 flex-col overflow-hidden px-10 py-12 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-120 xl:w-135 ${sidePanelClasses}`}>
+        <aside className={`relative hidden shrink-0 flex-col overflow-hidden px-10 py-12 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-120 xl:w-135 ${sidePanelClasses}`}>
           <div className="relative z-10">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
                 <svg viewBox="0 0 24 24" className="h-6 w-6" fill="white">
                   <path d="M12 2L2 7l10 5 10-5-10-5z" />
                   <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth={1.5} fill="none" />
                 </svg>
               </div>
               <div>
-                <span className="text-sm font-medium tracking-wide text-blue-100">Oncology Bridge</span>
-                <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-blue-100 border border-white/10">v2.0</span>
+                <span className="text-sm font-medium tracking-wide text-[#AFC6EE]">Oncology Bridge</span>
+                <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#AFC6EE] border border-white/10">v2.0</span>
               </div>
             </div>
             <div className="mt-10">
@@ -117,7 +226,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
         <main className="relative flex flex-1 items-center justify-center px-4 py-12">
           <div className={`relative z-10 w-full max-w-md rounded-2xl border p-8 ${cardClasses}`}>
             <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#1B3A6B] border-t-transparent" />
             </div>
           </div>
         </main>
@@ -127,19 +236,13 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
 
   return (
     <div className={`${shellClasses} lg:flex`}>
-      {/* Left Panel - Enhanced with animations */}
-      <aside className={`relative hidden shrink-0 flex-col overflow-hidden px-10 py-12 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-120 xl:w-135 ${sidePanelClasses}`}>
-        {/* Animated background pattern */}
+      {/* Left Panel */}
+      <aside className={`relative hidden shrink-0 flex-col overflow-hidden px-10 py-12 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-120 xl:w-135 ${sidePanelClasses}`}>
+        {/* Ambient background */}
         <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%)',
-          }} />
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(59,130,246,0.3) 0%, transparent 40%)',
-          }} />
+          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%)' }} />
+          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(76,141,255,0.35) 0%, transparent 40%)' }} />
         </div>
-
-        {/* Grid pattern */}
         <div
           className="pointer-events-none absolute inset-0 opacity-10"
           style={{
@@ -147,8 +250,6 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
             backgroundSize: '24px 24px',
           }}
         />
-
-        {/* Floating particles - fixed positions */}
         <div className="absolute inset-0 pointer-events-none">
           {particles.map((particle, i) => (
             <div
@@ -168,37 +269,34 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
 
         {/* Content */}
         <div className="relative z-10">
-          {/* Brand */}
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 ring-1 ring-white/30 backdrop-blur-sm transition-all hover:scale-105">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 transition-all hover:scale-105">
               <svg viewBox="0 0 24 24" className="h-6 w-6" fill="white">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" />
                 <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth={1.5} fill="none" />
               </svg>
             </div>
             <div>
-              <span className="text-sm font-medium tracking-wide text-blue-100">Oncology Bridge</span>
-              <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-blue-100 border border-white/10">
+              <span className="text-sm font-medium tracking-wide text-[#AFC6EE]">Oncology Bridge</span>
+              <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#AFC6EE] border border-white/10">
                 v2.0
               </span>
             </div>
           </div>
 
-          {/* Hero text */}
           <div className="mt-10">
             <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
               Lagos–Ibadan
               <br />
-              <span className="text-blue-200">Oncology Network</span>
+              <span className="text-[#8FB4F0]">Oncology Network</span>
             </h1>
-            <div className="mt-4 h-1 w-20 rounded-full bg-blue-400/50" />
-            <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-blue-100/90">
-              Secure portal for redistribution and facility coordination — track inventory,
-              audits, and near-expiry biologics across the corridor in real time.
+            <div className="mt-4 h-1 w-20 rounded-full bg-[#4C8DFF]/60" />
+            <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-[#C3D3EC]">
+              Secure collaboration platform connecting verified oncology facilities for
+              inventory visibility, medicine verification, and safe redistribution across Nigeria.
             </p>
           </div>
 
-          {/* Stats */}
           <div className="mt-8 flex gap-6">
             {[
               { label: 'Facilities', value: '24+' },
@@ -207,7 +305,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
             ].map((stat) => (
               <div key={stat.label}>
                 <div className="text-2xl font-bold text-white">{stat.value}</div>
-                <div className="text-xs text-blue-200/80">{stat.label}</div>
+                <div className="text-xs text-[#8FA6CB]">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -215,7 +313,6 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
 
         <div className="flex-1" />
 
-        {/* Bottom */}
         <div className="relative z-10">
           <svg viewBox="0 0 440 170" className="w-full max-w-95">
             <defs>
@@ -234,23 +331,24 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
               strokeDasharray="4 8"
               strokeLinecap="round"
             />
-            <circle cx="70" cy="135" r="8" fill="white" className="shadow-lg" />
-            <circle cx="370" cy="80" r="8" fill="white" className="shadow-lg" />
-            <circle r="6" fill="#60a5fa" className="shadow-lg">
+            <circle cx="70" cy="135" r="8" fill="white" />
+            <circle cx="370" cy="80" r="8" fill="white" />
+            <circle r="6" fill="#4C8DFF">
               <animateMotion dur="4s" repeatCount="indefinite">
                 <mpath href="#corridor-route" />
               </animateMotion>
             </circle>
-            <text x="45" y="160" fill="white" fontSize="13" fontWeight="600" className="drop-shadow-lg">Lagos</text>
-            <text x="350" y="62" fill="white" fontSize="13" fontWeight="600" className="drop-shadow-lg">Ibadan</text>
+            <text x="45" y="160" fill="white" fontSize="13" fontWeight="600">Lagos</text>
+            <text x="350" y="62" fill="white" fontSize="13" fontWeight="600">Ibadan</text>
           </svg>
 
           <div className="mt-4 flex flex-wrap gap-2">
-            {['GS1 Verified', 'NAFDAC ML4', 'AES-256 Encrypted', 'HIPAA Compliant'].map((tag) => (
+            {networkBadges.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-medium text-blue-50 backdrop-blur-sm transition-all hover:bg-white/20"
+                className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#DCE7F8] transition-colors hover:bg-white/10"
               >
+                <Check className="h-3 w-3 text-[#7FB0FF]" />
                 {tag}
               </span>
             ))}
@@ -260,32 +358,29 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
 
       {/* Right Panel */}
       <main className="relative flex flex-1 items-center justify-center px-4 py-12 lg:h-screen lg:overflow-y-auto">
-        {/* Background pattern */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.15]"
+          className="pointer-events-none absolute inset-0 opacity-[0.12]"
           style={{
             backgroundImage: isDark
-              ? 'radial-gradient(circle at 1px 1px, rgba(96,165,250,0.2) 1px, transparent 0)'
-              : 'radial-gradient(circle at 1px 1px, rgb(59 130 246 / 0.1) 1px, transparent 0)',
+              ? 'radial-gradient(circle at 1px 1px, rgba(76,141,255,0.25) 1px, transparent 0)'
+              : 'radial-gradient(circle at 1px 1px, rgba(27,58,107,0.15) 1px, transparent 0)',
             backgroundSize: '28px 28px',
           }}
         />
 
-        {/* Theme Toggle */}
         <button
           onClick={onToggleTheme}
-          className={`absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full border shadow-lg transition-all duration-300 hover:scale-110 ${toggleButtonClasses}`}
+          className={`absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full border shadow-sm transition-colors duration-200 ${toggleButtonClasses}`}
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
             <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
           </svg>
         </button>
 
-        {/* Card */}
-        <div className={`relative z-10 w-full max-w-md rounded-2xl border p-8 transition-all duration-300 hover:shadow-2xl ${cardClasses}`}>
+        <div className={`relative z-10 w-full ${isLogin ? 'max-w-md' : 'max-w-xl'} rounded-2xl border p-8 transition-all duration-300 ${cardClasses}`}>
           {/* Mobile brand */}
           <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-900 to-blue-700 shadow-lg shadow-blue-500/30">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0B1E3D]">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="white">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" />
               </svg>
@@ -293,84 +388,66 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
             <span className={`text-sm font-semibold ${headingText}`}>Oncology Bridge</span>
           </div>
 
-          {/* Header */}
-          <div className="space-y-1">
-            <h2 className={`text-2xl font-bold tracking-tight ${headingText}`}>
-              {isLogin ? 'Welcome back' : 'Join the network'}
-            </h2>
-            <p className={`text-sm ${mutedText}`}>
-              {isLogin
-                ? 'Sign in to access your facility dashboard'
-                : 'Create your facility account to get started'}
-            </p>
-          </div>
-
           {isLogin ? (
-            <form className="mt-6 space-y-4" onSubmit={handleLogin}>
-              <div>
-                <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@facility.org"
-                  className={inputClasses}
-                />
+            <>
+              {/* Header */}
+              <div className="space-y-1">
+                <h2 className={`text-2xl font-bold tracking-tight ${headingText}`}>Welcome back</h2>
+                <p className={`text-sm ${mutedText}`}>Sign in to access your facility dashboard</p>
               </div>
 
-              <div>
-                <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>
-                  Password
-                </label>
-                <div className="relative">
+              <form className="mt-6 space-y-4" onSubmit={handleLogin}>
+                <div>
+                  <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Email Address</label>
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type="email"
                     required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className={`${inputClasses} pr-11`}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@facility.org"
+                    className={inputClasses}
                   />
+                </div>
+
+                <div>
+                  <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className={`${inputClasses} pr-11`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((s) => !s)}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${mutedText}`}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
                   <button
                     type="button"
-                    onClick={() => setShowPassword((s) => !s)}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => { onShowAuth('register'); setRegisterStep(1); }}
+                    className="text-sm font-medium transition-colors"
+                    style={{ color: accent }}
                   >
-                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
-                      {showPassword ? (
-                        <path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.5 5.3A9.8 9.8 0 0112 5c5 0 9 4 10 7-.4 1.1-1.1 2.3-2 3.4M6.2 6.6C4.3 8 3 9.9 2 12c1 3 5 7 10 7 1.3 0 2.6-.3 3.8-.7" strokeLinecap="round" strokeLinejoin="round" />
-                      ) : (
-                        <>
-                          <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" strokeLinecap="round" strokeLinejoin="round" />
-                          <circle cx="12" cy="12" r="3" />
-                        </>
-                      )}
-                    </svg>
+                    Create account
                   </button>
                 </div>
-              </div>
 
-              {/* Removed "Remember me" checkbox - just the create account link */}
-              <div className="flex justify-end pt-1">
                 <button
-                  type="button"
-                  onClick={() => onShowAuth('register')}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                  type="submit"
+                  disabled={submitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-70"
+                  style={{ backgroundColor: '#0B1E3D' }}
                 >
-                  Create account
-                </button>
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="group relative w-full overflow-hidden rounded-xl bg-blue-950 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/25 transition-all duration-300 hover:shadow-blue-900/40 hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100"
-              >
-                <span className="relative flex items-center justify-center gap-2">
                   {submitting && (
                     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -378,212 +455,422 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                     </svg>
                   )}
                   {submitting ? 'Signing in...' : 'Sign In'}
-                </span>
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 bg-linear-to-r from-transparent via-white/10 to-transparent" />
-              </button>
-
-              <div className="relative py-1">
-                <div className={`absolute inset-x-0 top-1/2 h-px ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
-                <span className={`relative px-3 text-xs uppercase tracking-wider ${isDark ? 'bg-slate-900 text-slate-400' : 'bg-white text-slate-400'}`}>
-                  Or continue with
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition-all duration-200 hover:shadow-md ${secondaryButtonClasses}`}
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                  </svg>
-                  Google
                 </button>
-                <button
-                  type="button"
-                  className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-medium transition-all duration-200 hover:shadow-md ${secondaryButtonClasses}`}
-                >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M11.4 24h1.2c.9 0 1.8-.1 2.7-.3l-.4-1.9c-.8.2-1.6.3-2.4.3h-1.4c-4.2 0-7.6-3.4-7.6-7.6V8.4c0-4.2 3.4-7.6 7.6-7.6h1.4c4.2 0 7.6 3.4 7.6 7.6v4.6c0 1.4-.4 2.7-1.1 3.8l1.5 1.4c1-1.5 1.6-3.3 1.6-5.2V8.4C24 3.8 20.2 0 15.6 0h-1.4C9.8 0 6 3.8 6 8.4v6.2c0 4.6 3.8 8.4 8.4 8.4h1.4z" />
-                  </svg>
-                  Microsoft
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form className="mt-6 space-y-4" onSubmit={handleRegister}>
-              <div>
-                <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>
-                  Facility Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={facilityName}
-                  onChange={(e) => setFacilityName(e.target.value)}
-                  placeholder="e.g. LUTH Pharmacy"
-                  className={inputClasses}
-                />
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>
-                    Facility Type
-                  </label>
-                  <select
-                    required
-                    value={facilityType}
-                    onChange={(e) => setFacilityType(e.target.value)}
-                    className={inputClasses}
+                <div className="relative py-1">
+                  <div className={`absolute inset-x-0 top-1/2 h-px ${isDark ? 'bg-[#1E3358]' : 'bg-[#E2E8F0]'}`} />
+                  <span className={`relative px-3 text-xs uppercase tracking-wider ${isDark ? 'bg-[#0F2038] text-[#8CA0BE]' : 'bg-white text-slate'}`}>
+                    Or continue with
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    className={`flex items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors duration-150 ${secondaryButtonClasses}`}
                   >
-                    <option value="">Select type</option>
-                    <option value="donor">Donor Hub</option>
-                    <option value="recipient">Recipient Hub</option>
-                    <option value="both">Both</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>
-                    Admin Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={adminName}
-                    onChange={(e) => setAdminName(e.target.value)}
-                    placeholder="Full Name"
-                    className={inputClasses}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>
-                  Work Email
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={workEmail}
-                  onChange={(e) => setWorkEmail(e.target.value)}
-                  placeholder="admin@facility.org"
-                  className={inputClasses}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={registerPassword}
-                      onChange={(e) => setRegisterPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className={`${inputClasses} pr-11`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((s) => !s)}
-                      className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
-                        {showPassword ? (
-                          <path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.5 5.3A9.8 9.8 0 0112 5c5 0 9 4 10 7-.4 1.1-1.1 2.3-2 3.4M6.2 6.6C4.3 8 3 9.9 2 12c1 3 5 7 10 7 1.3 0 2.6-.3 3.8-.7" strokeLinecap="round" strokeLinejoin="round" />
-                        ) : (
-                          <>
-                            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" strokeLinecap="round" strokeLinejoin="round" />
-                            <circle cx="12" cy="12" r="3" />
-                          </>
-                        )}
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>
-                    Confirm
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showConfirm ? 'text' : 'password'}
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className={`${inputClasses} pr-11`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm((s) => !s)}
-                      className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
-                      aria-label={showConfirm ? 'Hide confirmation' : 'Show confirmation'}
-                    >
-                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
-                        {showConfirm ? (
-                          <path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.5 5.3A9.8 9.8 0 0112 5c5 0 9 4 10 7-.4 1.1-1.1 2.3-2 3.4M6.2 6.6C4.3 8 3 9.9 2 12c1 3 5 7 10 7 1.3 0 2.6-.3 3.8-.7" strokeLinecap="round" strokeLinejoin="round" />
-                        ) : (
-                          <>
-                            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" strokeLinecap="round" strokeLinejoin="round" />
-                            <circle cx="12" cy="12" r="3" />
-                          </>
-                        )}
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="group relative w-full overflow-hidden rounded-xl bg-blue-950 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/25 transition-all duration-300 hover:shadow-blue-900/40 hover:scale-[1.02] disabled:opacity-70"
-              >
-                <span className="relative flex items-center justify-center gap-2">
-                  {submitting && (
-                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    <svg className="h-4 w-4" viewBox="0 0 24 24">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                     </svg>
-                  )}
-                  {submitting ? 'Creating...' : 'Create Account'}
-                </span>
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 bg-linear-to-r from-transparent via-white/10 to-transparent" />
-              </button>
+                    Google
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors duration-150 ${secondaryButtonClasses}`}
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M11.4 24h1.2c.9 0 1.8-.1 2.7-.3l-.4-1.9c-.8.2-1.6.3-2.4.3h-1.4c-4.2 0-7.6-3.4-7.6-7.6V8.4c0-4.2 3.4-7.6 7.6-7.6h1.4c4.2 0 7.6 3.4 7.6 7.6v4.6c0 1.4-.4 2.7-1.1 3.8l1.5 1.4c1-1.5 1.6-3.3 1.6-5.2V8.4C24 3.8 20.2 0 15.6 0h-1.4C9.8 0 6 3.8 6 8.4v6.2c0 4.6 3.8 8.4 8.4 8.4h1.4z" />
+                    </svg>
+                    Microsoft
+                  </button>
+                </div>
+              </form>
 
-              <p className={`pt-1 text-center text-xs ${mutedText}`}>
-                By registering you agree to our{' '}
-                <button type="button" className="text-blue-600 hover:underline">
-                  Terms of Service
-                </button>{' '}
-                and{' '}
-                <button type="button" className="text-blue-600 hover:underline">
-                  Privacy Policy
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => { onShowAuth('register'); setRegisterStep(1); }}
+                  className={`text-sm transition-colors ${mutedText}`}
+                >
+                  Don&apos;t have an account?{' '}
+                  <span className="font-medium hover:underline" style={{ color: accent }}>Sign up</span>
                 </button>
-              </p>
-            </form>
-          )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="space-y-1 mt-30">
+                <p className={`font-mono text-[11px] uppercase tracking-[0.2em] ${mutedText}`}>Network Application</p>
+                <h2 className={`text-2xl font-bold tracking-tight ${headingText}`}>Join the network</h2>
+                <p className={`text-sm ${mutedText}`}>
+                  Apply for your facility to join the Oncology Bridge network. Every application is reviewed and verified.
+                </p>
+              </div>
 
-          {/* Footer link */}
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => onShowAuth(isLogin ? 'register' : 'login')}
-              className={`text-sm transition-colors ${isDark ? 'text-slate-400 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <span className="font-medium text-blue-600 hover:underline">
-                {isLogin ? 'Sign up' : 'Sign in'}
-              </span>
-            </button>
-          </div>
+              {/* Step indicator */}
+              <div className="mt-6 flex items-center">
+                {STEPS.map((step, i) => {
+                  const isComplete = registerStep > step.id;
+                  const isActive = registerStep === step.id;
+                  return (
+                    <div key={step.id} className={`flex items-center ${i < STEPS.length - 1 ? 'flex-1' : ''}`}>
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold transition-colors duration-200"
+                          style={{
+                            borderColor: isComplete || isActive ? accent : (isDark ? '#1E3358' : '#E2E8F0'),
+                            backgroundColor: isComplete ? accent : 'transparent',
+                            color: isComplete ? '#FFFFFF' : isActive ? accent : (isDark ? '#8CA0BE' : '#94A3B8'),
+                          }}
+                        >
+                          {isComplete ? <Check className="h-4 w-4" /> : step.id}
+                        </div>
+                        <span
+                          className={`hidden text-center text-[11px] font-medium sm:block ${isActive || isComplete ? headingText : mutedText}`}
+                          style={{ maxWidth: '90px' }}
+                        >
+                          {step.label}
+                        </span>
+                      </div>
+                      {i < STEPS.length - 1 && (
+                        <div
+                          className="mx-2 h-0.5 flex-1 transition-colors duration-200"
+                          style={{ backgroundColor: isComplete ? accent : (isDark ? '#1E3358' : '#E2E8F0') }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <form className="mt-8 space-y-5" onSubmit={handleRegisterSubmit}>
+                {registerStep === 1 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" style={{ color: accent }} />
+                      <h3 className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}>Facility Information</h3>
+                    </div>
+
+                    <div>
+                      <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Facility Name</label>
+                      <input
+                        type="text"
+                        value={facilityName}
+                        onChange={(e) => setFacilityName(e.target.value)}
+                        placeholder="e.g. LUTH Pharmacy"
+                        className={inputClasses}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Facility Type</label>
+                        <select value={facilityType} onChange={(e) => setFacilityType(e.target.value)} className={inputClasses}>
+                          <option value="">Select type</option>
+                          <option value="HOSPITAL">Hospital</option>
+                          <option value="CANCER_CENTER">Cancer Center</option>
+                          <option value="CLINIC">Oncology Clinic</option>
+                          <option value="PHARMACY">Pharmacy</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Phone Number</label>
+                        <div className="relative">
+                          <Phone className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`} />
+                          <input
+                            type="tel"
+                            value={facilityPhone}
+                            onChange={(e) => setFacilityPhone(e.target.value)}
+                            placeholder="+234"
+                            className={`${inputClasses} pl-10`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Official Facility Email</label>
+                      <div className="relative">
+                        <Mail className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`} />
+                        <input
+                          type="email"
+                          value={facilityEmail}
+                          onChange={(e) => setFacilityEmail(e.target.value)}
+                          placeholder="records@facility.org"
+                          className={`${inputClasses} pl-10`}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Address</label>
+                      <div className="relative">
+                        <MapPin className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`} />
+                        <input
+                          type="text"
+                          value={facilityAddress}
+                          onChange={(e) => setFacilityAddress(e.target.value)}
+                          placeholder="Street address"
+                          className={`${inputClasses} pl-10`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>City</label>
+                        <input
+                          type="text"
+                          value={facilityCity}
+                          onChange={(e) => setFacilityCity(e.target.value)}
+                          placeholder="e.g. Lagos"
+                          className={inputClasses}
+                        />
+                      </div>
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>State</label>
+                        <input
+                          type="text"
+                          value={facilityState}
+                          onChange={(e) => setFacilityState(e.target.value)}
+                          placeholder="e.g. Lagos State"
+                          className={inputClasses}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {registerStep === 2 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" style={{ color: accent }} />
+                      <h3 className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}>Primary Administrator</h3>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>First Name</label>
+                        <input
+                          type="text"
+                          value={adminFirstName}
+                          onChange={(e) => setAdminFirstName(e.target.value)}
+                          placeholder="First name"
+                          className={inputClasses}
+                        />
+                      </div>
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Last Name</label>
+                        <input
+                          type="text"
+                          value={adminLastName}
+                          onChange={(e) => setAdminLastName(e.target.value)}
+                          placeholder="Last name"
+                          className={inputClasses}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Work Email</label>
+                        <input
+                          type="email"
+                          value={workEmail}
+                          onChange={(e) => setWorkEmail(e.target.value)}
+                          placeholder="admin@facility.org"
+                          className={inputClasses}
+                        />
+                      </div>
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Phone Number</label>
+                        <input
+                          type="tel"
+                          value={adminPhone}
+                          onChange={(e) => setAdminPhone(e.target.value)}
+                          placeholder="+234"
+                          className={inputClasses}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Password</label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={registerPassword}
+                            onChange={(e) => setRegisterPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className={`${inputClasses} pr-11`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((s) => !s)}
+                            className={`absolute right-3 top-1/2 -translate-y-1/2 ${mutedText}`}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Confirm</label>
+                        <div className="relative">
+                          <input
+                            type={showConfirm ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="••••••••"
+                            className={`${inputClasses} pr-11`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirm((s) => !s)}
+                            className={`absolute right-3 top-1/2 -translate-y-1/2 ${mutedText}`}
+                            aria-label={showConfirm ? 'Hide confirmation' : 'Show confirmation'}
+                          >
+                            {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {confirmPassword.length > 0 && !passwordsMatch && (
+                      <p className="text-xs" style={{ color: '#C4622D' }}>Passwords do not match.</p>
+                    )}
+
+                    <div className={`flex items-start gap-2.5 rounded-lg border p-3.5 ${borderColor} ${isDark ? 'bg-[#0B1E33]' : 'bg-[#F8FAFC]'}`}>
+                      <Info className={`mt-0.5 h-4 w-4 shrink-0 ${mutedText}`} />
+                      <p className={`text-xs leading-relaxed ${mutedText}`}>
+                        The first administrator will manage your facility account and can later invite pharmacists, oncologists, and other staff.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {registerStep === 3 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4" style={{ color: accent }} />
+                      <h3 className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}>Verification</h3>
+                    </div>
+
+                    <div className={`rounded-lg border p-5 ${borderColor} ${isDark ? 'bg-[#0B1E33]' : 'bg-[#F8FAFC]'}`}>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                          style={{ backgroundColor: isDark ? 'rgba(76,141,255,0.15)' : 'rgba(27,58,107,0.08)' }}
+                        >
+                          <ShieldCheck className="h-5 w-5" style={{ color: accent }} />
+                        </div>
+                        <h4 className={`font-semibold ${headingText}`}>Verification Process</h4>
+                      </div>
+                      <ul className={`mt-4 space-y-2.5 text-sm ${mutedText}`}>
+                        <li className="flex items-start gap-2">
+                          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
+                          Your application will be reviewed by the Oncology Bridge Network.
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
+                          Facility credentials may be verified before approval.
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
+                          You&apos;ll receive an email once your account has been activated.
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className={`rounded-lg border p-4 ${borderColor}`}>
+                      <p className={`mb-2 text-xs font-semibold uppercase tracking-wide ${mutedText}`}>Application summary</p>
+                      <div className="grid grid-cols-2 gap-y-1.5 text-sm">
+                        <span className={mutedText}>Facility</span>
+                        <span className={`text-right font-medium ${headingText}`}>{facilityName || '—'}</span>
+                        <span className={mutedText}>Type</span>
+                        <span className={`text-right font-medium ${headingText}`}>{facilityType || '—'}</span>
+                        <span className={mutedText}>Administrator</span>
+                        <span className={`text-right font-medium ${headingText}`}>
+                          {adminFirstName || adminLastName ? `${adminFirstName} ${adminLastName}`.trim() : '—'}
+                        </span>
+                        <span className={mutedText}>Work Email</span>
+                        <span className={`text-right font-medium ${headingText}`}>{workEmail || '—'}</span>
+                      </div>
+                    </div>
+
+                    <p className={`text-center text-xs ${mutedText}`}>
+                      By submitting you agree to our{' '}
+                      <button type="button" className="hover:underline" style={{ color: accent }}>Terms of Service</button>{' '}
+                      and{' '}
+                      <button type="button" className="hover:underline" style={{ color: accent }}>Privacy Policy</button>
+                    </p>
+                  </div>
+                )}
+
+                {/* Navigation */}
+                <div className="flex items-center gap-3 pt-2">
+                  {registerStep > 1 && (
+                    <button
+                      type="button"
+                      onClick={goBack}
+                      className={`flex items-center gap-1.5 rounded-lg border px-4 py-3 text-sm font-medium transition-colors duration-150 ${secondaryButtonClasses}`}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Back
+                    </button>
+                  )}
+
+                  {registerStep < 3 ? (
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      disabled={registerStep === 1 ? !step1Valid : !step2Valid}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-50"
+                      style={{ backgroundColor: '#0B1E3D' }}
+                    >
+                      Continue
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-70"
+                      style={{ backgroundColor: '#0B1E3D' }}
+                    >
+                      {submitting && (
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                      )}
+                      {submitting ? 'Submitting...' : 'Submit Facility Application'}
+                    </button>
+                  )}
+                </div>
+
+                {registerStep === 3 && (
+                  <div className={`flex items-center justify-center gap-1.5 text-xs ${mutedText}`}>
+                    <Clock className="h-3.5 w-3.5" />
+                    Average approval time: <span className={`font-medium ${headingText}`}>24–48 hours</span>
+                  </div>
+                )}
+              </form>
+
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => onShowAuth('login')}
+                  className={`text-sm transition-colors ${mutedText}`}
+                >
+                  Already approved?{' '}
+                  <span className="font-medium hover:underline" style={{ color: accent }}>Sign In</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </main>
 
@@ -591,9 +878,11 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
       <Link
         href="/pages/admin"
         aria-label="Open Admin Console"
-        className="group fixed bottom-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-gray text-white shadow-lg shadow-blue-900/30 transition-all duration-300 hover:scale-110 hover:shadow-blue-900/50"
+        className={`group fixed bottom-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full border shadow-sm transition-colors duration-200 ${
+          isDark ? 'border-[#1E3358] bg-[#0F2038] text-[#8CA0BE] hover:border-[#4C8DFF]' : 'border-[#E2E8F0] bg-white text-[#5B6B85] hover:border-[#1B3A6B]'
+        }`}
       >
-        <UserCogIcon className='text-gray-400'/>
+        <UserCogIcon className="h-5 w-5" />
       </Link>
     </div>
   );

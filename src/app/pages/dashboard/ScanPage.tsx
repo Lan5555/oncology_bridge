@@ -51,10 +51,10 @@ const ScanPage: React.FC<ScanPageProps> = ({ scanVisible, onSimulateScan }) => {
       <div className="card">
         <div className="ch"><div><div className="ct">Log Scanned Item</div><div className="cs">Confirm and submit to network ledger</div></div></div>
         <div className="form-row">
-          <div className="form-group"><label>Facility</label><select><option>Lagos University Teaching Hospital</option><option>EKO Hospital</option><option>UCH Ibadan</option><option>Lagos Island GH</option></select></div>
-          <div className="form-group"><label>Role Action</label><select><option>Flag as Available for Redistribution</option><option>Log as New Stock</option><option>Flag as Near-Expiry</option></select></div>
+          <div className="form-group"><label>Facility</label><select className="p-2"><option>Lagos University Teaching Hospital</option><option>EKO Hospital</option><option>UCH Ibadan</option><option>Lagos Island GH</option></select></div>
+          <div className="form-group"><label>Role Action</label><select className="p-2"><option>Flag as Available for Redistribution</option><option>Log as New Stock</option><option>Flag as Near-Expiry</option></select></div>
         </div>
-        <div className="form-group"><label>Notes (optional)</label><textarea placeholder="e.g. received from Pfizer distributor batch run"></textarea></div>
+        <div className="form-group"><label>Notes (optional)</label><textarea className="p-2" placeholder="e.g. received from Pfizer distributor batch run"></textarea></div>
         <div style={{display: 'flex', gap: '8px'}}>
           <button className="btn btn-primary" style={{flex: '1', justifyContent: 'center'}}><svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg>Submit to Ledger</button>
           <button className="btn btn-outline">Clear</button>

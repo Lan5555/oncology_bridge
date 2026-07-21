@@ -51,7 +51,7 @@ export default function CrisisCard() {
       className="bg-navy rounded-2xl p-8 w-full relative overflow-hidden"
     >
       {/* Background gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-sky-500/10 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-br from-sky-500/10 via-transparent to-transparent pointer-events-none" />
 
       <div className="relative z-10">
         <div className="font-display text-8xl font-extrabold tracking-[-3px] leading-none text-gradient-red mb-1">
@@ -64,7 +64,7 @@ export default function CrisisCard() {
         <div className="flex flex-col gap-2.5">
           {BARS.map((bar) => (
             <div className="flex items-center gap-2.5" key={bar.label}>
-              <div className="text-[11.5px] text-white/40 w-[110px] flex-shrink-0">
+              <div className="text-[11.5px] text-white/40 w-27.5 shrink-0">
                 {bar.label}
               </div>
               <div className="flex-1 h-1.5 bg-white/10 rounded-[3px] overflow-hidden">
@@ -78,7 +78,7 @@ export default function CrisisCard() {
                   }}
                 />
               </div>
-              <div className="text-[11.5px] font-semibold text-white/40 w-[30px] text-right">
+              <div className="text-[11.5px] font-semibold text-white/40 w-7.5 text-right">
                 {bar.pct}%
               </div>
             </div>
@@ -92,7 +92,7 @@ export default function CrisisCard() {
           </div>
           
           <div className="flex items-center gap-2.5">
-            <div className="text-[11.5px] text-white/50 w-[110px] flex-shrink-0">
+            <div className="text-[11.5px] text-white/50 w-27.5 shrink-0">
               Stock-out rate
             </div>
             <div className="flex-1 h-1.5 bg-white/10 rounded-[3px] overflow-hidden">
@@ -107,7 +107,7 @@ export default function CrisisCard() {
                 }}
               />
             </div>
-            <div className="text-[11.5px] font-semibold text-emerald-500 w-[30px] text-right">
+            <div className="text-[11.5px] font-semibold text-emerald-500 w-7.5 text-right">
               28%
             </div>
           </div>

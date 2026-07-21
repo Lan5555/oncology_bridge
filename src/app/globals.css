@@ -2169,7 +2169,7 @@ input,
 select,
 textarea {
   width: 100%;
-  padding: 8px 11px;
+  /* padding: 8px 11px; */
   border: 1px solid var(--g200);
   border-radius: var(--rsm);
   font-size: 13px;

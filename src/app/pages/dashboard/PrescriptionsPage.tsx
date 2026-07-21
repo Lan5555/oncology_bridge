@@ -108,12 +108,12 @@ const PrescriptionsPage: React.FC<PrescriptionsPageProps> = ({ onNav, onOpenModa
         <div className="g-stack">
           <div className="card">
             <div className="ch"><div><div className="ct">New Prescription</div><div className="cs">Doctor micro-interface</div></div></div>
-            <div className="form-group"><label>ICD-10 Diagnosis Code</label><select><option>C50.4 — Breast cancer, upper-outer quadrant</option><option>C85.1 — B-cell lymphoma</option><option>C18.7 — Colon cancer</option></select></div>
+            <div className="form-group"><label>ICD-10 Diagnosis Code</label><select className="p-2"><option>C50.4 — Breast cancer, upper-outer quadrant</option><option>C85.1 — B-cell lymphoma</option><option>C18.7 — Colon cancer</option></select></div>
             <div className="form-row">
-              <div className="form-group"><label>TNM Stage</label><select><option>Stage I</option><option>Stage II</option><option>Stage IIIA</option><option>Stage IV</option></select></div>
-              <div className="form-group"><label>Insurer</label><select><option>AXA Mansard</option><option>NHIA</option><option>Hygeia HMO</option><option>Cash Pay</option></select></div>
+              <div className="form-group"><label>TNM Stage</label><select className="p-2"><option>Stage I</option><option>Stage II</option><option>Stage IIIA</option><option>Stage IV</option></select></div>
+              <div className="form-group"><label>Insurer</label><select className="p-2"><option>AXA Mansard</option><option>NHIA</option><option>Hygeia HMO</option><option>Cash Pay</option></select></div>
             </div>
-            <div className="form-group"><label>Drug (HMO-filtered)</label><select><option>Trastuzumab</option><option>Pertuzumab</option></select></div>
+            <div className="form-group"><label>Drug (HMO-filtered)</label><select className="p-2"><option>Trastuzumab</option><option>Pertuzumab</option></select></div>
             <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>Send to Network</button>
           </div>
         </div>
