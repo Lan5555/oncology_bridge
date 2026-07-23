@@ -1,6 +1,7 @@
 'use client';
 
 import { PageId } from "../lib/types";
+import { useProvider } from "../providers/provider";
 
 
 
@@ -13,6 +14,7 @@ interface TopNavProps {
 }
 
 export default function TopNav({ activePage, onNav, onToggleSidebar, onToggleTheme, onOpenModal }: TopNavProps) {
+  const {userData} = useProvider();
   return (
     <nav className="topnav">
       <div className="logo">
@@ -22,7 +24,7 @@ export default function TopNav({ activePage, onNav, onToggleSidebar, onToggleThe
         </div>
         <div>
           <div className="logo-name">Oncology Bridge</div>
-          <div className="logo-tag">Lagos–Ibadan Network</div>
+          <div className="logo-tag">{userData.user?.hospital?.name}</div>
         </div>
       </div>
     
@@ -34,7 +36,7 @@ export default function TopNav({ activePage, onNav, onToggleSidebar, onToggleThe
       </div>
     
       <div className="nav-r">
-        <div className="live-badge"><div className="live-dot"></div>Network Live</div>
+        <div className="live-badge"><div className="live-dot"></div>{userData.user?.first_name}&nbsp;{userData.user?.last_name}</div>
         <button className="notif-btn" title="Toggle Dark Mode" onClick={onToggleTheme}><svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
         <button className="notif-btn" aria-label="Notifications" onClick={() => onOpenModal('modal-notifications')}><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><div className="notif-pip"></div></button>
         <div className="avatar"><img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop" alt="User"/></div>

@@ -22,6 +22,9 @@ import {
 import { FACILITY_SERVICE } from '../services/facility-service/facility-service';
 import { toast } from 'sonner';
 import { AUTH_SERVICE } from '../services/auth-service/auth-service';
+import { useProvider } from '../providers/provider';
+import { FacilityResponse } from '../models/facility-model';
+import { UserResponse } from '../models/user-model';
 
 interface AuthPagesProps {
   view: AuthView;
@@ -66,6 +69,9 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
   const [adminPhone, setAdminPhone] = useState<string>('');
   const [registerPassword, setRegisterPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const {setUser, setFacilityResponse} = useProvider();
+  
+
 
   // Handle hydration
   useEffect(() => {
@@ -123,8 +129,10 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
       password
     };
     const res = await AUTH_SERVICE.signIn(payload);
-    if(res.success){
+    if(res.success && res.data){
       toast.success(res.message);
+      const user = UserResponse.fromJson(res.data);
+      setUser(user);
       onDoLogin();
       setSubmitting(false);
     }else{
@@ -157,8 +165,10 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
       
     }
     const res = await FACILITY_SERVICE.registerFacility(payload);
-    if(res.success){
+    if(res.success && res.data){
       setSubmitting(false);
+      const facility = FacilityResponse.fromJson(res.data);
+      setFacilityResponse(facility);
       onShowAuth('login');
       toast.success(res.message);
     }else{
