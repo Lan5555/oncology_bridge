@@ -8,6 +8,8 @@ interface ModalsProps {
   onCloseModal: (id: ModalId) => void;
 }
 
+
+
 export default function Modals({ openModalId, onCloseModal }: ModalsProps) {
   return (
     <>
@@ -43,21 +45,21 @@ export default function Modals({ openModalId, onCloseModal }: ModalsProps) {
     <div className="modal-b">
       <div className="form-group">
         <label>Select Drug from Surplus</label>
-        <select><option>Trastuzumab (Lot TZ-2204-B) - LUTH</option><option>Rituximab (Lot RX-0912-A) - EKO</option></select>
+        <select className="p-2"><option>Trastuzumab (Lot TZ-2204-B) - LUTH</option><option>Rituximab (Lot RX-0912-A) - EKO</option></select>
       </div>
       <div className="form-row">
         <div className="form-group">
           <label>Quantity</label>
-          <input type="number" defaultValue="1" min="1"/>
+          <input type="number" defaultValue="1" min="1" className="p-2"/>
         </div>
         <div className="form-group">
           <label>Recipient Facility</label>
-          <select><option>LASUTH</option><option>Lagos Island GH</option><option>UCH Ibadan</option></select>
+          <select className="p-2"><option>LASUTH</option><option>Lagos Island GH</option><option>UCH Ibadan</option></select>
         </div>
       </div>
       <div className="form-group">
         <label>Urgency Level</label>
-        <select><option>Standard (48h)</option><option>Urgent (24h)</option><option>Emergency (Same Day)</option></select>
+        <select className="p-2"><option>Standard (48h)</option><option>Urgent (24h)</option><option>Emergency (Same Day)</option></select>
       </div>
     </div>
     <div className="modal-f">
@@ -92,19 +94,19 @@ export default function Modals({ openModalId, onCloseModal }: ModalsProps) {
     <div className="modal-b">
       <div className="form-group">
         <label>Patient ID / Name</label>
-        <input type="text" placeholder="e.g. #0493 or John Doe"/>
+        <input type="text" placeholder="e.g. #0493 or John Doe" className="p-2"/>
       </div>
       <div className="form-group">
         <label>ICD-10 Diagnosis Code</label>
-        <select><option>🎗️ C50.4 — Breast cancer, upper-outer quadrant</option><option>🩸 C85.1 — B-cell lymphoma</option><option>💊 C18.7 — Colon cancer</option></select>
+        <select className="p-2"><option>🎗️ C50.4 — Breast cancer, upper-outer quadrant</option><option>🩸 C85.1 — B-cell lymphoma</option><option>💊 C18.7 — Colon cancer</option></select>
       </div>
       <div className="form-row">
-        <div className="form-group"><label>TNM Stage</label><select><option>❶ Stage I</option><option>❷ Stage II</option><option>❸ Stage IIIA</option><option>❹ Stage IV</option></select></div>
-        <div className="form-group"><label>Insurer</label><select><option>🛡️ AXA Mansard</option><option>🏛️ NHIA</option><option>🏥 Hygeia HMO</option><option>💵 Cash Pay</option></select></div>
+        <div className="form-group"><label>TNM Stage</label><select className="p-2"><option>❶ Stage I</option><option>❷ Stage II</option><option>❸ Stage IIIA</option><option>❹ Stage IV</option></select></div>
+        <div className="form-group"><label>Insurer</label><select className="p-2"><option>🛡️ AXA Mansard</option><option>🏛️ NHIA</option><option>🏥 Hygeia HMO</option><option>💵 Cash Pay</option></select></div>
       </div>
       <div className="form-group">
         <label>Drug (HMO-filtered)</label>
-        <select><option>Trastuzumab</option><option>Pertuzumab</option><option>Rituximab</option></select>
+        <select className="p-2"><option>Trastuzumab</option><option>Pertuzumab</option><option>Rituximab</option></select>
       </div>
     </div>
     <div className="modal-f">

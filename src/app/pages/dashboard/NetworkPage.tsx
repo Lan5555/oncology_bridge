@@ -1,4 +1,5 @@
 import type React from 'react';
+import { toast } from 'sonner';
 
 const NetworkPage: React.FC = () => {
   return (
@@ -17,7 +18,7 @@ const NetworkPage: React.FC = () => {
           <svg style={{width: '64px', height: '64px', fill: 'none', stroke: 'var(--p)', strokeWidth: '1', marginBottom: '16px', opacity: '0.6'}} viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <p style={{fontSize: '15px', fontWeight: '600', color: 'var(--g800)', marginBottom: '6px'}}>Geospatial Network View</p>
           <p style={{fontSize: '12.5px', maxWidth: '300px', lineHeight: '1.6'}}>Live visualization of the 120km Lagos–Ibadan oncology corridor. Showing real-time stock movement and transit routes.</p>
-          <button className="btn btn-primary" style={{marginTop: '20px'}}>Initialize Map Engine</button>
+          <button className="btn btn-primary" style={{marginTop: '20px'}} onClick={() => toast.info("Map Engine will be initialized here.")}>Initialize Map Engine</button>
         </div>
         
         <div style={{position: 'absolute', inset: '0', opacity: '0.05', backgroundImage: 'radial-gradient(var(--p) 1px, transparent 0)', backgroundSize: '24px 24px'}}></div>

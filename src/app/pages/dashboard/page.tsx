@@ -16,6 +16,7 @@ import SettingsPage from "./SettingsPage";
 import TransfersPage from "./TransfersPage";
 import UsersPage from "./UsersPage";
 import DashboardPage from "./DashboardPage";
+import Camera from "@/app/components/Camera/camera";
 
 const DashboardView: React.FC = () => {
   const [activePage, setActivePage] = useState<PageId>('pg-dashboard');
@@ -23,6 +24,7 @@ const DashboardView: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openModalId, setOpenModalId] = useState<ModalId | null>(null);
   const [scanVisible, setScanVisible] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem('theme') as Theme | null;
@@ -66,9 +68,14 @@ const DashboardView: React.FC = () => {
   };
 
   const handleSimulateScan = () => {
-    setScanVisible(false);
+    setCameraOpen(prev => !prev);
+    scanVail();
     window.setTimeout(() => setScanVisible(true), 600);
   };
+
+  const scanVail = () => {
+    setScanVisible(false);
+  }
 
   // Dashboard no longer shows auth UI; authentication is handled on /auth route.
 
@@ -107,6 +114,7 @@ const DashboardView: React.FC = () => {
       </div>
 
       <Modals openModalId={openModalId} onCloseModal={() => setOpenModalId(null)} />
+        {cameraOpen ? <Camera/> : null}
     </>
   );
 }

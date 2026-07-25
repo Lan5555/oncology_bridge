@@ -10,14 +10,14 @@ const SettingsPage: React.FC = () => {
     <div className="g-stack">
       <div className="card">
         <div className="ch"><div className="ct">General Configuration</div></div>
-        <div className="form-group"><label>Network Name</label><input type="text" defaultValue="Lagos–Ibadan Oncology Network"/></div>
+        <div className="form-group"><label>Network Name</label><input type="text" defaultValue="Lagos–Ibadan Oncology Network" className="p-2"/></div>
         <div className="form-row">
-          <div className="form-group"><label>Alert Threshold (Days)</label><input type="number" defaultValue="60"/></div>
-          <div className="form-group"><label>Currency Display</label><select><option>NGN (₦)</option><option>USD ($)</option></select></div>
+          <div className="form-group"><label>Alert Threshold (Days)</label><input type="number" defaultValue="60" className="p-2"/></div>
+          <div className="form-group"><label>Currency Display</label><select className="p-2"><option>NGN (₦)</option><option>USD ($)</option></select></div>
         </div>
         <div className="form-group">
           <label>Notification Email</label>
-          <input type="email" defaultValue="admin@oncologybridge.org"/>
+          <input type="email" defaultValue="admin@oncologybridge.org" className="p-2"/>
         </div>
         <button className="btn btn-primary">Update Profile</button>
       </div>
@@ -43,7 +43,7 @@ const SettingsPage: React.FC = () => {
             <div style={{fontSize: '13px', fontWeight: '600'}}>IP Lockdown</div>
             <div style={{fontSize: '11px', color: 'var(--g500)'}}>Restrict access to whitelisted facility IPs</div>
           </div>
-          <input type="checkbox" style={{width: '40px', height: '20px'}} defaultChecked/>
+          <input type="checkbox" className="p-2" style={{width: '40px', height: '20px'}} defaultChecked/>
         </div>
       </div>
     </div>
@@ -53,7 +53,7 @@ const SettingsPage: React.FC = () => {
         <div className="ch"><div className="ct">Data & Sync</div></div>
         <div className="form-group">
           <label>Sync Frequency</label>
-          <select><option>Real-time (Push)</option><option>Every 5 minutes</option><option>Every 15 minutes</option></select>
+          <select className="p-2"><option>Real-time (Push)</option><option>Every 5 minutes</option><option>Every 15 minutes</option></select>
         </div>
         <div className="form-group" style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '1rem'}}>
           <input type="checkbox" id="chk-offline" style={{width: 'auto'}} defaultChecked/>

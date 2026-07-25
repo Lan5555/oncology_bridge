@@ -106,9 +106,9 @@ export default function NetworkDiagram() {
               <path id="path5" d="M420,100 L420,190" fill="none"/>
     
               
-              <rect x="258" y="118" width="124" height="22" rx="11" fill="rgba(16,185,129,.12)" stroke="rgba(16,185,129,.3)" strokeWidth="1"/>
-              <circle cx="275" cy="129" r="4" fill="#10B981"><animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite"/></circle>
-              <text x="283" y="133" fill="#10B981" fontSize="8.5" fontFamily="Inter" fontWeight="600">All systems verified · GS1 active</text>
+              <rect x="258" y="130" width="156" height="22" rx="11" fill="rgba(16,185,129,.12)" stroke="rgba(16,185,129,.3)" strokeWidth="1"/>
+              <circle cx="275" cy="139" r="4" fill="#10B981"><animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite"/></circle>
+              <text x="283" y="142" fill="#10B981" fontSize="8.5" fontFamily="Inter" fontWeight="600">All systems verified · GS1 active</text>
             </svg>
   );
 }
