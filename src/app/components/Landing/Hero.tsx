@@ -1,6 +1,8 @@
 import Particles from './Particles';
 import NetworkDiagram from './NetworkDiagram';
 import styles from '@/app/pages/landing/landing.module.css';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 const WORDS: { text: string; delay: number; accent?: boolean; break?: boolean }[] = [
   { text: 'No\u00A0', delay: 0.3 },
@@ -20,6 +22,7 @@ const WORDS: { text: string; delay: number; accent?: boolean; break?: boolean }[
 ];
 
 export default function Hero() {
+  const router= useRouter();
   return (
     <section className={styles['hero']}>
       <Particles />
@@ -52,11 +55,11 @@ export default function Hero() {
         </p>
 
         <div className={styles['hero-actions']}>
-          <button className={styles['btn-hero-primary']}>
+          <button className={styles['btn-hero-primary']} onClick={()=> router.push('/pages/auth')}>
             <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
             Request Platform Access
           </button>
-          <button className={styles['btn-hero-ghost']}>
+          <button className={styles['btn-hero-ghost']} onClick={() => toast.info('A link to demo would be connected here..')}>
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><polygon points="10,8 16,12 10,16" /></svg>
             Watch Demo
           </button>

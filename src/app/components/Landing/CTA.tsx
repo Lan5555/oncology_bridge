@@ -1,6 +1,7 @@
 'use client';
 import styles from '@/app/pages/landing/landing.module.css';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 export default function CTA() {
   const router = useRouter();
   return (
@@ -14,8 +15,8 @@ export default function CTA() {
           solution.
         </p>
         <div className={styles['cta-actions']}>
-          <button className={styles['btn-cta'] + ' ' + styles['primary']} onClick={() => router.push('/auth')}>Apply for Facility Access</button>
-          <button className={styles['btn-cta'] + ' ' + styles['outline']} onClick={() => router.push('/pages/demo')}>Schedule a Demo</button>
+          <button className={styles['btn-cta'] + ' ' + styles['primary']} onClick={() => router.push('/pages/auth')}>Apply for Facility Access</button>
+          <button className={styles['btn-cta'] + ' ' + styles['outline']} onClick={() => toast.info('Demo would be scheduled here..')}>Schedule a Demo</button>
         </div>
       </div>
     </section>
