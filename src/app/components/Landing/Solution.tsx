@@ -65,7 +65,7 @@ export default function Solution() {
           <div className={styles['img-frame']} style={{ height: '300px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=800"
+              src="https://media.istockphoto.com/id/2207690669/photo/friendly-female-doctor-smiling-during-a-consultation-in-a-bright-office-setting.webp?a=1&b=1&s=612x612&w=0&k=20&c=7KE5IlD0YO_Pq9zPYisXHk1-9pBsXMS6oWJd93DXHEw="
               alt="Medical Lab"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
