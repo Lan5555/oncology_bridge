@@ -1,3 +1,4 @@
+'use client'
 import Particles from './Particles';
 import NetworkDiagram from './NetworkDiagram';
 import styles from '@/app/pages/landing/landing.module.css';
