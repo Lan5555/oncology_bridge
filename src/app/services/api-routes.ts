@@ -2,9 +2,12 @@ const route = (module: string, endpoint: string) =>
   `/${module}/api/${endpoint}`;
 
 export class Routes {
+  //Auth
   static SIGN_IN = route("auth", "login");
   static SIGN_OUT = route("auth", "log-out");
+  static PING_SERVER = route("auth", "ping-server");
 
+  //Facility
   static REGISTER_FACILITY = route("hospital", "register-facility");
   static FIND_ALL_FACILITIES = route("hospital", "find-all-facilities");
   static FIND_ONE_FACILITY = route("hospital", "find-one-facility");

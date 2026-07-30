@@ -10,5 +10,9 @@ class AuthService extends CoreService {
         return await this.get(`${Routes.SIGN_OUT}/${id}`);
     }
 
+    public async pingServer(){
+        return await this.get(Routes.PING_SERVER);
+    }
+
 }
 export const AUTH_SERVICE: AuthService = new AuthService();

@@ -456,7 +456,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                   type="submit"
                   disabled={submitting}
                   className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-70"
-                  style={{ backgroundColor: '#0B1E3D' }}
+                  style={{ backgroundColor: isDark ? '#FFFFFF': '#0B1E3D', color: isDark ? '#0B1E3D': '#FFFFFF' }}
                 >
                   {submitting && (
                     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -839,7 +839,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                       onClick={goNext}
                       disabled={registerStep === 1 ? !step1Valid : !step2Valid}
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-50"
-                      style={{ backgroundColor: '#0B1E3D' }}
+                      style={{ backgroundColor: isDark ? '#FFFFFF': '#0B1E3D', color: isDark ? '#0B1E3D': '#FFFFFF' }}
                     >
                       Continue
                       <ChevronRight className="h-4 w-4" />
@@ -849,7 +849,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                       type="submit"
                       disabled={submitting}
                       className="flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-70"
-                      style={{ backgroundColor: '#0B1E3D' }}
+                      style={{ backgroundColor: isDark ? '#FFFFFF': '#0B1E3D', color: isDark ? '#0B1E3D': '#FFFFFF' }}
                     >
                       {submitting && (
                         <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">

@@ -5,12 +5,25 @@ import { useRouter } from 'next/navigation';
 import AuthPages from '@/app/components/AuthPages';
 import { AuthView } from '@/app/lib/types';
 import Link from 'next/link';
+import { AUTH_SERVICE } from '@/app/services/auth-service/auth-service';
+import { toast } from 'sonner';
+import PingServerLoader from '@/app/components/Loader/ping-server.';
 
 export default function AuthPage() {
   const [view, setView] = useState<AuthView>('login');
   const router = useRouter();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isMounted, setIsMounted] = useState(false);
+  const [serverReady, setServerReady] = useState<boolean>(false);
+
+  const pingServer = async() => {
+    const res = await AUTH_SERVICE.pingServer();
+    if(res.success){
+      setServerReady(true);
+    }else{
+      toast.error(res.message);
+    }
+  }
 
   // Handle hydration - only run on client
   useEffect(() => {
@@ -21,6 +34,7 @@ export default function AuthPage() {
     } else if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
       setTheme('dark');
     }
+    pingServer();
   }, []);
 
   // Update theme when it changes
@@ -48,6 +62,11 @@ export default function AuthPage() {
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
       </div>
     );
+  }
+  if(!serverReady){
+    return (
+      <PingServerLoader/>
+    )
   }
 
   return (
