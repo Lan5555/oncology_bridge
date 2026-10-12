@@ -4,9 +4,9 @@ import { Toaster } from "sonner";
 import { AppProvider } from "./providers/provider";
 
 export const metadata: Metadata = {
-  title: "Oncology Bridge — Closing Nigeria's Cancer Drug Gap",
+  title: "Oncosourz — Closing Nigeria's Cancer Drug Gap",
   description:
-    'Oncology Bridge is a real-time inventory visibility and verification platform closing Nigeria\'s cancer drug access gap — one verified vial at a time.',
+    'Oncosourz is a real-time inventory visibility and verification platform closing Nigeria\'s cancer drug access gap — one verified vial at a time.',
 };
 
 export default function RootLayout({

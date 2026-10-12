@@ -1,5 +1,5 @@
 import Reveal from './Reveal';
-import styles from  '@/app/pages/landing/landing.module.css';
+import { EYEBROW, H2_DARK, INNER, P_DARK, SECTION } from './classes';
 
 const STEPS = [
   {
@@ -42,24 +42,24 @@ const STEPS = [
 
 export default function Workflow() {
   return (
-    <section className={styles['section']} id="workflow">
-      <div className={styles['section-inner']}>
-        <div style={{ maxWidth: '560px', marginBottom: 0 }}>
-          <div className={styles['section-eyebrow']}>How It Works</div>
-          <h2 className={styles['section-h2']}>From pharmacy shelf to treatment chair — verified every step.</h2>
-          <p className={styles['section-p']}>
+    <section className={SECTION} id="workflow">
+      <div className={INNER}>
+        <div className="max-w-[560px]">
+          <div className={EYEBROW}>How It Works</div>
+          <h2 className={H2_DARK}>From pharmacy shelf to treatment chair — verified every step.</h2>
+          <p className={P_DARK}>
             Six integrated stages ensure a vial&rsquo;s journey is tracked, authenticated, and
             cold-chain-secured before it reaches a patient.
           </p>
         </div>
 
-        <div className={styles['workflow-steps']}>
+        <div className="mt-12 grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-6">
           {STEPS.map((s, i) => (
-            <Reveal className={styles['wf-card']} key={s.num} delayMs={i * 80}>
-              <div className={styles['wf-step-num']}>{s.num}</div>
-              <div className={styles['wf-icon']}><svg viewBox="0 0 24 24">{s.icon}</svg></div>
-              <div className={styles['wf-title']}>{s.title}</div>
-              <div className={styles['wf-body']}>{s.body}</div>
+            <Reveal className="relative translate-y-6 overflow-hidden rounded-[14px] border border-[#E2E8F0] bg-white p-7 transition-[opacity,translate,box-shadow] duration-500 before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:bg-linear-135 before:from-sky before:to-cyan before:content-[''] hover:-translate-y-[3px]! hover:shadow-[0_12px_40px_rgba(14,165,233,0.12)]" key={s.num} delayMs={i * 80}>
+              <div className="absolute top-4 right-5 font-display text-[2.5rem] leading-none font-extrabold tracking-[-2px] text-sky/12">{s.num}</div>
+              <div className="mb-4 flex size-[38px] items-center justify-center rounded-[9px] bg-offwhite"><svg viewBox="0 0 24 24" className="size-[18px] fill-none stroke-sky stroke-2">{s.icon}</svg></div>
+              <div className="mb-1.5 font-display text-sm font-bold text-navy">{s.title}</div>
+              <div className="text-[13px] leading-[1.65] text-slate-2">{s.body}</div>
             </Reveal>
           ))}
         </div>

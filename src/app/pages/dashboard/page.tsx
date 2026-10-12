@@ -17,9 +17,18 @@ import TransfersPage from "./TransfersPage";
 import UsersPage from "./UsersPage";
 import DashboardPage from "./DashboardPage";
 import Camera from "@/app/components/Camera/camera";
+import VerificationGate from "@/app/components/VerificationGate";
+import { allowedPages as getAllowedPages } from "@/app/lib/accounts";
+import { useProvider } from "@/app/providers/provider";
 
 const DashboardView: React.FC = () => {
-  const [activePage, setActivePage] = useState<PageId>('pg-dashboard');
+  const { userData } = useProvider();
+  const accountType = userData.user?.account_type;
+  const verification = userData.user?.verification_status;
+  const allowedPages = getAllowedPages(accountType, verification);
+  const isVerified = !accountType || verification === 'VERIFIED';
+  const defaultPage: PageId = accountType === 'DOCTOR' || accountType === 'PHARMACIST' ? 'pg-prescriptions' : 'pg-dashboard';
+  const [activePage, setActivePage] = useState<PageId>(isVerified ? defaultPage : 'pg-dashboard');
   const [theme, setTheme] = useState<Theme>('light');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openModalId, setOpenModalId] = useState<ModalId | null>(null);
@@ -61,6 +70,7 @@ const DashboardView: React.FC = () => {
 
 
   const handleNav = (id: PageId) => {
+    if (allowedPages && !allowedPages.includes(id)) return;
     setActivePage(id);
     if (typeof window !== 'undefined' && window.innerWidth <= 960) {
       setSidebarOpen(false);
@@ -103,14 +113,15 @@ const DashboardView: React.FC = () => {
         onNav={handleNav}
         onOpenModal={setOpenModalId}
         onToggleSidebar={toggleSidebar}
+        allowedPages={allowedPages}
         onToggleTheme={toggleTheme}
       />
-    <div className='blue-overlay'/>
+    <div className="fixed inset-0 bg-[rgba(18,83,223,0.05)] pointer-events-none z-[9999] mix-blend-multiply"/>
 
-      <div className="shell active">
-        <Sidebar sidebarOpen={sidebarOpen} activePage={activePage} onNav={handleNav} />
+      <div className="flex min-h-[calc(100vh-64px)]">
+        <Sidebar sidebarOpen={sidebarOpen} activePage={activePage} onNav={handleNav} allowedPages={allowedPages} accountType={accountType} />
 
-        <main className="main">{pageComponents[activePage]}</main>
+        <main className="flex-1 px-8 py-7 overflow-x-hidden max-w-[calc(100vw-var(--sidebar-w))] max-lg:max-w-[100vw] max-lg:w-full max-lg:px-4 max-lg:py-5 max-md:p-4">{!isVerified && activePage !== 'pg-settings' ? <VerificationGate /> : pageComponents[activePage]}</main>
       </div>
 
       <Modals openModalId={openModalId} onCloseModal={() => setOpenModalId(null)} />

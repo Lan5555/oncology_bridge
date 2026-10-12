@@ -1,6 +1,5 @@
 'use client';
-import { useEffect, useRef } from 'react';
-import styles from '@/app/pages/landing/landing.module.css';
+import { useEffect, useRef, useState } from 'react';
 
 interface RevealProps {
   children: React.ReactNode;
@@ -10,12 +9,12 @@ interface RevealProps {
 }
 
 /**
- * Wraps its children in an element that gains the `.revealed` class
- * (defined in globals.css) once it scrolls into view. Mirrors the
- * original page's IntersectionObserver-based reveal animation.
+ * Wraps its children in an element that fades/slides in once it scrolls into view.
+ * Callers set the hidden offset and transition via className.
  */
 export default function Reveal({ children, className = '', delayMs = 0 }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -25,7 +24,7 @@ export default function Reveal({ children, className = '', delayMs = 0 }: Reveal
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add(styles['revealed']);
+            setShown(true);
             obs.unobserve(entry.target);
           }
         });
@@ -38,7 +37,12 @@ export default function Reveal({ children, className = '', delayMs = 0 }: Reveal
   }, []);
 
   return (
-    <div ref={ref} className={`${styles['reveal']} ${className}`} style={{ transitionDelay: `${delayMs}ms` }}>
+    <div
+      ref={ref}
+      data-shown={shown}
+      className={`opacity-0 data-[shown=true]:translate-x-0 data-[shown=true]:translate-y-0 data-[shown=true]:opacity-100 ${className}`}
+      style={{ transitionDelay: `${delayMs}ms` }}
+    >
       {children}
     </div>
   );

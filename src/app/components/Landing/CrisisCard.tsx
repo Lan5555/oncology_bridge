@@ -85,10 +85,10 @@ export default function CrisisCard() {
           ))}
         </div>
 
-        {/* After Oncology Bridge Section */}
+        {/* After Oncosourz Section */}
         <div className="mt-7 pt-6 border-t border-white/10">
           <div className="text-[11px] font-semibold text-white/30 uppercase tracking-[1px] mb-2.5">
-            After Oncology Bridge
+            After Oncosourz
           </div>
           
           <div className="flex items-center gap-2.5">

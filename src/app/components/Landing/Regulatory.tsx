@@ -1,11 +1,17 @@
 import Reveal from './Reveal';
-import styles from '@/app/pages/landing/landing.module.css';
+import { EYEBROW, H2_DARK, INNER, P_DARK, SECTION } from './classes';
+
+const TONES: Record<string, { bg: string; stroke: string }> = {
+  blue: { bg: 'bg-[#EFF6FF]', stroke: 'stroke-[#3B82F6]' },
+  green: { bg: 'bg-[#ecfdf5]', stroke: 'stroke-ok' },
+  amber: { bg: 'bg-[#FFFBEB]', stroke: 'stroke-warn' },
+};
 const REGS = [
   {
     tone: 'blue',
     icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
     title: 'NAFDAC Maturity Level 4',
-    body: "Nigeria's shift to full traceability makes digital inventory tracking a regulatory requirement. Oncology Bridge is the user-friendly front-end for NAFDAC compliance.",
+    body: "Nigeria's shift to full traceability makes digital inventory tracking a regulatory requirement. Oncosourz is the user-friendly front-end for NAFDAC compliance.",
   },
   {
     tone: 'green',
@@ -29,22 +35,22 @@ const REGS = [
 
 export default function Regulatory() {
   return (
-    <section className={styles['section'] + ' ' + styles['regs']} id="regulatory">
-      <div className={styles['section-inner']}>
-        <div style={{ textAlign: 'center', maxWidth: '560px', margin: '0 auto 3rem' }}>
-          <div className={styles['section-eyebrow']} style={{ justifyContent: 'center' }}>2026 Regulatory Tailwinds</div>
-          <h2 className={styles['section-h2']} style={{ textAlign: 'center' }}>Built for the regulatory moment Nigeria is entering.</h2>
-          <p className={styles['section-p']} style={{ margin: '0 auto', textAlign: 'center' }}>
+    <section className={`${SECTION} bg-white`} id="regulatory">
+      <div className={INNER}>
+        <div className="mx-auto mb-12 max-w-[560px] text-center">
+          <div className={`${EYEBROW} justify-center`}>2026 Regulatory Tailwinds</div>
+          <h2 className={`${H2_DARK} text-center`}>Built for the regulatory moment Nigeria is entering.</h2>
+          <p className={`${P_DARK} mx-auto text-center`}>
             Three converging forces make this the right platform at the right time.
           </p>
         </div>
-        <div className={styles['reg-grid']}>
+        <div className="mt-12 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-5">
           {REGS.map((r) => (
-            <Reveal className={styles['reg-card']} key={r.title}>
-              <div className={styles['reg-ico'] + ' ' + r.tone}><svg viewBox="0 0 24 24">{r.icon}</svg></div>
+            <Reveal className="flex translate-y-4 items-start gap-3.5 rounded-xl border border-[#E2E8F0] p-6 transition-[opacity,translate,box-shadow] duration-500 hover:border-sky-light hover:shadow-[0_6px_24px_rgba(14,165,233,0.1)]" key={r.title}>
+              <div className={`flex size-10 shrink-0 items-center justify-center rounded-[10px] ${TONES[r.tone].bg}`}><svg viewBox="0 0 24 24" className={`size-5 fill-none stroke-2 ${TONES[r.tone].stroke}`}>{r.icon}</svg></div>
               <div>
-                <div className={styles['reg-title']}>{r.title}</div>
-                <div className={styles['reg-body']}>{r.body}</div>
+                <div className="mb-1 font-display text-sm font-bold text-navy">{r.title}</div>
+                <div className="text-[13px] leading-[1.6] text-slate-2">{r.body}</div>
               </div>
             </Reveal>
           ))}

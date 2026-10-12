@@ -1,10 +1,14 @@
 import { Hospital } from "lucide-react";
 import { Facility } from "./facility-model";
 import { Role } from "./role-model";
+import type { AccountType, VerificationStatus } from "../lib/accounts";
 
 export class User {
     public id?: string;
     public role?: Role;
+    public account_type?: AccountType;
+    public license_number: string = '';
+    public verification_status: VerificationStatus = 'VERIFIED';
     public hospital?: Facility;
     public first_name: string = '';
     public last_name: string = '';
@@ -37,6 +41,9 @@ export class User {
         return new User({
             id: data.id,
             role: data.role,
+            account_type: data.account_type,
+            license_number: data.license_number ?? '',
+            verification_status: data.verification_status ?? (data.account_type ? 'PENDING' : 'VERIFIED'),
             hospital: data.hospital,
             first_name: data.first_name ?? '',
             last_name: data.last_name ?? '',

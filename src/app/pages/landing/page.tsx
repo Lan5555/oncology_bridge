@@ -10,7 +10,6 @@ import Solution from "@/app/components/Landing/Solution";
 import Stats from "@/app/components/Landing/Stats";
 import TrustBar from "@/app/components/Landing/TrustBar";
 import Workflow from "@/app/components/Landing/Workflow";
-import styles from './landing.module.css'
 
 
 const HomePage:React.FC = () => {

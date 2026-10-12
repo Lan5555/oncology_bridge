@@ -18,13 +18,19 @@ import {
   EyeOff,
   Info,
   Clock,
+  Stethoscope,
+  Pill,
+  Store,
+  BadgeCheck,
 } from 'lucide-react';
 import { FACILITY_SERVICE } from '../services/facility-service/facility-service';
 import { toast } from 'sonner';
 import { AUTH_SERVICE } from '../services/auth-service/auth-service';
+import { VERIFICATION_SERVICE } from '../services/verification-service/verification-service';
 import { useProvider } from '../providers/provider';
 import { FacilityResponse } from '../models/facility-model';
 import { UserResponse } from '../models/user-model';
+import { ACCOUNT_TYPES, AccountType, getAccountInfo } from '../lib/accounts';
 
 interface AuthPagesProps {
   view: AuthView;
@@ -35,10 +41,17 @@ interface AuthPagesProps {
 }
 
 const STEPS = [
-  { id: 1, label: 'Facility Information' },
-  { id: 2, label: 'Administrator' },
-  { id: 3, label: 'Verification' },
+  { id: 1, label: 'Account Type' },
+  { id: 2, label: 'Practice Details' },
+  { id: 3, label: 'Your Details' },
+  { id: 4, label: 'Verification' },
 ] as const;
+
+const ACCOUNT_ICONS: Record<AccountType, typeof Stethoscope> = {
+  DOCTOR: Stethoscope,
+  PHARMACIST: Pill,
+  PHARMACY_STORE: Store,
+};
 
 export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggleTheme }: AuthPagesProps) {
   const isLogin = view === 'login';
@@ -53,7 +66,9 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
   const [password, setPassword] = useState<string>('');
 
   // Registration — Step 1: Facility Information
-  const [registerStep, setRegisterStep] = useState<1 | 2 | 3>(1);
+  const [registerStep, setRegisterStep] = useState<1 | 2 | 3 | 4>(1);
+  const [accountType, setAccountType] = useState<AccountType | null>(null);
+  const [licenseNumber, setLicenseNumber] = useState<string>('');
   const [facilityName, setFacilityName] = useState<string>('');
   const [facilityType, setFacilityType] = useState<string>('');
   const [facilityEmail, setFacilityEmail] = useState<string>('');
@@ -143,14 +158,28 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
 
   const handleRegisterSubmit = async(e: any) => {
     e.preventDefault();
+    if (!accountType) return;
     setSubmitting(true);
+    const info = getAccountInfo(accountType)!;
+    const verification = await VERIFICATION_SERVICE.verifyLicense({
+      licenseNumber: licenseNumber.trim(),
+      registry: info.registry,
+      lastName: accountType === 'PHARMACY_STORE' ? undefined : adminLastName.trim(),
+    });
     const payload = {
+      account_type: accountType,
+      license: {
+        number: licenseNumber.trim(),
+        registry: info.registry,
+        verification_status: verification.status,
+        registry_result: verification.registryResult,
+      },
       facility: {
       name: facilityName,
       facility_type: facilityType,
-      email: facilityEmail,
+      email: isStore ? facilityEmail : workEmail,
       phone: facilityPhone,
-      address: facilityAddress,
+      address: isStore ? facilityAddress : `${facilityCity}, ${facilityState}`,
       city: facilityCity,
       state: facilityState
       },
@@ -178,18 +207,28 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
     }
   };
 
-  const step1Valid = Boolean(
-    facilityName.trim() && facilityType && facilityEmail.trim() && facilityPhone.trim() &&
-    facilityAddress.trim() && facilityCity.trim() && facilityState.trim()
+  const isStore = accountType === 'PHARMACY_STORE';
+  const accountInfo = getAccountInfo(accountType ?? undefined);
+  const step1Valid = accountType !== null;
+  const step2Valid = Boolean(
+    facilityName.trim() && facilityType && facilityPhone.trim() && facilityCity.trim() && facilityState.trim() &&
+    (!isStore || (facilityEmail.trim() && facilityAddress.trim()))
   );
   const passwordsMatch = registerPassword.length > 0 && registerPassword === confirmPassword;
-  const step2Valid = Boolean(
+  const step3Valid = Boolean(
     adminFirstName.trim() && adminLastName.trim() && workEmail.trim() && adminPhone.trim() &&
     registerPassword && confirmPassword && passwordsMatch
   );
+  const stepValid = [false, step1Valid, step2Valid, step3Valid][registerStep];
+  const licenseValid = /^[A-Za-z0-9/-]{4,24}$/.test(licenseNumber.trim());
 
-  const goNext = () => setRegisterStep((s) => (s < 3 ? ((s + 1) as 1 | 2 | 3) : s));
-  const goBack = () => setRegisterStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s));
+  const selectAccountType = (type: AccountType) => {
+    setAccountType(type);
+    setFacilityType(type === 'PHARMACY_STORE' ? 'PHARMACY' : '');
+  };
+
+  const goNext = () => setRegisterStep((s) => (s < 4 ? ((s + 1) as 1 | 2 | 3 | 4) : s));
+  const goBack = () => setRegisterStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3 | 4) : s));
 
   // Fixed particle positions - deterministic on server and client
   const particles = [
@@ -224,7 +263,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                 </svg>
               </div>
               <div>
-                <span className="text-sm font-medium tracking-wide text-[#AFC6EE]">Oncology Bridge</span>
+                <span className="text-sm font-medium tracking-wide text-[#AFC6EE]">Oncosourz</span>
                 <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#AFC6EE] border border-white/10">v2.0</span>
               </div>
             </div>
@@ -287,7 +326,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
               </svg>
             </div>
             <div>
-              <span className="text-sm font-medium tracking-wide text-[#AFC6EE]">Oncology Bridge</span>
+              <span className="text-sm font-medium tracking-wide text-[#AFC6EE]">Oncosourz</span>
               <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#AFC6EE] border border-white/10">
                 v2.0
               </span>
@@ -395,7 +434,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                 <path d="M12 2L2 7l10 5 10-5-10-5z" />
               </svg>
             </div>
-            <span className={`text-sm font-semibold ${headingText}`}>Oncology Bridge</span>
+            <span className={`text-sm font-semibold ${headingText}`}>Oncosourz</span>
           </div>
 
           {isLogin ? (
@@ -516,7 +555,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                 <p className={`font-mono text-[11px] uppercase tracking-[0.2em] ${mutedText}`}>Network Application</p>
                 <h2 className={`text-2xl font-bold tracking-tight ${headingText}`}>Join the network</h2>
                 <p className={`text-sm ${mutedText}`}>
-                  Apply for your facility to join the Oncology Bridge network. Every application is reviewed and verified.
+                  Sign up as a doctor, pharmacist or pharmacy store. Your professional licence is verified before you get full access.
                 </p>
               </div>
 
@@ -560,12 +599,43 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                 {registerStep === 1 && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
+                      <BadgeCheck className="h-4 w-4" style={{ color: accent }} />
+                      <h3 className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}>I am signing up as</h3>
+                    </div>
+                    <div className="grid gap-3">
+                      {ACCOUNT_TYPES.map((t) => {
+                        const Icon = ACCOUNT_ICONS[t.id];
+                        const selected = accountType === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => selectAccountType(t.id)}
+                            className={`flex items-start gap-3 rounded-lg border p-4 text-left transition-colors duration-150 ${selected ? '' : borderColor}`}
+                            style={selected ? { borderColor: accent, backgroundColor: isDark ? 'rgba(76,141,255,0.1)' : 'rgba(27,58,107,0.06)' } : undefined}
+                          >
+                            <Icon className="mt-0.5 h-5 w-5 shrink-0" style={{ color: accent }} />
+                            <span>
+                              <span className={`block text-sm font-semibold ${headingText}`}>{t.label}</span>
+                              <span className={`block text-xs ${mutedText}`}>{t.blurb}</span>
+                              <span className={`mt-1 block font-mono text-[10px] uppercase tracking-wider ${mutedText}`}>Workspace: {t.workspace}</span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {registerStep === 2 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" style={{ color: accent }} />
-                      <h3 className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}>Facility Information</h3>
+                      <h3 className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}>{isStore ? 'Pharmacy Information' : 'Where You Practice'}</h3>
                     </div>
 
                     <div>
-                      <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Facility Name</label>
+                      <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>{isStore ? 'Pharmacy Name' : 'Hospital / Clinic / Pharmacy Name'}</label>
                       <input
                         type="text"
                         value={facilityName}
@@ -601,6 +671,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                       </div>
                     </div>
 
+                    {isStore && (<>
                     <div>
                       <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>Official Facility Email</label>
                       <div className="relative">
@@ -628,6 +699,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                         />
                       </div>
                     </div>
+                    </>)}
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -654,11 +726,11 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                   </div>
                 )}
 
-                {registerStep === 2 && (
+                {registerStep === 3 && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4" style={{ color: accent }} />
-                      <h3 className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}>Primary Administrator</h3>
+                      <h3 className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}>{isStore ? 'Primary Administrator' : 'Your Details'}</h3>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -756,17 +828,32 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                     <div className={`flex items-start gap-2.5 rounded-lg border p-3.5 ${borderColor} ${isDark ? 'bg-[#0B1E33]' : 'bg-[#F8FAFC]'}`}>
                       <Info className={`mt-0.5 h-4 w-4 shrink-0 ${mutedText}`} />
                       <p className={`text-xs leading-relaxed ${mutedText}`}>
-                        The first administrator will manage your facility account and can later invite pharmacists, oncologists, and other staff.
+                        {isStore
+                          ? 'The first administrator will manage your pharmacy account and can later invite staff.'
+                          : 'Use the name exactly as it appears on your professional licence; it is matched against the registry.'}
                       </p>
                     </div>
                   </div>
                 )}
 
-                {registerStep === 3 && (
+                {registerStep === 4 && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4" style={{ color: accent }} />
                       <h3 className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}>Verification</h3>
+                    </div>
+
+                    <div>
+                      <label className={`mb-1.5 block text-sm font-medium ${labelText}`}>{accountInfo?.licenseLabel}</label>
+                      <input
+                        type="text"
+                        value={licenseNumber}
+                        onChange={(e) => setLicenseNumber(e.target.value)}
+                        placeholder={accountInfo?.licensePlaceholder}
+                        className={inputClasses}
+                        autoComplete="off"
+                      />
+                      <p className={`mt-1.5 text-xs ${mutedText}`}>Checked against the {accountInfo?.registryName} register.</p>
                     </div>
 
                     <div className={`rounded-lg border p-5 ${borderColor} ${isDark ? 'bg-[#0B1E33]' : 'bg-[#F8FAFC]'}`}>
@@ -782,11 +869,11 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                       <ul className={`mt-4 space-y-2.5 text-sm ${mutedText}`}>
                         <li className="flex items-start gap-2">
                           <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
-                          Your application will be reviewed by the Oncology Bridge Network.
+                          Your licence is checked against the public registry, then reviewed by the Oncosourz team.
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
-                          Facility credentials may be verified before approval.
+                          Until you are verified you can sign in but only see your overview and settings.
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
@@ -798,7 +885,9 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                     <div className={`rounded-lg border p-4 ${borderColor}`}>
                       <p className={`mb-2 text-xs font-semibold uppercase tracking-wide ${mutedText}`}>Application summary</p>
                       <div className="grid grid-cols-2 gap-y-1.5 text-sm">
-                        <span className={mutedText}>Facility</span>
+                        <span className={mutedText}>Account type</span>
+                        <span className={`text-right font-medium ${headingText}`}>{accountInfo?.label ?? '—'}</span>
+                        <span className={mutedText}>{isStore ? 'Pharmacy' : 'Workplace'}</span>
                         <span className={`text-right font-medium ${headingText}`}>{facilityName || '—'}</span>
                         <span className={mutedText}>Type</span>
                         <span className={`text-right font-medium ${headingText}`}>{facilityType || '—'}</span>
@@ -833,11 +922,11 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                     </button>
                   )}
 
-                  {registerStep < 3 ? (
+                  {registerStep < 4 ? (
                     <button
                       type="button"
                       onClick={goNext}
-                      disabled={registerStep === 1 ? !step1Valid : !step2Valid}
+                      disabled={!stepValid}
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-50"
                       style={{ backgroundColor: isDark ? '#FFFFFF': '#0B1E3D', color: isDark ? '#0B1E3D': '#FFFFFF' }}
                     >
@@ -847,7 +936,7 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                   ) : (
                     <button
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || !licenseValid}
                       className="flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-70"
                       style={{ backgroundColor: isDark ? '#FFFFFF': '#0B1E3D', color: isDark ? '#0B1E3D': '#FFFFFF' }}
                     >
@@ -857,12 +946,12 @@ export default function AuthPages({ view, theme, onDoLogin, onShowAuth, onToggle
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                         </svg>
                       )}
-                      {submitting ? 'Submitting...' : 'Submit Facility Application'}
+                      {submitting ? 'Verifying…' : 'Submit Application'}
                     </button>
                   )}
                 </div>
 
-                {registerStep === 3 && (
+                {registerStep === 4 && (
                   <div className={`flex items-center justify-center gap-1.5 text-xs ${mutedText}`}>
                     <Clock className="h-3.5 w-3.5" />
                     Average approval time: <span className={`font-medium ${headingText}`}>24–48 hours</span>

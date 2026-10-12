@@ -1,5 +1,4 @@
 'use client';
-import styles from '@/app/pages/landing/landing.module.css';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -26,49 +25,72 @@ export default function Nav() {
 
   return (
     <>
-      <nav className={styles['nav'] + (scrolled ? ' ' + styles['scrolled'] : '')} id="mainNav">
-        <div className={styles['nav-logo']}>
-          <div className={styles['nav-logo-mark']}>
-            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
+      <nav
+        className={`fixed inset-x-0 top-0 z-[900] flex h-16 items-center justify-between px-10 transition-[background,box-shadow] duration-400 max-[600px]:px-5 ${
+          scrolled
+            ? 'bg-navy/95 shadow-[0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-[16px]'
+            : 'bg-linear-to-b from-navy/80 to-transparent'
+        }`}
+        id="mainNav"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-[34px] items-center justify-center rounded-[9px] bg-linear-135 from-sky to-cyan">
+            <svg viewBox="0 0 24 24" className="size-[18px] fill-none stroke-white stroke-[2.2]"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
           </div>
           <div>
-            <div className={styles['nav-logo-name']}>Oncology Bridge</div>
-            <div className={styles['nav-logo-tag']}>Lagos–Ibadan Network</div>
+            <div className="font-display text-[15px] font-bold tracking-[-0.3px] text-white max-[860px]:text-sm">Oncosourz</div>
+            <div className="text-[9px] font-semibold uppercase tracking-[1px] text-cyan max-[860px]:text-[8px]">Lagos–Ibadan Network</div>
           </div>
         </div>
 
-        <div className={styles['nav-links']}>
+        <div className="flex gap-8 max-[860px]:hidden">
           {LINKS.map((l) => (
-            <a href={l.href} key={l.href}>{l.label}</a>
+            <a
+              href={l.href}
+              key={l.href}
+              className="text-[13.5px] font-medium text-white/65 transition-colors duration-200 hover:text-white"
+            >
+              {l.label}
+            </a>
           ))}
         </div>
 
-        <div className={styles['nav-cta']}>
-          <button className={styles['btn-nav'] + ' ' + styles['ghost']} onClick={() => router.push('/pages/auth')}>
+        <div className="flex items-center gap-2">
+          <button className="cursor-pointer rounded-lg border border-white/15 bg-transparent px-[18px] py-2 font-display text-[13px] font-bold text-white/70 transition-all duration-200 hover:border-white/40 hover:text-white max-[860px]:px-2.5 max-[860px]:py-1.5 max-[860px]:text-[11px]" onClick={() => router.push('/pages/auth')}>
             Sign In
           </button>
-          <button className={styles['btn-nav'] + ' ' + styles['solid']} onClick={() => router.push('/pages/auth')}>
+          <button className="cursor-pointer rounded-lg bg-linear-135 from-sky to-cyan px-[18px] py-2 font-display text-[13px] font-bold text-white transition-all duration-200 hover:-translate-y-px hover:opacity-90 hover:shadow-[0_6px_24px_rgba(14,165,233,0.35)] max-[860px]:px-2.5 max-[860px]:py-1.5 max-[860px]:text-[11px]" onClick={() => router.push('/pages/auth')}>
             Request Access
           </button>
         </div>
 
         <div
-          className={styles['hamburger']}
+          className="hidden cursor-pointer flex-col gap-1 p-1 max-[860px]:flex"
           id="hamburger"
           aria-label="Open menu"
           onClick={() => setMobileOpen((v) => !v)}
         >
-          <span style={mobileOpen ? { transform: 'rotate(45deg) translate(4px,4px)' } : undefined} />
-          <span style={mobileOpen ? { opacity: 0 } : undefined} />
-          <span style={mobileOpen ? { transform: 'rotate(-45deg) translate(4px,-4px)' } : undefined} />
+          <span className={`block h-0.5 w-[22px] rounded-[2px] bg-white transition-all duration-300 ${mobileOpen ? '[transform:rotate(45deg)_translate(4px,4px)]' : ''}`} />
+          <span className={`block h-0.5 w-[22px] rounded-[2px] bg-white transition-all duration-300 ${mobileOpen ? 'opacity-0' : ''}`} />
+          <span className={`block h-0.5 w-[22px] rounded-[2px] bg-white transition-all duration-300 ${mobileOpen ? '[transform:rotate(-45deg)_translate(4px,-4px)]' : ''}`} />
         </div>
       </nav>
 
-      <div className={styles['nav-mobile'] + (mobileOpen ? ' ' + styles['open'] : '')} id="mobileNav">
+      <div
+        className={`fixed inset-x-0 top-16 z-[800] hidden flex-col border-b border-white/10 bg-navy/[0.98] pt-2 pb-6 shadow-[0_20px_40px_rgba(0,0,0,0.4)] backdrop-blur-[16px] ${mobileOpen ? 'max-[860px]:flex' : ''}`}
+        id="mobileNav"
+      >
         {LINKS.map((l) => (
-          <a href={l.href} key={l.href} onClick={closeMob}>{l.label}</a>
+          <a
+            href={l.href}
+            key={l.href}
+            onClick={closeMob}
+            className="border-b border-white/5 px-8 py-[13px] text-[15px] font-medium text-white/70 transition-colors duration-200 hover:text-white"
+          >
+            {l.label}
+          </a>
         ))}
-        <a href="#cta" onClick={closeMob} style={{ color: 'var(--cyan)', fontWeight: 700 }}>
+        <a href="#cta" onClick={closeMob} className="px-8 py-[13px] text-[15px] font-bold text-cyan">
           Request Access →
         </a>
       </div>

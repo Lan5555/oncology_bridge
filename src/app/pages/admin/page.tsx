@@ -49,7 +49,49 @@ import {
   FileCheck,
   Key,
   CheckCircle2,
+  UserCheck,
+  Stethoscope,
+  Pill,
+  Store,
+  XCircle,
 } from 'lucide-react';
+import { ACCOUNT_TYPES, AccountType, VerificationStatus, getAccountInfo } from '@/app/lib/accounts';
+import { VERIFICATION_SERVICE } from '@/app/services/verification-service/verification-service';
+
+type RegistryResult = 'MATCH' | 'NO_MATCH' | 'UNAVAILABLE';
+
+interface Application {
+  id: string;
+  name: string;
+  accountType: AccountType;
+  license: string;
+  workplace: string;
+  submitted: string;
+  registryResult: RegistryResult;
+  status: VerificationStatus;
+}
+
+const INITIAL_APPLICATIONS: Application[] = [
+  { id: 'a1', name: 'Dr. Chidinma Okafor', accountType: 'DOCTOR', license: 'MDCN/R/48211', workplace: 'LUTH, Lagos', submitted: '12m ago', registryResult: 'MATCH', status: 'MANUAL_REVIEW' },
+  { id: 'a2', name: 'Ph. Tunde Balogun', accountType: 'PHARMACIST', license: 'PCN/20987', workplace: 'UCH, Ibadan', submitted: '1h ago', registryResult: 'MATCH', status: 'MANUAL_REVIEW' },
+  { id: 'a3', name: 'HealthPlus Ikeja', accountType: 'PHARMACY_STORE', license: 'PCN/PREM/5543', workplace: 'Ikeja, Lagos', submitted: '3h ago', registryResult: 'UNAVAILABLE', status: 'MANUAL_REVIEW' },
+  { id: 'a4', name: 'Dr. Aisha Bello', accountType: 'DOCTOR', license: 'MDCN/R/51034', workplace: 'EKO Hospital, Lagos', submitted: '5h ago', registryResult: 'NO_MATCH', status: 'MANUAL_REVIEW' },
+  { id: 'a5', name: 'Ph. Emeka Eze', accountType: 'PHARMACIST', license: 'PCN/18842', workplace: 'LASUTH, Lagos', submitted: 'Yesterday', registryResult: 'MATCH', status: 'VERIFIED' },
+  { id: 'a6', name: 'Greenfield Pharmacy', accountType: 'PHARMACY_STORE', license: 'PCN/PREM/3021', workplace: 'Ibadan North', submitted: 'Yesterday', registryResult: 'MATCH', status: 'VERIFIED' },
+  { id: 'a7', name: 'Dr. Samuel Ade', accountType: 'DOCTOR', license: 'MDCN/R/00012', workplace: 'Unknown clinic', submitted: '2d ago', registryResult: 'NO_MATCH', status: 'REJECTED' },
+];
+
+const TYPE_ICONS: Record<AccountType, typeof Stethoscope> = {
+  DOCTOR: Stethoscope,
+  PHARMACIST: Pill,
+  PHARMACY_STORE: Store,
+};
+
+const REGISTRY_TEXT: Record<RegistryResult, string> = {
+  MATCH: 'Found in registry',
+  NO_MATCH: 'Not found in registry \u2014 check manually',
+  UNAVAILABLE: 'Registry unavailable \u2014 check manually',
+};
 
 interface AdminPageProps {
   onNav?: (id: PageId) => void;
@@ -57,7 +99,11 @@ interface AdminPageProps {
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
-  const [section, setSection] = useState<'overview' | 'roles' | 'integrations' | 'users' | 'facilities' | 'audit'>('overview');
+  const [section, setSection] = useState<'overview' | 'verification' | 'roles' | 'integrations' | 'users' | 'facilities' | 'audit'>('overview');
+  const [applications, setApplications] = useState<Application[]>(INITIAL_APPLICATIONS);
+  const [statusFilter, setStatusFilter] = useState<'REVIEW' | 'VERIFIED' | 'REJECTED' | 'ALL'>('REVIEW');
+  const [typeFilter, setTypeFilter] = useState<AccountType | 'ALL'>('ALL');
+  const [rechecking, setRechecking] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
@@ -96,6 +142,23 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   }, []);
 
   const isDark = theme === 'dark';
+
+  const pendingCount = applications.filter((a) => a.status === 'PENDING' || a.status === 'MANUAL_REVIEW').length;
+
+  const decide = (app: Application, status: 'VERIFIED' | 'REJECTED') => {
+    setApplications((list) => list.map((a) => (a.id === app.id ? { ...a, status } : a)));
+    notify(`${app.name} ${status === 'VERIFIED' ? 'approved' : 'rejected'}.`);
+  };
+
+  const recheck = async (app: Application) => {
+    setRechecking(app.id);
+    const info = getAccountInfo(app.accountType)!;
+    const lastName = app.accountType === 'PHARMACY_STORE' ? undefined : app.name.split(' ').slice(-1)[0];
+    const result = await VERIFICATION_SERVICE.verifyLicense({ licenseNumber: app.license, registry: info.registry, lastName });
+    setApplications((list) => list.map((a) => (a.id === app.id ? { ...a, registryResult: result.registryResult } : a)));
+    setRechecking(null);
+    notify(`Registry check: ${REGISTRY_TEXT[result.registryResult].toLowerCase()}.`);
+  };
 
   const handleAdminLogin = () => {
     // FIX: previously this just silently returned when a field was empty,
@@ -154,6 +217,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'verification', label: `Verification${pendingCount ? ` (${pendingCount})` : ''}`, icon: UserCheck },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'facilities', label: 'Facilities', icon: Building2 },
     { id: 'audit', label: 'Audit', icon: ClipboardList },
@@ -169,10 +233,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     { label: 'Inventory items', value: '2,847', change: '+5%', icon: Package, trend: 'up', color: '#6D28D9' },
     { label: 'Near expiry', value: '7', change: '-3%', icon: AlertCircle, trend: 'down', color: '#C4622D' },
     { label: 'Total value', value: '\u20a64.2M', change: '+15%', icon: DollarSign, trend: 'up', color: '#15803D' },
-    { label: 'Transactions', value: '1,234', change: '+22%', icon: Activity, trend: 'up', color: '#0E7490' },
+    { label: 'Pending verifications', value: String(pendingCount), change: 'needs review', icon: UserCheck, trend: 'down', color: '#0E7490' },
   ];
 
   const activityFeed = [
+    { action: 'Licence PCN/20987 sent for manual review', time: '1h ago', user: 'Verification', icon: UserCheck },
     { action: 'Dr. Musa updated facility settings', time: '5m ago', user: 'Network Admin', icon: Settings },
     { action: 'Nurse Adebayo registered', time: '23m ago', user: 'System', icon: UserPlus },
     { action: 'Inventory sync completed for LUTH', time: '1h ago', user: 'Auto-sync', icon: RefreshCw },
@@ -182,21 +247,22 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   ];
 
   const roles = [
-    { name: 'Network Admin', desc: 'Full access across all modules', count: '3 users', icon: ShieldCheck },
-    { name: 'Facility Manager', desc: 'Manage facility inventory and users', count: '12 users', icon: Building2 },
-    { name: 'Auditor', desc: 'Read-only access to audit logs', count: '5 users', icon: ClipboardList },
-    { name: 'Inventory Manager', desc: 'Manage inventory and transfers', count: '8 users', icon: Package },
+    { name: 'Doctor', desc: 'Signs up with an MDCN licence. Sees only the Clinical workspace.', count: '41 users', icon: Stethoscope, sees: ['Prescriptions', 'Cold Chain Monitor', 'Near-Expiry', 'Network Map'] },
+    { name: 'Pharmacist', desc: 'Signs up with a PCN registration. Sees only the Clinical workspace.', count: '58 users', icon: Pill, sees: ['Prescriptions', 'Cold Chain Monitor', 'Near-Expiry', 'Network Map'] },
+    { name: 'Pharmacy Store', desc: 'Signs up with a PCN premises licence. Sees only Pharmacy Tools.', count: '24 stores', icon: Store, sees: ['Scan GS1', 'Inventory Ledger', 'Redistribution', 'Near-Expiry', 'Network Map'] },
+    { name: 'Network Admin', desc: 'Full access across all modules, including verification.', count: '3 users', icon: ShieldCheck, sees: ['Everything', 'Verification queue', 'Audit log'] },
   ];
 
   const integrations = [
-    { name: 'HMO Sync', status: 'Active', lastSync: '12m ago', desc: 'Synchronize patient data with HMO providers', icon: Database },
+    { name: 'MDCN Registry', status: 'Active', lastSync: 'Live lookup', desc: 'Doctor licence check against the Medical and Dental Council of Nigeria register', icon: UserCheck },
+    { name: 'PCN Registry', status: 'Active', lastSync: 'Live lookup', desc: 'Pharmacist and premises licence check against the Pharmacists Council of Nigeria', icon: UserCheck },    { name: 'HMO Sync', status: 'Active', lastSync: '12m ago', desc: 'Synchronize patient data with HMO providers', icon: Database },
     { name: 'NAFDAC API', status: 'Active', lastSync: '2h ago', desc: 'Drug verification and compliance checking', icon: ShieldCheck },
     { name: 'GS1 Registry', status: 'Inactive', lastSync: 'Never', desc: 'GS1 barcode validation service', icon: LinkIcon },
     { name: 'EHR Integration', status: 'Active', lastSync: '45m ago', desc: 'Electronic Health Records synchronization', icon: FileText },
   ];
 
   const quickActions = [
-    { label: 'Run health check', icon: Activity, color: '#1B3A6B' },
+    { label: 'Review verifications', icon: UserCheck, color: '#0E7490' },
     { label: 'Sync all facilities', icon: RefreshCw, color: '#0E7490' },
     { label: 'Export audit', icon: Download, color: '#6D28D9' },
     { label: 'Generate report', icon: FileText, color: '#15803D' },
@@ -313,7 +379,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
             >
               <ShieldCheck className="h-6 w-6 text-white" />
             </div>
-            <p className={`font-mono text-[11px] uppercase tracking-[0.2em] ${mutedText}`}>Oncology Bridge / Restricted</p>
+            <p className={`font-mono text-[11px] uppercase tracking-[0.2em] ${mutedText}`}>Oncosourz / Restricted</p>
             <h1 className={`font-display mt-1 text-3xl font-semibold tracking-tight ${headingText}`}>Admin Sign In</h1>
             <p className={`mt-2 text-sm ${mutedText}`}>Secure access to system administration</p>
           </div>
@@ -439,7 +505,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                 <ShieldCheck className="h-4.5 w-4.5 text-white" />
               </div>
               <div>
-                <p className={`font-mono text-[11px] uppercase tracking-[0.2em] ${mutedText}`}>Oncology Bridge</p>
+                <p className={`font-mono text-[11px] uppercase tracking-[0.2em] ${mutedText}`}>Oncosourz</p>
                 <div className="flex items-center gap-3">
                   <h1 className={`font-display text-2xl font-semibold tracking-tight md:text-3xl ${headingText}`}>
                     Administration
@@ -563,14 +629,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                     <div>
                       <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/60">Network overview</p>
                       <h2 className="font-display mt-1 text-xl font-semibold sm:text-2xl">Good to see you back.</h2>
-                      <p className="mt-1 text-sm text-white/70">24 facilities online across the Lagos&ndash;Ibadan corridor &middot; 7 items nearing expiry need attention.</p>
+                      <p className="mt-1 text-sm text-white/70">24 facilities online across the Lagos&ndash;Ibadan corridor &middot; {pendingCount} licence{pendingCount === 1 ? '' : 's'} awaiting review.</p>
                     </div>
                     <button
-                      onClick={() => setSection('audit')}
+                      onClick={() => setSection('verification')}
                       className="press-fx flex shrink-0 items-center gap-2 rounded-lg bg-white/10 px-4 py-2.5 text-sm font-medium backdrop-blur-sm hover:bg-white/20"
                     >
-                      <ShieldAlert className="h-4 w-4" style={{ color: '#F0B27A' }} />
-                      Review near-expiry
+                      <UserCheck className="h-4 w-4" style={{ color: '#F0B27A' }} />
+                      Review verifications
                     </button>
                   </div>
                 </div>
@@ -623,7 +689,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                       return (
                         <button
                           key={action.label}
-                          onClick={() => notify(`${action.label}\u2026 started.`)}
+                          onClick={() => (action.label === 'Review verifications' ? setSection('verification') : notify(`${action.label}\u2026 started.`))}
                           className={`press-fx flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-xs font-medium text-left md:text-sm ${
                             isDark
                               ? 'border-[#1E3358] text-[#EAF0FA] hover:border-[#4C8DFF] hover:bg-[#0F2038]'
@@ -724,6 +790,127 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
               </div>
             )}
 
+            {section === 'verification' && (() => {
+              const q = search.trim().toLowerCase();
+              const visible = applications.filter((a) => {
+                const inStatus =
+                  statusFilter === 'ALL' ||
+                  (statusFilter === 'REVIEW' ? a.status === 'PENDING' || a.status === 'MANUAL_REVIEW' : a.status === statusFilter);
+                const inType = typeFilter === 'ALL' || a.accountType === typeFilter;
+                const inSearch = !q || a.name.toLowerCase().includes(q) || a.license.toLowerCase().includes(q);
+                return inStatus && inType && inSearch;
+              });
+              const chip = (active: boolean) =>
+                `press-fx rounded-md border px-3 py-1.5 text-xs font-medium ${
+                  active
+                    ? isDark ? 'border-[#4C8DFF] bg-[#4C8DFF]/10 text-[#4C8DFF]' : 'border-[#1B3A6B] bg-[#1B3A6B]/10 text-[#1B3A6B]'
+                    : `${borderColor} ${mutedText}`
+                }`;
+              const statusColor: Record<VerificationStatus, string> = {
+                VERIFIED: accentPositive,
+                REJECTED: '#B91C1C',
+                PENDING: accentAmber,
+                MANUAL_REVIEW: accentAmber,
+              };
+              const statusLabel: Record<VerificationStatus, string> = {
+                VERIFIED: 'Verified',
+                REJECTED: 'Rejected',
+                PENDING: 'Pending',
+                MANUAL_REVIEW: 'Needs review',
+              };
+              return (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className={`font-display text-lg font-semibold ${headingText}`}>Licence verification</h3>
+                    <p className={`text-sm ${mutedText}`}>
+                      Doctors, pharmacists and pharmacy stores only see their own workspace once approved. Registry results are a first check, not proof of identity.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {([['REVIEW', `Needs review (${pendingCount})`], ['VERIFIED', 'Verified'], ['REJECTED', 'Rejected'], ['ALL', 'All']] as const).map(([id, label]) => (
+                      <button key={id} onClick={() => setStatusFilter(id)} className={chip(statusFilter === id)}>{label}</button>
+                    ))}
+                    <select
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value as AccountType | 'ALL')}
+                      className={`${baseInputClasses} ml-auto w-auto px-3 py-1.5 text-xs`}
+                    >
+                      <option value="ALL">All account types</option>
+                      {ACCOUNT_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                    </select>
+                  </div>
+
+                  {visible.length === 0 && (
+                    <div className={`rounded-xl border border-dashed p-8 text-center text-sm ${borderColor} ${mutedText}`}>
+                      Nothing to show for this filter.
+                    </div>
+                  )}
+
+                  {visible.map((app) => {
+                    const Icon = TYPE_ICONS[app.accountType];
+                    const info = getAccountInfo(app.accountType)!;
+                    const open = app.status === 'PENDING' || app.status === 'MANUAL_REVIEW';
+                    return (
+                      <div key={app.id} className={`rounded-xl p-4 ${interactiveCardClasses}`}>
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="flex items-start gap-3">
+                            <div className={`rounded-md border p-2 ${borderColor}`}>
+                              <Icon className={`h-5 w-5 ${mutedText}`} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`font-medium ${headingText}`}>{app.name}</span>
+                                <span className="font-mono text-[11px]" style={{ color: statusColor[app.status] }}>● {statusLabel[app.status]}</span>
+                              </div>
+                              <div className={`text-sm ${mutedText}`}>{info.label} &middot; {app.workplace}</div>
+                              <div className={`mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs ${mutedText}`}>
+                                <span>{info.registry.replace('_', ' ')}: {app.license}</span>
+                                <span style={{ color: app.registryResult === 'MATCH' ? accentPositive : accentAmber }}>{REGISTRY_TEXT[app.registryResult]}</span>
+                                <span>{app.submitted}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => recheck(app)}
+                              disabled={rechecking === app.id}
+                              className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors duration-150 disabled:opacity-60 ${
+                                isDark ? 'border-[#1E3358] text-[#EAF0FA] hover:border-[#4C8DFF]' : 'border-[#E2E8F0] text-[#0B1E3D] hover:border-[#1B3A6B]'
+                              }`}
+                            >
+                              {rechecking === app.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                              Re-check registry
+                            </button>
+                            {app.status !== 'VERIFIED' && (
+                              <button
+                                onClick={() => decide(app, 'VERIFIED')}
+                                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white"
+                                style={{ backgroundColor: accentBlue }}
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                Approve
+                              </button>
+                            )}
+                            {open && (
+                              <button
+                                onClick={() => decide(app, 'REJECTED')}
+                                className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium"
+                                style={{ borderColor: accentAmber, color: accentAmber }}
+                              >
+                                <XCircle className="h-3 w-3" />
+                                Reject
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {section === 'roles' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -752,6 +939,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                             <div className={`mt-1 flex items-center gap-2 font-mono text-xs ${mutedText}`}>
                               <Users className="h-3 w-3" />
                               {role.count}
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {role.sees.map((s) => (
+                                <span key={s} className={`rounded-md border px-2 py-0.5 text-[11px] ${borderColor} ${mutedText}`}>{s}</span>
+                              ))}
                             </div>
                           </div>
                         </div>
