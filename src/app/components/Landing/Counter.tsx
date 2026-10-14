@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 interface CounterProps {
   target: number;
@@ -36,7 +36,7 @@ export default function Counter({ target, durationMs = 1800 }: CounterProps) {
           }
         });
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
 
     obs.observe(el);

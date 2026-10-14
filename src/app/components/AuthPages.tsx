@@ -149,10 +149,7 @@ export default function AuthPages({
   const handleLogin = async (e: any) => {
     e.preventDefault();
     setSubmitting(true);
-    const payload = {
-      email,
-      password,
-    };
+    const payload = { email, password };
     const res = await AUTH_SERVICE.signIn(payload);
     if (res.success && res.data) {
       toast.success(res.message);

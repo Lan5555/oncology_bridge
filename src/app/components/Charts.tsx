@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   Chart as ChartJS,
@@ -9,8 +9,14 @@ import {
   BarElement,
   ArcElement,
   Tooltip,
-} from 'chart.js/auto';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
+} from "chart.js/auto";
+import { Line, Doughnut, Bar } from "react-chartjs-2";
+import { useEffect, useState } from "react";
+import { Activity, ChartColumn, ChartPie, Package } from "lucide-react";
+import EmptyState from "@/app/components/EmptyState";
+import { DASHBOARD_SERVICE } from "@/app/services/dashboard-service/dashboard-service";
+import { SCAN_SERVICE } from "@/app/services/scan-service/scan-service";
+import { unwrapArray } from "@/app/services/response-utils";
 
 ChartJS.register(
   CategoryScale,
@@ -19,29 +25,162 @@ ChartJS.register(
   LineElement,
   BarElement,
   ArcElement,
-  Tooltip
+  Tooltip,
 );
 
-const P = '#0891B2';
-const AC = '#0D9488';
-const OK = '#059669';
-const WN = '#F59E0B';
-const ER = '#EF4444';
-const GL = '#F1F5F9';
-const GM = '#94A3B8';
-const G7 = '#334155';
-const MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+const P = "#0891B2";
+const AC = "#0D9488";
+const OK = "#059669";
+const WN = "#F59E0B";
+const ER = "#EF4444";
+const GL = "#F1F5F9";
+const GM = "#94A3B8";
+const G7 = "#334155";
 
-/** Line chart: Biologic Inventory — Network Wide (dashboard) */
-export function InventoryChart() {
+/** Renders the authenticated, persisted cold-chain history supplied by its monitor. */
+export function TemperatureHistoryChart({
+  historyData,
+  loading = false,
+  error = "",
+}: {
+  historyData: any | null;
+  loading?: boolean;
+  error?: string;
+}) {
+  const history = historyData;
+  if (error)
+    return (
+      <EmptyState
+        compact
+        icon={Activity}
+        title="History unavailable"
+        description={error}
+      />
+    );
+
+  const readings = unwrapArray(history?.readings);
+  const labels: string[] =
+    history?.labels ??
+    readings.map((reading: any) =>
+      new Date(
+        reading.recordedAt ?? reading.at ?? reading.timestamp,
+      ).toLocaleTimeString("en-NG", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    );
+  const returnedSeries: any[] = Array.isArray(history?.series)
+    ? history.series
+    : [];
+  const series = returnedSeries.length
+    ? returnedSeries
+    : readings.length
+      ? [
+          {
+            label: "Temperature",
+            data: readings.map((reading: any) =>
+              Number(
+                reading.celsius ?? reading.temperatureC ?? reading.temperature,
+              ),
+            ),
+          },
+        ]
+      : [];
+
+  if (loading || history === null)
+    return (
+      <EmptyState
+        compact
+        icon={Activity}
+        title="Loading history"
+        description="Fetching recorded readings for the last 24 hours."
+      />
+    );
+
+  if (!labels.length || !series.some((item) => item.data?.length))
+    return (
+      <EmptyState
+        compact
+        icon={Activity}
+        title="No readings yet"
+        description="Temperature history will appear here when readings have been recorded."
+      />
+    );
+
   return (
     <Line
       data={{
-        labels: MO,
+        labels,
+        datasets: series.map((item, index) => ({
+          label: item.label ?? `Unit ${index + 1}`,
+          data: item.data,
+          borderColor: [P, AC, OK, WN, ER][index % 5],
+          backgroundColor: `${[P, AC, OK, WN, ER][index % 5]}18`,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 2,
+          fill: false,
+        })),
+      }}
+      options={{
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: series.length > 1, position: "bottom" } },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: GM, font: { size: 10 }, maxTicksLimit: 8 },
+          },
+          y: {
+            grid: { color: GL },
+            ticks: {
+              color: GM,
+              font: { size: 10 },
+              callback: (value) => `${value}°C`,
+            },
+            min: 0,
+            max: 14,
+          },
+        },
+      }}
+    />
+  );
+}
+
+/** Line chart: Biologic Inventory — Network Wide (dashboard) */
+export function InventoryChart() {
+  const [points, setPoints] = useState<Array<{ label: string; vials: number }>>(
+    [],
+  );
+  useEffect(() => {
+    void DASHBOARD_SERVICE.charts().then((response) => {
+      const data = response.data as any;
+      if (response.success)
+        setPoints(
+          unwrapArray(data?.inventoryOverTime ?? data).map((point) => ({
+            label: point.label,
+            vials: Number(point.vials ?? point.qty ?? 0),
+          })),
+        );
+    });
+  }, []);
+  if (!points.length)
+    return (
+      <EmptyState
+        compact
+        icon={ChartColumn}
+        title="No inventory trend yet"
+        description="This chart will fill in when inventory history is available."
+      />
+    );
+  return (
+    <Line
+      data={{
+        labels: points.map((point) => point.label),
         datasets: [
           {
-            label: 'Trastuzumab',
-            data: [210, 280, 320, 290, 340, 312],
+            label: "Inventory",
+            data: points.map((point) => point.vials),
             borderColor: P,
             backgroundColor: `${P}18`,
             fill: true,
@@ -50,30 +189,6 @@ export function InventoryChart() {
             pointRadius: 3,
             pointBackgroundColor: P,
           },
-          {
-            label: 'Rituximab',
-            data: [150, 180, 210, 195, 240, 226],
-            borderColor: AC,
-            backgroundColor: `${AC}10`,
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointBackgroundColor: AC,
-            borderDash: [5, 5],
-          },
-          {
-            label: 'Bevacizumab',
-            data: [90, 110, 140, 125, 165, 158],
-            borderColor: OK,
-            backgroundColor: `${OK}10`,
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointBackgroundColor: OK,
-            borderDash: [2, 2],
-          },
         ],
       }}
       options={{
@@ -81,10 +196,17 @@ export function InventoryChart() {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { color: GM, font: { size: 11 } } },
+          x: {
+            grid: { display: false },
+            ticks: { color: GM, font: { size: 11 } },
+          },
           y: {
             grid: { color: GL },
-            ticks: { color: GM, font: { size: 11 }, callback: (v) => `${v} vials` },
+            ticks: {
+              color: GM,
+              font: { size: 11 },
+              callback: (v) => `${v} vials`,
+            },
           },
         },
       }}
@@ -94,16 +216,38 @@ export function InventoryChart() {
 
 /** Doughnut chart: Drug Availability Split (dashboard) */
 export function DrugSplitChart() {
+  const [split, setSplit] = useState<Array<{ drug: string; pct: number }>>([]);
+  useEffect(() => {
+    void DASHBOARD_SERVICE.charts().then((response) => {
+      const data = response.data as any;
+      if (response.success)
+        setSplit(
+          unwrapArray(data?.drugSplit).map((row) => ({
+            drug: row.drug,
+            pct: Number(row.pct ?? 0),
+          })),
+        );
+    });
+  }, []);
+  if (!split.length)
+    return (
+      <EmptyState
+        compact
+        icon={ChartPie}
+        title="No availability mix yet"
+        description="Medicine shares will appear after the catalog and stock data are linked."
+      />
+    );
   return (
     <Doughnut
       data={{
-        labels: ['Trastuzumab', 'Rituximab', 'Bevacizumab', 'Other'],
+        labels: split.map((row) => row.drug),
         datasets: [
           {
-            data: [38, 27, 19, 16],
-            backgroundColor: [P, AC, OK, WN],
+            data: split.map((row) => row.pct),
+            backgroundColor: [P, AC, OK, WN, ER],
             borderWidth: 3,
-            borderColor: '#fff',
+            borderColor: "#fff",
             hoverOffset: 6,
           },
         ],
@@ -111,8 +255,10 @@ export function DrugSplitChart() {
       options={{
         responsive: true,
         maintainAspectRatio: false,
-        cutout: '68%',
-        plugins: { legend: { display: false } },
+        cutout: "68%",
+        plugins: {
+          legend: { display: true, position: "bottom" },
+        },
       }}
     />
   );
@@ -120,21 +266,45 @@ export function DrugSplitChart() {
 
 /** Horizontal bar chart: Network Redistribution Efficiency (dashboard) */
 export function RedistributionEfficiencyChart() {
+  const [efficiency, setEfficiency] = useState<
+    Array<{ label: string; days: number }>
+  >([]);
+  useEffect(() => {
+    void DASHBOARD_SERVICE.charts().then((response) => {
+      const data = response.data as any;
+      if (response.success)
+        setEfficiency(
+          unwrapArray(data?.redistributionEfficiency).map((row) => ({
+            label: row.label,
+            days: Number(row.days ?? 0),
+          })),
+        );
+    });
+  }, []);
+  if (!efficiency.length)
+    return (
+      <EmptyState
+        compact
+        icon={Activity}
+        title="No transfer trend yet"
+        description="Completed transfer records will power this trend."
+      />
+    );
   return (
     <Bar
       data={{
-        labels: ['LUTH', 'EKO Hospital', 'UCH Ibadan', 'LASUTH', 'Lagos Island GH', 'Lagos State Hosp'],
+        labels: efficiency.map((row) => row.label),
         datasets: [
           {
-            label: 'Avg Days',
-            data: [1.2, 2.4, 1.8, 3.1, 0.9, 2.1],
+            label: "Avg Days",
+            data: efficiency.map((row) => row.days),
             backgroundColor: P,
             borderRadius: 4,
             barThickness: 12,
           },
           {
-            label: 'Target',
-            data: [2, 2, 2, 2, 2, 2],
+            label: "Target",
+            data: efficiency.map(() => 2),
             backgroundColor: `${AC}20`,
             borderColor: AC,
             borderWidth: 1,
@@ -144,7 +314,7 @@ export function RedistributionEfficiencyChart() {
         ],
       }}
       options={{
-        indexAxis: 'y' as const,
+        indexAxis: "y" as const,
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
@@ -154,7 +324,65 @@ export function RedistributionEfficiencyChart() {
             ticks: { color: GM, font: { size: 11 }, callback: (v) => `${v}d` },
             max: 4,
           },
-          y: { grid: { display: false }, ticks: { color: G7, font: { size: 11, weight: 500 } } },
+          y: {
+            grid: { display: false },
+            ticks: { color: G7, font: { size: 11, weight: 500 } },
+          },
+        },
+      }}
+    />
+  );
+}
+
+/** Horizontal bar chart: current therapeutic stock from the dashboard API. */
+export function TherapeuticStockChart() {
+  const [stock, setStock] = useState<Array<{ drug: string; qty: number }>>([]);
+  useEffect(() => {
+    void DASHBOARD_SERVICE.charts().then((response) => {
+      const data = response.data as any;
+      if (response.success)
+        setStock(
+          unwrapArray(data?.therapeuticStock).map((row) => ({
+            drug: row.drug,
+            qty: Number(row.qty ?? 0),
+          })),
+        );
+    });
+  }, []);
+  if (!stock.length)
+    return (
+      <EmptyState
+        compact
+        icon={Package}
+        title="No stock quantities yet"
+        description="Therapeutic stock appears when inventory has been recorded."
+      />
+    );
+  return (
+    <Bar
+      data={{
+        labels: stock.map((row) => row.drug),
+        datasets: [
+          {
+            label: "Units in stock",
+            data: stock.map((row) => row.qty),
+            backgroundColor: P,
+            borderRadius: 4,
+            barThickness: 16,
+          },
+        ],
+      }}
+      options={{
+        indexAxis: "y" as const,
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: GL }, ticks: { color: GM, font: { size: 10 } } },
+          y: {
+            grid: { display: false },
+            ticks: { color: G7, font: { size: 11 } },
+          },
         },
       }}
     />
@@ -163,14 +391,35 @@ export function RedistributionEfficiencyChart() {
 
 /** Bar chart: Monthly GS1 Scans (scan page) */
 export function MonthlyScansChart() {
+  const [months, setMonths] = useState<Array<{ month: string; count: number }>>(
+    [],
+  );
+  useEffect(() => {
+    void SCAN_SERVICE.monthly().then((response) => {
+      if (response.success)
+        setMonths(
+          unwrapArray(response.data).map((row) => ({
+            month: row.month,
+            count: Number(row.count ?? 0),
+          })),
+        );
+    });
+  }, []);
   return (
     <Bar
       data={{
-        labels: MO,
+        labels: months.map((row) => row.month),
         datasets: [
           {
-            data: [184, 210, 248, 290, 320, 310],
-            backgroundColor: [`${P}88`, `${P}88`, `${P}88`, `${P}88`, `${P}88`, P],
+            data: months.map((row) => row.count),
+            backgroundColor: [
+              `${P}88`,
+              `${P}88`,
+              `${P}88`,
+              `${P}88`,
+              `${P}88`,
+              P,
+            ],
             borderRadius: 4,
             borderSkipped: false,
           },
@@ -181,64 +430,11 @@ export function MonthlyScansChart() {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { color: GM, font: { size: 10 } } },
+          x: {
+            grid: { display: false },
+            ticks: { color: GM, font: { size: 10 } },
+          },
           y: { display: false },
-        },
-      }}
-    />
-  );
-}
-
-/** Line chart: Temperature History — 24 Hours (cold chain page) */
-export function TemperatureHistoryChart() {
-  const hrs = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00'];
-  return (
-    <Line
-      data={{
-        labels: hrs,
-        datasets: [
-          {
-            label: 'LUTH',
-            data: [4.1, 4.0, 4.2, 4.3, 4.1, 4.2, 4.0, 4.2],
-            borderColor: OK,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 2,
-            fill: false,
-          },
-          {
-            label: 'EKO',
-            data: [3.8, 3.9, 3.8, 3.7, 3.9, 3.8, 3.8, 3.8],
-            borderColor: P,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 2,
-            fill: false,
-          },
-          {
-            label: 'Transit T-07',
-            data: [4.0, 4.1, 4.2, 4.5, 6.1, 11.2, 11.2, 11.2],
-            borderColor: ER,
-            tension: 0.4,
-            borderWidth: 2.5,
-            pointRadius: 3,
-            fill: false,
-            borderDash: [4, 3],
-          },
-        ],
-      }}
-      options={{
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: GM, font: { size: 10 } } },
-          y: {
-            grid: { color: GL },
-            ticks: { color: GM, font: { size: 10 }, callback: (v) => `${v}°C` },
-            min: 0,
-            max: 14,
-          },
         },
       }}
     />

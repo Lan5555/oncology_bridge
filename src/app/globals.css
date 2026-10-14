@@ -60,20 +60,20 @@
 
 @theme {
   /* Colors */
-  --color-navy: #050E1F;
-  --color-navy-2: #0A1628;
-  --color-navy-3: #0F2040;
-  --color-sky: #0EA5E9;
-  --color-cyan: #06B6D4;
-  --color-sky-light: #BAE6FD;
-  --color-teal: #0891B2;
-  --color-offwhite: #F0F9FF;
-  --color-slate: #94A3B8;
-  --color-slate-2: #64748B;
+  --color-navy: #050e1f;
+  --color-navy-2: #0a1628;
+  --color-navy-3: #0f2040;
+  --color-sky: #0ea5e9;
+  --color-cyan: #06b6d4;
+  --color-sky-light: #bae6fd;
+  --color-teal: #0891b2;
+  --color-offwhite: #f0f9ff;
+  --color-slate: #94a3b8;
+  --color-slate-2: #64748b;
   --color-slate-3: #334155;
-  --color-ok: #10B981;
-  --color-warn: #F59E0B;
-  --color-err: #EF4444;
+  --color-ok: #10b981;
+  --color-warn: #f59e0b;
+  --color-err: #ef4444;
 
   /* Fonts */
   --font-display: "Plus Jakarta Sans", sans-serif;
@@ -90,43 +90,86 @@
   --animate-modal-in: modalIn 0.2s ease-out;
 
   @keyframes slideUp {
-    0% { opacity: 0; transform: translateY(20px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
   }
 
   @keyframes bounce {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(5px); }
+    0%,
+    100% {
+      transform: translateX(-50%) translateY(0);
+    }
+    50% {
+      transform: translateX(-50%) translateY(5px);
+    }
   }
 
   @keyframes pulseRing {
-    0% { transform: scale(1); opacity: 0.4; }
-    100% { transform: scale(1.5); opacity: 0; }
+    0% {
+      transform: scale(1);
+      opacity: 0.4;
+    }
+    100% {
+      transform: scale(1.5);
+      opacity: 0;
+    }
   }
 
   @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
   }
 
   @keyframes shimmer {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(100%); }
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
   }
 
   @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @keyframes modalIn {
-    from { opacity: 0; transform: scale(0.95) translateY(10px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
   }
 }
 
@@ -167,7 +210,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    *, ::before, ::after {
+    *,
+    ::before,
+    ::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }

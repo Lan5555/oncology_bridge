@@ -1,24 +1,29 @@
-'use client'
-import Particles from './Particles';
-import NetworkDiagram from './NetworkDiagram';
-import { useRouter } from 'next/navigation';
+"use client";
+import Particles from "./Particles";
+import NetworkDiagram from "./NetworkDiagram";
+import { useRouter } from "next/navigation";
 
-const WORDS: { text: string; delay: number; accent?: boolean; break?: boolean }[] = [
-  { text: 'Every\u00A0', delay: 0.3 },
-  { text: 'verified\u00A0', delay: 0.38 },
-  { text: 'vial,\u00A0', delay: 0.46 },
-  { text: 'visible\u00A0', delay: 0.54 },
-  { text: 'to\u00A0', delay: 0.62 },
-  { text: 'the\u00A0', delay: 0.7 },
-  { text: 'patient', delay: 0.78, break: true },
-  { text: 'who\u00A0', delay: 0.86, accent: true },
-  { text: 'needs\u00A0', delay: 0.92, accent: true },
-  { text: 'it\u00A0', delay: 0.98, accent: true },
-  { text: 'most.', delay: 1.04, accent: true },
+const WORDS: {
+  text: string;
+  delay: number;
+  accent?: boolean;
+  break?: boolean;
+}[] = [
+  { text: "Every\u00A0", delay: 0.3 },
+  { text: "verified\u00A0", delay: 0.38 },
+  { text: "vial,\u00A0", delay: 0.46 },
+  { text: "visible\u00A0", delay: 0.54 },
+  { text: "to\u00A0", delay: 0.62 },
+  { text: "the\u00A0", delay: 0.7 },
+  { text: "patient", delay: 0.78, break: true },
+  { text: "who\u00A0", delay: 0.86, accent: true },
+  { text: "needs\u00A0", delay: 0.92, accent: true },
+  { text: "it\u00A0", delay: 0.98, accent: true },
+  { text: "most.", delay: 1.04, accent: true },
 ];
 
 export default function Hero() {
-  const router= useRouter();
+  const router = useRouter();
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-navy px-8 pt-[100px] pb-16 before:pointer-events-none before:absolute before:-top-[200px] before:left-1/2 before:size-[800px] before:-translate-x-1/2 before:bg-[radial-gradient(circle,rgba(14,165,233,0.18)_0%,transparent_65%)] before:content-[''] after:pointer-events-none after:absolute after:-right-[100px] after:-bottom-[100px] after:size-[500px] after:bg-[radial-gradient(circle,rgba(6,182,212,0.12)_0%,transparent_65%)] after:content-['']">
       <Particles />
@@ -37,8 +42,10 @@ export default function Hero() {
             <span
               key={i}
               className={
-                'inline-block animate-[slideUp_.5s_ease_forwards] opacity-0' +
-                (w.accent ? ' bg-linear-135 from-sky via-cyan to-teal bg-clip-text text-transparent' : '')
+                "inline-block animate-[slideUp_.5s_ease_forwards] opacity-0" +
+                (w.accent
+                  ? " bg-linear-135 from-sky via-cyan to-teal bg-clip-text text-transparent"
+                  : "")
               }
               style={{ animationDelay: `${w.delay}s` }}
             >
@@ -49,18 +56,36 @@ export default function Hero() {
         </h1>
 
         <p className="mx-auto mb-10 max-w-[580px] animate-[slideUp_.6s_.9s_ease_forwards] text-[clamp(15px,2vw,18px)] leading-[1.75] text-white/60 opacity-0">
-          Oncosourz connects licensed doctors, pharmacists and pharmacy stores on one live,
-          GS1-authenticated network — so life-saving oncology biologics are found, verified,
-          cold-chain monitored and redistributed before they expire.
+          Oncosourz connects licensed doctors, pharmacists and pharmacy stores
+          on one live, GS1-authenticated network — so life-saving oncology
+          biologics are found, verified, cold-chain monitored and redistributed
+          before they expire.
         </p>
 
         <div className="flex animate-[slideUp_.5s_1.1s_ease_forwards] flex-wrap items-center justify-center gap-3 opacity-0">
-          <button className="flex cursor-pointer items-center gap-2 rounded-[10px] bg-linear-135 from-sky to-cyan px-7 py-3.5 font-display text-sm font-bold text-white shadow-[0_4px_24px_rgba(14,165,233,0.35)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.45)]" onClick={()=> router.push('/register')}>
-            <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-white stroke-2"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+          <button
+            className="flex cursor-pointer items-center gap-2 rounded-[10px] bg-linear-135 from-sky to-cyan px-7 py-3.5 font-display text-sm font-bold text-white shadow-[0_4px_24px_rgba(14,165,233,0.35)] transition-all duration-250 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(14,165,233,0.45)]"
+            onClick={() => router.push("/register")}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="size-4 fill-none stroke-white stroke-2"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
             Get Verified & Join
           </button>
-          <button className="flex cursor-pointer items-center gap-2 rounded-[10px] border border-white/15 bg-white/6 px-7 py-3.5 font-display text-sm font-semibold text-white/85 transition-all duration-250 hover:border-white/30 hover:bg-white/10" onClick={() => router.push('/portal')}>
-            <svg viewBox="0 0 24 24" className="size-3.5 fill-none stroke-current stroke-2"><circle cx="12" cy="12" r="10" /><polygon points="10,8 16,12 10,16" /></svg>
+          <button
+            className="flex cursor-pointer items-center gap-2 rounded-[10px] border border-white/15 bg-white/6 px-7 py-3.5 font-display text-sm font-semibold text-white/85 transition-all duration-250 hover:border-white/30 hover:bg-white/10"
+            onClick={() => router.push("/portal")}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="size-3.5 fill-none stroke-current stroke-2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="10,8 16,12 10,16" />
+            </svg>
             Open Portal
           </button>
         </div>
@@ -72,8 +97,16 @@ export default function Hero() {
         </div>
       </div>
 
-      <div className="absolute bottom-8 left-1/2 z-[2] flex animate-bounce-slow flex-col items-center gap-2 text-[11px] tracking-[1px] text-white/30 uppercase" aria-hidden="true">
-        <svg viewBox="0 0 24 24" className="size-[18px] fill-none stroke-current stroke-2"><polyline points="6,9 12,15 18,9" /></svg>
+      <div
+        className="absolute bottom-8 left-1/2 z-[2] flex animate-bounce-slow flex-col items-center gap-2 text-[11px] tracking-[1px] text-white/30 uppercase"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="size-[18px] fill-none stroke-current stroke-2"
+        >
+          <polyline points="6,9 12,15 18,9" />
+        </svg>
         Scroll
       </div>
     </section>

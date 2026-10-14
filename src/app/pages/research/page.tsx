@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
-import { BRIDGE_DATA_SERVICE } from "@/app/services/bridge-data/bridge-mock-service";
+import { BRIDGE_DATA_SERVICE } from "@/app/services/bridge-data/bridge-data-service";
 
 const CAPABILITIES = [
   {
@@ -47,12 +47,16 @@ export default function ResearchPage() {
     const formData = new FormData(event.currentTarget);
     const result = await BRIDGE_DATA_SERVICE.submitPartnershipInquiry({
       organization: String(formData.get("organization") ?? ""),
-      representativeTitle: String(formData.get("representativeTitle") ?? ""),
+      name: String(formData.get("representativeName") ?? ""),
       projectScope: String(formData.get("projectScope") ?? ""),
       email: String(formData.get("email") ?? ""),
     });
     setNotice(
-      `Demo inquiry ${result.reference} accepted in this page only. No email was sent and the details were not stored.`,
+      result.success
+        ? result.reference
+          ? `Inquiry submitted. Reference: ${result.reference}.`
+          : result.message || "Inquiry submitted."
+        : result.message || "The inquiry could not be sent. Please try again.",
     );
   };
 
@@ -216,11 +220,11 @@ export default function ResearchPage() {
               className="text-xs font-bold text-[#314d45]"
               htmlFor="representative-title"
             >
-              Representative title
+              Representative name
               <input
                 className="mt-2 rounded-md border border-[#cbd7d0] bg-white px-3 py-3 text-sm font-normal outline-none focus:border-[#126b5d] focus:ring-2 focus:ring-[#126b5d]/15"
-                id="representative-title"
-                name="representativeTitle"
+                id="representative-name"
+                name="representativeName"
                 required
               />
             </label>

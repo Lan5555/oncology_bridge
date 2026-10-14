@@ -1,45 +1,351 @@
-import { TemperatureHistoryChart } from "../../components/Charts";
+"use client";
 
+import { useState } from "react";
+import {
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Snowflake,
+  Thermometer,
+} from "lucide-react";
+import { TemperatureHistoryChart } from "@/app/components/Charts";
+import EmptyState from "@/app/components/EmptyState";
+import { useColdChainMonitor } from "@/app/hooks/useColdChainMonitor";
 
-const ColdChainPage = () => {
+const dateLabel = (value?: string | null) =>
+  value ? new Date(value).toLocaleString("en-NG") : "—";
+
+export default function ColdChainPage() {
+  const [hours, setHours] = useState(24);
+  const [filters, setFilters] = useState({
+    unitId: "",
+    status: "",
+    from: "",
+    to: "",
+    page: 1,
+  });
+  const monitor = useColdChainMonitor({ hours, filters });
+  const updateFilter = (
+    key: "unitId" | "status" | "from" | "to",
+    value: string,
+  ) => setFilters((current) => ({ ...current, [key]: value, page: 1 }));
+
   return (
-    <div className="block animate-fade-up">
-      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap max-md:flex-col max-md:items-stretch max-md:gap-4">
-    <div className="[&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-g900 [&_h1]:tracking-[-0.4px] [&_p]:text-[12.5px] [&_p]:text-g500 [&_p]:mt-[3px]"><h1>Cold Chain Monitor</h1><p>Real-time temperature tracking · Target 2°C – 8°C</p></div>
-    <div className="flex gap-2 flex-wrap max-md:w-full max-md:justify-start"><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Log</button></div>
-  </div>
+    <div className="block animate-fade-up space-y-5">
+      <header className="rounded-2xl border border-g200 bg-linear-to-br from-w via-w to-pll p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="flex items-center gap-2 text-xl font-bold text-g900">
+              <Snowflake size={21} className="text-p" aria-hidden="true" />
+              Cold Chain Monitor
+            </h1>
+            <p className="mt-1 text-[12.5px] text-g500">
+              Persisted storage units, temperature readings, and cold-chain
+              events for your facility.
+            </p>
+          </div>
+          <div
+            className="flex items-center gap-2 rounded-full border border-g200 bg-w px-3 py-1.5 text-xs font-semibold text-g700"
+            role="status"
+          >
+            <Activity
+              size={14}
+              className={
+                monitor.streamStatus === "live"
+                  ? "text-green-600"
+                  : "text-amber-600"
+              }
+            />
+            {monitor.streamStatus === "live"
+              ? "Live updates"
+              : monitor.streamStatus === "reconnecting"
+                ? "Reconnecting…"
+                : monitor.streamStatus === "error"
+                  ? "Live updates unavailable"
+                  : monitor.streamStatus === "offline"
+                    ? "Offline"
+                    : "Connecting…"}
+          </div>
+        </div>
+        {monitor.streamError && (
+          <p className="mt-3 text-xs text-err">{monitor.streamError}</p>
+        )}
+        {monitor.unitsError && (
+          <p
+            role="alert"
+            className="mt-3 rounded-lg border border-err bg-errl p-3 text-sm text-err"
+          >
+            {monitor.unitsError}
+          </p>
+        )}
+      </header>
 
-  <div className="flex flex-wrap items-start gap-2.5 px-3.5 py-[11px] rounded-xl mb-6 text-[12.5px] border [&_p]:flex-1 [&_p]:min-w-0 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 [&_svg]:mt-px [&_p_strong]:font-bold max-lg:flex-col max-lg:items-start max-lg:[&_svg]:mt-0 max-md:p-3 dk:[&_p]:text-white dk:[&_svg]:stroke-white bg-errl border-[#fecaca] border-l-4 border-l-err text-[#7f1d1d] dk:bg-[#4b0f0f] dk:border-[#fca5a5] dk:text-[#fee2e2]">
-    <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-    <p><strong>Breach detected:</strong> Transit unit T-07 reached 11.2°C. Transfer automatically quarantined. All vials in unit RX-1044-E flagged for physical inspection.</p>
-  </div>
+      <section className="rounded-xl border border-g200 bg-w p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-[15px] font-bold text-g900">
+              Facility storage units
+            </h2>
+            <p className="mt-1 text-xs text-g500">
+              Current values come from the latest persisted or live reading.
+            </p>
+          </div>
+          {monitor.loading && (
+            <span className="text-xs text-g500">Loading…</span>
+          )}
+        </div>
+        {monitor.units.length ? (
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(190px,1fr))] gap-3">
+            {monitor.units.map((unit: any) => {
+              const current =
+                unit.currentC == null ? null : Number(unit.currentC);
+              const state = String(
+                unit.readingState ?? "OFFLINE",
+              ).toUpperCase();
+              const tone =
+                state === "BREACH"
+                  ? "border-err/40 bg-errl text-err"
+                  : state === "OFFLINE"
+                    ? "border-g200 bg-g50 text-g500"
+                    : "border-green-200 bg-green-50 text-green-700";
+              return (
+                <article
+                  key={unit.id}
+                  className={`rounded-lg border p-4 ${tone}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-[11px] font-bold uppercase">
+                      {unit.label || "Storage unit"}
+                    </p>
+                    <span className="text-[10px] font-bold">{state}</span>
+                  </div>
+                  <p className="mt-3 text-2xl font-bold">
+                    {current == null || !Number.isFinite(current)
+                      ? "No reading"
+                      : `${current.toFixed(1)}°C`}
+                  </p>
+                  <p className="mt-1 text-xs opacity-80">
+                    Target {unit.targetMin}–{unit.targetMax}°C
+                  </p>
+                  <p className="mt-2 truncate text-[11px] opacity-75">
+                    {unit.facility?.name ?? unit.facility ?? "Facility"}
+                  </p>
+                  <p className="mt-1 text-[11px] opacity-75">
+                    Last seen {dateLabel(unit.lastSeenAt)}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+        ) : monitor.loading ? (
+          <div className="py-8 text-center text-sm text-g500">
+            Loading storage units…
+          </div>
+        ) : (
+          <EmptyState
+            icon={Thermometer}
+            title="No storage units configured"
+            description="Persisted storage units assigned to your facility will appear here."
+          />
+        )}
+      </section>
 
-  <div className="grid grid-cols-2 gap-4 max-lg:grid-cols-1" style={{marginBottom: '1rem'}}>
-    <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4">
-      <div className="flex items-center justify-between mb-4 gap-2"><div><div className="text-[15px] font-bold text-g900">Facility Storage Units</div><div className="text-xs text-g500 mt-0.5">Live readings — refreshed every 30s</div></div></div>
-      <div className="grid grid-cols-2 gap-2 max-md:grid-cols-1">
-        <div className="border border-g200 rounded-lg p-2.5"><div className="text-[10px] font-bold text-g400 uppercase tracking-[0.5px] mb-1">LUTH Fridge A</div><div className="text-[22px] font-bold tracking-[-0.5px] mb-[5px] text-good">4.2°C</div><div className="h-1 bg-g100 rounded-[2px] overflow-hidden mb-1"><div className="h-full rounded-[2px] bg-good" style={{width: '52%'}}></div></div><div className="text-[10.5px] text-g400">Within 2°C–8°C ✓</div></div>
-        <div className="border border-g200 rounded-lg p-2.5"><div className="text-[10px] font-bold text-g400 uppercase tracking-[0.5px] mb-1">LUTH Fridge B</div><div className="text-[22px] font-bold tracking-[-0.5px] mb-[5px] text-good">3.6°C</div><div className="h-1 bg-g100 rounded-[2px] overflow-hidden mb-1"><div className="h-full rounded-[2px] bg-good" style={{width: '45%'}}></div></div><div className="text-[10.5px] text-g400">Within 2°C–8°C ✓</div></div>
-        <div className="border border-g200 rounded-lg p-2.5"><div className="text-[10px] font-bold text-g400 uppercase tracking-[0.5px] mb-1">EKO Hospital</div><div className="text-[22px] font-bold tracking-[-0.5px] mb-[5px] text-good">3.8°C</div><div className="h-1 bg-g100 rounded-[2px] overflow-hidden mb-1"><div className="h-full rounded-[2px] bg-good" style={{width: '47%'}}></div></div><div className="text-[10.5px] text-g400">Within 2°C–8°C ✓</div></div>
-        <div className="border border-g200 rounded-lg p-2.5"><div className="text-[10px] font-bold text-g400 uppercase tracking-[0.5px] mb-1">UCH Ibadan</div><div className="text-[22px] font-bold tracking-[-0.5px] mb-[5px] text-good">5.1°C</div><div className="h-1 bg-g100 rounded-[2px] overflow-hidden mb-1"><div className="h-full rounded-[2px] bg-good" style={{width: '63%'}}></div></div><div className="text-[10.5px] text-g400">Within 2°C–8°C ✓</div></div>
-        <div className="border border-g200 rounded-lg p-2.5"><div className="text-[10px] font-bold text-g400 uppercase tracking-[0.5px] mb-1">Lagos Island GH</div><div className="text-[22px] font-bold tracking-[-0.5px] mb-[5px] text-good">4.7°C</div><div className="h-1 bg-g100 rounded-[2px] overflow-hidden mb-1"><div className="h-full rounded-[2px] bg-good" style={{width: '58%'}}></div></div><div className="text-[10.5px] text-g400">Within 2°C–8°C ✓</div></div>
-        <div className="border border-g200 rounded-lg p-2.5" style={{borderColor: 'var(--err)', background: 'var(--errl)', boxShadow: '0 0 0 2px var(--errl)'}}><div className="text-[10px] font-bold text-g400 uppercase tracking-[0.5px] mb-1" style={{color: 'var(--err)'}}>Transit T-07 ⚠</div><div className="text-[22px] font-bold tracking-[-0.5px] mb-[5px] text-err">11.2°C</div><div className="h-1 bg-g100 rounded-[2px] overflow-hidden mb-1"><div className="h-full rounded-[2px] bg-err animate-[shimmer_1.5s_infinite] opacity-80" style={{width: '100%'}}></div></div><div className="text-[10.5px] text-g400" style={{color: 'var(--err)', fontWeight: '600'}}>CRITICAL BREACH</div></div>
-      </div>
-    </div>
+      <section className="rounded-xl border border-g200 bg-w p-5">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-[15px] font-bold text-g900">
+              Temperature history
+            </h2>
+            <p className="mt-1 text-xs text-g500">
+              Recorded readings returned by the history API.
+            </p>
+          </div>
+          <label className="text-xs font-medium text-g600">
+            Time range{" "}
+            <select
+              className="ml-2 rounded-md border border-g200 bg-w px-2 py-1.5"
+              value={hours}
+              onChange={(e) => setHours(Number(e.target.value))}
+            >
+              {[24, 48, 168, 720].map((value) => (
+                <option value={value} key={value}>
+                  {value < 48 ? `${value} hours` : `${value / 24} days`}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {monitor.historyError && (
+          <p role="alert" className="mb-3 text-sm text-err">
+            {monitor.historyError}
+          </p>
+        )}
+        <div className="h-[260px]">
+          <TemperatureHistoryChart
+            historyData={monitor.history}
+            loading={monitor.loading}
+            error={monitor.historyError}
+          />
+        </div>
+      </section>
 
-    <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4">
-      <div className="flex items-center justify-between mb-4 gap-2"><div><div className="text-[15px] font-bold text-g900">Temperature History — 24 Hours</div><div className="text-xs text-g500 mt-0.5">All units overlay</div></div></div>
-      <div style={{position: 'relative', height: '200px'}}><TemperatureHistoryChart /></div>
-    </div>
-  </div>
-
-  <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4">
-    <div className="flex items-center justify-between mb-4 gap-2"><div><div className="text-[15px] font-bold text-g900">Breach Event Log</div><div className="text-xs text-g500 mt-0.5">Automated alerts triggered</div></div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--err)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">Transit T-07 — Temperature breach (11.2°C)</div><div className="text-[11px] text-g400 mt-0.5">Transfer quarantined automatically · Webhook sent to admin panel · RX-1044-E flagged</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 13 · 10:47</div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--warn)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">UCH Ibadan Fridge A — Temperature warning (7.9°C)</div><div className="text-[11px] text-g400 mt-0.5">Resolved within 12 minutes · Thermostat adjusted</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 11 · 14:22</div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0" style={{border: 'none'}}><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--ok)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">All systems nominal — Routine check passed</div><div className="text-[11px] text-g400 mt-0.5">24-facility sweep · 0 anomalies</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 10 · 08:00</div></div>
-  </div>
+      <section className="rounded-xl border border-g200 bg-w p-5">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-[15px] font-bold text-g900">
+              Cold-chain event log
+            </h2>
+            <p className="mt-1 text-xs text-g500">
+              Persisted events, with live breach and resolution updates.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <select
+              aria-label="Filter by storage unit"
+              className="rounded-md border border-g200 bg-w px-2 py-1.5 text-xs"
+              value={filters.unitId}
+              onChange={(e) => updateFilter("unitId", e.target.value)}
+            >
+              <option value="">All units</option>
+              {monitor.units.map((unit: any) => (
+                <option value={unit.id} key={unit.id}>
+                  {unit.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter by event status"
+              className="rounded-md border border-g200 bg-w px-2 py-1.5 text-xs"
+              value={filters.status}
+              onChange={(e) => updateFilter("status", e.target.value)}
+            >
+              <option value="">All statuses</option>
+              <option value="OPEN">Open</option>
+              <option value="RESOLVED">Resolved</option>
+            </select>
+            <label className="flex items-center gap-1 rounded-md border border-g200 px-2 text-xs text-g500">
+              <Clock3 size={13} />
+              <input
+                aria-label="Events from date"
+                className="max-w-[125px] py-1.5 text-g700"
+                type="date"
+                value={filters.from}
+                onChange={(e) => updateFilter("from", e.target.value)}
+              />
+            </label>
+            <label className="flex items-center gap-1 rounded-md border border-g200 px-2 text-xs text-g500">
+              <Clock3 size={13} />
+              <input
+                aria-label="Events to date"
+                className="max-w-[125px] py-1.5 text-g700"
+                type="date"
+                value={filters.to}
+                onChange={(e) => updateFilter("to", e.target.value)}
+              />
+            </label>
+          </div>
+        </div>
+        {monitor.eventsError && (
+          <p role="alert" className="mb-3 text-sm text-err">
+            {monitor.eventsError}
+          </p>
+        )}
+        {monitor.events.length ? (
+          <div className="divide-y divide-g100">
+            {monitor.events.map((event: any, index: number) => (
+              <article
+                className="py-3"
+                key={event.id ?? `${event.at}-${index}`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-g800">
+                    {event.message || "Cold-chain event"}
+                  </p>
+                  <span className="rounded-full bg-g100 px-2 py-0.5 text-[10px] font-bold uppercase text-g600">
+                    {event.status ??
+                      event.state ??
+                      event.eventStatus ??
+                      event.eventState ??
+                      event.severity ??
+                      "Event"}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-g500">
+                  {monitor.units.find(
+                    (unit: any) => String(unit.id) === String(event.unitId),
+                  )?.label ?? event.unitId}{" "}
+                  · {dateLabel(event.at)} ·{" "}
+                  {event.severity ?? "Unspecified severity"}
+                </p>
+                {(event.observedMinCelsius != null ||
+                  event.observedMaxCelsius != null) && (
+                  <p className="mt-1 text-xs text-g600">
+                    Observed: {event.observedMinCelsius ?? "—"}°C to{" "}
+                    {event.observedMaxCelsius ?? "—"}°C
+                  </p>
+                )}
+                {event.actionTaken && (
+                  <p className="mt-1 text-xs text-g600">
+                    Action taken: {event.actionTaken}
+                  </p>
+                )}
+                <p className="mt-1 text-[11px] text-g500">
+                  Last seen {dateLabel(event.lastSeenAt)} ·{" "}
+                  {event.resolvedAt
+                    ? `Resolved ${dateLabel(event.resolvedAt)}`
+                    : "Unresolved"}
+                </p>
+              </article>
+            ))}
+          </div>
+        ) : monitor.loading ? (
+          <p className="py-6 text-center text-sm text-g500">Loading events…</p>
+        ) : (
+          <EmptyState
+            compact
+            icon={Snowflake}
+            title="No recorded events"
+            description="Persisted cold-chain events matching these filters will appear here."
+          />
+        )}
+        <div className="mt-4 flex items-center justify-between border-t border-g100 pt-3 text-xs text-g500">
+          <span>
+            {monitor.eventTotal == null
+              ? `Page ${filters.page}`
+              : `${monitor.eventTotal} event${monitor.eventTotal === 1 ? "" : "s"}`}
+          </span>
+          <div className="flex gap-2">
+            <button
+              disabled={filters.page <= 1}
+              onClick={() =>
+                setFilters((current) => ({
+                  ...current,
+                  page: current.page - 1,
+                }))
+              }
+              className="rounded border border-g200 p-1.5 disabled:opacity-40"
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span className="px-1 py-1.5">{filters.page}</span>
+            <button
+              disabled={!monitor.hasNextPage}
+              onClick={() =>
+                setFilters((current) => ({
+                  ...current,
+                  page: current.page + 1,
+                }))
+              }
+              className="rounded border border-g200 p-1.5 disabled:opacity-40"
+              aria-label="Next page"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
-export default ColdChainPage;

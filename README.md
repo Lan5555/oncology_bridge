@@ -20,11 +20,13 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Frontend Data Integration
+## Frontend API Integration
 
-`src/app/services/bridge-data/bridge-mock-service.ts` is the adapter for the currently mocked invoice lookup, stock search, inventory fixtures, prescription orders, verification queue, settlement summary, and research inquiry. Its `BRIDGE_DATA_SERVICE` methods return demo data only; edits and payment simulations are not persisted or sent to a provider.
+The frontend calls the backend origin configured by `NEXT_PUBLIC_BASE_URL`. `src/app/services/api-routes.ts` owns API paths and query builders. Each domain has an async service under `src/app/services/` (auth, dashboard, facilities, inventory, scans, transfers, prescriptions, invoices, cold chain, users, audit, settings, reports, notifications, admin, research, and medicines). `hooks/service/core-service.ts` adds the stored bearer token, unwraps both API envelopes and direct JSON responses, and refreshes an expired user session when a refresh token is available.
 
-When connecting the external backend, replace the adapter methods with calls to the corresponding API while keeping the UI-facing types stable. Keep Paystack initialization and verification server-side; never expose a secret key through a `NEXT_PUBLIC_` variable. Authentication, facility registration, and licence verification already have separate service classes under `src/app/services/`.
+The UI service adapter in `services/bridge-data/bridge-data-service.ts` translates backend responses for stock search, invoice lookup/creation, and partnership inquiries. Protected API calls require a valid `userSession`; admin calls use the separate `adminSession` returned by `/admin/api/login`. In production, add the deployed frontend origin to the backend's comma-separated `CORS_ORIGIN`. Keep Paystack initialization and verification server-side; never expose a secret key through a `NEXT_PUBLIC_` variable.
+
+The camera decode endpoint requested for the GS1 scanner is not part of the current backend contract. See [SCANNER_ENDPOINT_README.md](SCANNER_ENDPOINT_README.md) for the proposed `POST /api/scans/decode` request and response contract.
 
 ## Learn More
 

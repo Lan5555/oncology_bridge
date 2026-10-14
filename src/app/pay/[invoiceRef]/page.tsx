@@ -1,7 +1,7 @@
 import { ArrowLeft, CircleAlert, LockKeyhole } from "lucide-react";
 import Link from "next/link";
-import { BRIDGE_DATA_SERVICE } from "@/app/services/bridge-data/bridge-mock-service";
-import MockInvoicePayment from "@/app/components/MockInvoicePayment";
+import { BRIDGE_DATA_SERVICE } from "@/app/services/bridge-data/bridge-data-service";
+import InvoicePayment from "@/app/components/InvoicePayment";
 
 export default async function InvoiceCheckoutPage({
   params,
@@ -48,33 +48,65 @@ export default async function InvoiceCheckoutPage({
             payment methods must be verified by Oncosourz before payment.
           </p>
           {invoice ? (
-            <section className="mt-8 border border-[#d4dfd9] bg-white p-6" aria-labelledby="invoice-detail-title">
+            <section
+              className="mt-8 border border-[#d4dfd9] bg-white p-6"
+              aria-labelledby="invoice-detail-title"
+            >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 id="invoice-detail-title" className="font-display text-lg font-bold text-[#173b35]">Invoice details</h2>
-                  <p className="mt-1 text-sm text-[#5d6e69]">{invoice.pharmacy}</p>
+                  <h2
+                    id="invoice-detail-title"
+                    className="font-display text-lg font-bold text-[#173b35]"
+                  >
+                    Invoice details
+                  </h2>
+                  <p className="mt-1 text-sm text-[#5d6e69]">
+                    {invoice.pharmacy}
+                  </p>
                 </div>
-                <span className="border border-[#e7c89b] bg-[#fff8eb] px-2.5 py-1 text-xs font-bold text-[#80521e]">DEMO DATA</span>
+                {invoice.isDemo ? (
+                  <span className="border border-[#e7c89b] bg-[#fff8eb] px-2.5 py-1 text-xs font-bold text-[#80521e]">
+                    DEMO DATA
+                  </span>
+                ) : null}
               </div>
               <div className="mt-5 divide-y divide-[#e5ebe7] border-y border-[#e5ebe7]">
                 {invoice.items.map((item) => (
-                  <div className="flex justify-between gap-5 py-4 text-sm" key={item.description}>
+                  <div
+                    className="flex justify-between gap-5 py-4 text-sm"
+                    key={item.description}
+                  >
                     <div>
-                      <p className="font-semibold text-[#263f39]">{item.description}</p>
-                      <p className="mt-1 text-xs text-[#71807b]">Quantity: {item.quantity}</p>
+                      <p className="font-semibold text-[#263f39]">
+                        {item.description}
+                      </p>
+                      <p className="mt-1 text-xs text-[#71807b]">
+                        Quantity: {item.quantity}
+                      </p>
                     </div>
-                    <span className="shrink-0 text-[#263f39]">{formatNaira(item.quantity * item.unitPriceNaira)}</span>
+                    <span className="shrink-0 text-[#263f39]">
+                      {formatNaira(item.quantity * item.unitPriceNaira)}
+                    </span>
                   </div>
                 ))}
               </div>
               <div className="flex justify-between gap-4 pt-4 font-display text-base font-bold text-[#173b35]">
                 <span>Total</span>
-                <span>{formatNaira(invoice.items.reduce((total, item) => total + item.quantity * item.unitPriceNaira, 0))}</span>
+                <span>
+                  {formatNaira(
+                    invoice.items.reduce(
+                      (total, item) =>
+                        total + item.quantity * item.unitPriceNaira,
+                      0,
+                    ),
+                  )}
+                </span>
               </div>
             </section>
           ) : (
             <div className="mt-8 border border-[#d4dfd9] bg-white p-5 text-sm leading-6 text-[#5d6e69]">
-              No matching demo invoice was found for this reference. Check the code with your care team.
+              No matching invoice was found for this reference. Check the code
+              with your care team.
             </div>
           )}
         </section>
@@ -86,19 +118,23 @@ export default async function InvoiceCheckoutPage({
             />
             <div>
               <h2 className="font-display text-base font-bold text-[#173b35]">
-                Demonstration checkout
+                Secure checkout
               </h2>
               <p className="mt-2 text-sm leading-6 text-[#5d6e69]">
-                This screen uses local mock invoice data. No payment is sent to
-                Paystack, no funds move, and no real pharmacy order is created.
+                Payment is initialized by the backend and processed by its
+                configured provider.
               </p>
             </div>
           </div>
           <div className="mt-6 border-t border-[#e5ebe7] pt-5 text-xs leading-5 text-[#76847f]">
-            Payment methods shown in a live checkout must be enabled by the
-            merchant and confirmed by the external payment backend.
+            Payment options are provided by the invoice service.
           </div>
-          {invoice ? <MockInvoicePayment paymentMethods={invoice.paymentMethods} /> : null}
+          {invoice ? (
+            <InvoicePayment
+              paymentMethods={invoice.paymentMethods}
+              reference={invoice.reference}
+            />
+          ) : null}
           <Link
             className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-[#126b5d] hover:text-[#173b35]"
             href="/"

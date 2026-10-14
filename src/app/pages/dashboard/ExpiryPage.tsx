@@ -1,34 +1,132 @@
-import type React from 'react';
+"use client";
 
-const ExpiryPage: React.FC = () => {
+import { useEffect, useState } from "react";
+import { PackageSearch } from "lucide-react";
+import EmptyState from "@/app/components/EmptyState";
+import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
+import { TRANSFER_SERVICE } from "@/app/services/transfer-service/transfer-service";
+import { unwrapArray } from "@/app/services/response-utils";
+
+export default function ExpiryPage() {
+  const [items, setItems] = useState<any[]>([]);
+  const [notice, setNotice] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  useEffect(() => {
+    void INVENTORY_SERVICE.expiry(60).then((response) => {
+      if (response.success) setItems(unwrapArray(response.data));
+      else setNotice(response.message || "Expiry data could not be loaded.");
+    });
+  }, []);
+  const requestTransfer = async (item: any) => {
+    const recipient = item.nearestRecipient;
+    if (!recipient?.id || (!item.inventoryItemId && !item.id)) {
+      setNotice(
+        "A linked inventory item and eligible recipient are required for a transfer.",
+      );
+      return;
+    }
+    setBusyId(item.id);
+    const response = await TRANSFER_SERVICE.create({
+      inventoryItemId: item.inventoryItemId ?? item.id,
+      recipientFacilityId: recipient.id,
+      quantity: item.qty ?? item.quantity ?? 1,
+    });
+    setNotice(
+      response.message ||
+        (response.success
+          ? "Transfer request submitted."
+          : "Transfer request failed."),
+    );
+    setBusyId(null);
+  };
   return (
     <div className="block animate-fade-up">
-      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap max-md:flex-col max-md:items-stretch max-md:gap-4">
-    <div className="[&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-g900 [&_h1]:tracking-[-0.4px] [&_p]:text-[12.5px] [&_p]:text-g500 [&_p]:mt-[3px]"><h1>Near-Expiry Alerts</h1><p>Items flagged within 60 days of expiry — auto-broadcast to recipient hubs</p></div>
-  </div>
-
-  <div className="flex flex-wrap items-start gap-2.5 px-3.5 py-[11px] rounded-xl mb-6 text-[12.5px] border [&_p]:flex-1 [&_p]:min-w-0 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 [&_svg]:mt-px [&_p_strong]:font-bold max-lg:flex-col max-lg:items-start max-lg:[&_svg]:mt-0 max-md:p-3 dk:[&_p]:text-white dk:[&_svg]:stroke-white bg-warnl border-[#fde68a] border-l-[5px] border-l-warn text-[#78350f] [&_p_strong]:text-[#92400e] dk:bg-[#331f04] dk:border-[#a16207] dk:text-[#fef3c7] dk:[&_p_strong]:text-white">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-    <p><strong>7 items</strong> require redistribution within the next 60 days to prevent wastage. Facilities within 50-mile radius have been notified.</p>
-  </div>
-
-  <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4">
-    <div className="flex items-center justify-between mb-4 gap-2"><div><div className="text-[15px] font-bold text-g900">Near-Expiry Stock Register</div><div className="text-xs text-g500 mt-0.5">Sorted by urgency</div></div></div>
-    <div className="overflow-x-auto rounded-xl bg-w border border-g100 shadow-[0_14px_30px_rgba(15,23,42,0.08)] max-lg:block max-lg:w-full max-lg:[&_table]:w-auto max-lg:[&_table]:min-w-[720px] max-lg:[&_th]:whitespace-nowrap max-lg:[&_td]:whitespace-nowrap max-md:[&_table]:w-full max-md:[&_table]:min-w-0 max-md:[&_thead]:hidden max-md:[&_tr]:block max-md:[&_tr]:mb-4 max-md:[&_tr]:border max-md:[&_tr]:border-g200 max-md:[&_tr]:rounded-xl max-md:[&_tr]:overflow-hidden max-md:[&_tr]:bg-w max-md:[&_td]:flex max-md:[&_td]:justify-between max-md:[&_td]:items-start max-md:[&_td]:px-3 max-md:[&_td]:py-2.5 max-md:[&_td]:border-0 max-md:[&_td]:border-b max-md:[&_td]:border-g100 max-md:[&_td]:whitespace-normal max-md:[&_td:last-child]:border-b-0 max-md:[&_td]:before:content-[attr(data-label)] max-md:[&_td]:before:basis-[45%] max-md:[&_td]:before:grow-0 max-md:[&_td]:before:shrink-0 max-md:[&_td]:before:text-[11px] max-md:[&_td]:before:font-bold max-md:[&_td]:before:text-g500 max-md:[&_td]:before:mr-2.5 max-md:[&_td]:before:whitespace-nowrap max-md:[&_td_span.badge]:ml-auto max-[520px]:[&_td]:flex-col max-[520px]:[&_td]:items-start max-[520px]:[&_td]:before:mb-1.5 max-[520px]:[&_td]:before:basis-auto">
-      <table>
-        <thead><tr><th>Drug</th><th>Lot Number</th><th>Donor Facility</th><th>Qty</th><th>Expiry</th><th>Urgency</th><th>Nearest Recipient</th><th>Action</th></tr></thead>
-        <tbody>
-          <tr style={{background: 'var(--errl)'}}><td><div className="font-bold text-g900 text-[13px]">Rituximab</div><div className="text-[11px] text-g400 mt-0.5">GTIN 0812945002</div></td><td style={{fontFamily: 'monospace', fontSize: '12px'}}>RX-1044-E</td><td>LASUTH</td><td>7</td><td>Jul 22, 2026</td><td><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-errl text-[#7f1d1d] dk:bg-[#4b0f0f] dk:text-[#fee2e2]" style={{padding: '4px 10px', border: '1px solid #fecaca'}}>Critical: 26 days</span></td><td>EKO Hospital · 8.1km</td><td><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" style={{padding: '5px 10px', fontSize: '11px', background: 'var(--err)', border: 'none'}}>Priority Transfer</button></td></tr>
-          <tr style={{background: 'var(--errl)'}}><td><div className="font-bold text-g900 text-[13px]">Rituximab</div><div className="text-[11px] text-g400 mt-0.5">GTIN 0812944031</div></td><td style={{fontFamily: 'monospace', fontSize: '12px'}}>RX-0912-A</td><td>EKO Hospital</td><td>5</td><td>Jul 28, 2026</td><td><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-errl text-[#7f1d1d] dk:bg-[#4b0f0f] dk:text-[#fee2e2]" style={{padding: '4px 10px', border: '1px solid #fecaca'}}>Critical: 32 days</span></td><td>LUTH · 7.8km</td><td><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" style={{padding: '5px 10px', fontSize: '11px', background: 'var(--err)', border: 'none'}}>Priority Transfer</button></td></tr>
-          <tr><td><div className="font-bold text-g900 text-[13px]">Trastuzumab</div><div className="text-[11px] text-g400 mt-0.5">GTIN 0304817892</div></td><td style={{fontFamily: 'monospace', fontSize: '12px'}}>TZ-2204-B</td><td>LUTH</td><td>8</td><td>Aug 3, 2026</td><td><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]" style={{padding: '4px 10px'}}>Warning: 38 days</span></td><td>Lagos Island GH · 14.2km</td><td><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" style={{padding: '5px 10px', fontSize: '11px'}}>Request Transfer</button></td></tr>
-          <tr><td><div className="font-bold text-g900 text-[13px]">Pertuzumab</div><div className="text-[11px] text-g400 mt-0.5">GTIN 0321847920</div></td><td style={{fontFamily: 'monospace', fontSize: '12px'}}>PT-0707-D</td><td>Lagos Island GH</td><td>3</td><td>Sep 5, 2026</td><td><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]" style={{padding: '4px 10px'}}>Warning: 41 days</span></td><td>LUTH · 14.2km</td><td><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" style={{padding: '5px 10px', fontSize: '11px'}}>Request Transfer</button></td></tr>
-          <tr><td><div className="font-bold text-g900 text-[13px]">Bevacizumab</div><div className="text-[11px] text-g400 mt-0.5">GTIN 0519273447</div></td><td style={{fontFamily: 'monospace', fontSize: '12px'}}>BV-1103-C</td><td>UCH Ibadan</td><td>12</td><td>Sep 12, 2026</td><td><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]" style={{padding: '4px 10px'}}>Warning: 48 days</span></td><td>LASUTH · 22km</td><td><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" style={{padding: '5px 10px', fontSize: '11px'}}>Request Transfer</button></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+      <header className="mb-6 rounded-2xl border border-g200 bg-linear-to-br from-w via-w to-pll p-5 shadow-sm">
+        <h1 className="flex items-center gap-2 text-xl font-bold text-g900">
+          <PackageSearch className="size-5 text-p" aria-hidden="true" />
+          Near-Expiry Alerts
+        </h1>
+        <p className="mt-1 text-[12.5px] text-g500">
+          Items approaching expiry · Sorted by urgency
+        </p>
+      </header>
+      <div className="mb-5 rounded-xl border border-g200 bg-w p-4 text-sm text-g700">
+        {items.length} items require review within the next 60 days.
+      </div>
+      {notice ? (
+        <p className="mb-4 text-sm text-g600" role="status">
+          {notice}
+        </p>
+      ) : null}
+      <div className="overflow-x-auto rounded-xl border border-g200 bg-w">
+        <table className="w-full min-w-[780px] text-left text-sm">
+          <thead className="bg-g50 text-xs uppercase text-g500">
+            <tr>
+              {[
+                "Drug",
+                "Lot",
+                "Donor facility",
+                "Quantity",
+                "Expiry",
+                "Days left",
+                "Nearest recipient",
+                "Action",
+              ].map((label) => (
+                <th className="px-4 py-3" key={label}>
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr className="border-t border-g100" key={item.id}>
+                <td className="px-4 py-3 font-semibold text-g800">
+                  {item.drug ?? "—"}
+                </td>
+                <td className="px-4 py-3 font-mono text-xs">
+                  {item.lot ?? item.batchNumber ?? "—"}
+                </td>
+                <td className="px-4 py-3">
+                  {item.donorFacility?.name ?? item.donorFacility ?? "—"}
+                </td>
+                <td className="px-4 py-3">{item.qty ?? item.quantity ?? 0}</td>
+                <td className="px-4 py-3">
+                  {item.expiry
+                    ? new Date(item.expiry).toLocaleDateString("en-NG")
+                    : "—"}
+                </td>
+                <td className="px-4 py-3">{item.daysLeft ?? "—"}</td>
+                <td className="px-4 py-3">
+                  {item.nearestRecipient?.name ?? item.nearestRecipient ?? "—"}
+                  {item.distanceKm != null ? ` · ${item.distanceKm} km` : ""}
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    disabled={busyId === item.id}
+                    onClick={() => void requestTransfer(item)}
+                    className="rounded-md bg-p px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {busyId === item.id ? "Sending…" : "Request transfer"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {!items.length ? (
+              <tr>
+                <td className="px-4 py-3" colSpan={8}>
+                  <EmptyState
+                    compact
+                    icon={PackageSearch}
+                    title="No near-expiry inventory"
+                    description="Inventory nearing its expiry date will appear here."
+                  />
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
-
-export default ExpiryPage;

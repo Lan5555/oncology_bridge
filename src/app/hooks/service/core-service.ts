@@ -1,113 +1,179 @@
-import { Net, NetResponse } from "./net-response";
+import { NetResponse } from "./net-response";
+import { Routes } from "@/app/services/api-routes";
 
+type RequestOptions = {
+  method?: string;
+  body?: unknown;
+  auth?: boolean;
+  admin?: boolean;
+  headers?: Record<string, string>;
+};
 
+/** Shared REST client for the backend API documented in the project contract. */
 export class CoreService {
-  private BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || '';
-
-  private fallback: Net = {
-    success: false,
-    message: 'An error occurred.',
-    data: null
-  };
+  private BASE_URL = process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") || "";
 
   public setBaseUrl(url: string): void {
-    this.BASE_URL = url;
+    this.BASE_URL = url.replace(/\/$/, "");
   }
 
-  private getToken(): string | null {
+  private getSession(admin = false): Record<string, any> | null {
     if (typeof window === "undefined") return null;
-    const userSession = localStorage.getItem("userSession");
-    if (!userSession) return null;
     try {
-      const parsed = JSON.parse(userSession);
-      return parsed?.token || null;
+      const preferredKey = admin ? "adminSession" : "userSession";
+      const preferred = localStorage.getItem(preferredKey);
+      if (preferred) return JSON.parse(preferred);
+      // Admin pages reuse shared user and facility views. Those views should
+      // continue to send the authenticated admin bearer token when opened in
+      // the admin console.
+      if (!admin) {
+        const adminSession = localStorage.getItem("adminSession");
+        return adminSession ? JSON.parse(adminSession) : null;
+      }
+      return null;
     } catch {
       return null;
     }
   }
-  private getHeaders(): Record<string, string> {
+
+  private async refreshSession(): Promise<boolean> {
+    if (typeof window === "undefined" || !localStorage.getItem("userSession"))
+      return false;
+    const session = this.getSession();
+    if (!session?.refreshToken || !this.BASE_URL) return false;
+    try {
+      const response = await fetch(`${this.BASE_URL}${Routes.REFRESH}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: session.refreshToken }),
+      });
+      const result = await response.json();
+      if (!response.ok || result?.success === false) return false;
+      const tokens = result?.data ?? result;
+      const updated = { ...session, ...tokens, user: session.user };
+      localStorage.setItem("userSession", JSON.stringify(updated));
+      return Boolean(updated.token);
+    } catch {
+      return false;
+    }
+  }
+
+  private async request(
+    endpoint: string,
+    options: RequestOptions = {},
+    retried = false,
+  ): Promise<NetResponse> {
+    if (!this.BASE_URL) {
+      return new NetResponse({
+        success: false,
+        message: "Set NEXT_PUBLIC_BASE_URL to your backend API origin.",
+        data: null,
+      });
+    }
+    const session = this.getSession(options.admin);
+    const token = session?.token;
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      Accept: "application/json",
+      ...options.headers,
     };
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (options.body !== undefined && !(options.body instanceof FormData))
+      headers["Content-Type"] = "application/json";
+    if (options.auth !== false && token)
+      headers.Authorization = `Bearer ${token}`;
+    const body =
+      options.body === undefined
+        ? undefined
+        : options.body instanceof FormData
+          ? options.body
+          : JSON.stringify(options.body);
+
+    try {
+      const response = await fetch(
+        `${this.BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`,
+        {
+          method: options.method ?? "GET",
+          headers,
+          body,
+          cache: "no-store",
+        },
+      );
+      if (
+        response.status === 401 &&
+        token &&
+        !retried &&
+        !options.admin &&
+        !endpoint.includes("/auth/api/refresh")
+      ) {
+        if (await this.refreshSession())
+          return this.request(endpoint, options, true);
+      }
+      const text = await response.text();
+      let parsed: any = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = text;
+      }
+      const isEnvelope =
+        parsed && typeof parsed === "object" && "success" in parsed;
+      return new NetResponse({
+        success: isEnvelope
+          ? Boolean(parsed.success) && response.ok
+          : response.ok,
+        message: isEnvelope
+          ? (parsed.message ?? "")
+          : response.ok
+            ? ""
+            : (parsed?.message ?? response.statusText),
+        data: isEnvelope ? (parsed.data ?? null) : parsed,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Network request failed.";
+      return new NetResponse({ success: false, message, data: null });
     }
-    return headers;
   }
 
-  public async send(endpoint: string, payload: Record<string, any>): Promise<NetResponse> {
-    try {
-      const res = await fetch(`${this.BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      return new NetResponse({
-        success: data.success ?? res.ok,
-        message: data.message || '',
-        data: data.data ?? null
-      });
-    } catch (e: any) {
-      console.error(e);
-    }
-    return new NetResponse(this.fallback);
+  public async send(
+    endpoint: string,
+    payload: unknown,
+    options: Omit<RequestOptions, "method" | "body"> = {},
+  ) {
+    return await this.request(endpoint, {
+      ...options,
+      method: "POST",
+      body: payload,
+    });
   }
-
-  public async update(endpoint: string, payload: Record<string, any>): Promise<NetResponse> {
-    try {
-      const res = await fetch(`${this.BASE_URL}${endpoint}`, {
-        method: 'PATCH',
-        headers: this.getHeaders(),
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      return new NetResponse({
-        success: data.success ?? res.ok,
-        message: data.message || '',
-        data: data.data ?? null
-      });
-    } catch (e: any) {
-      console.error(e);
-    }
-    return new NetResponse(this.fallback);
+  public async update(
+    endpoint: string,
+    payload: unknown,
+    options: Omit<RequestOptions, "method" | "body"> = {},
+  ) {
+    return await this.request(endpoint, {
+      ...options,
+      method: "PATCH",
+      body: payload,
+    });
   }
-
-  public async delete(endpoint: string, payload?: Record<string, any>): Promise<NetResponse> {
-    try {
-      const res = await fetch(`${this.BASE_URL}${endpoint}`, {
-        method: 'DELETE',
-        headers: this.getHeaders(),
-        body: payload ? JSON.stringify(payload) : null
-      });
-      const data = await res.json();
-      return new NetResponse({
-        success: data.success ?? res.ok,
-        message: data.message || '',
-        data: data.data ?? null
-      });
-    } catch (e: any) {
-      console.error(e);
-    }
-    return new NetResponse(this.fallback);
+  public async put(endpoint: string, payload: unknown) {
+    return await this.request(endpoint, { method: "PUT", body: payload });
   }
-
-  public async get(endpoint: string): Promise<NetResponse> {
-    try {
-      const res = await fetch(`${this.BASE_URL}${endpoint}`, {
-        method: 'GET',
-        headers: this.getHeaders()
-      });
-      const data = await res.json();
-      return new NetResponse({
-        success: data.success ?? res.ok,
-        message: data.message || '',
-        data: data.data ?? null
-      });
-    } catch (e: any) {
-      console.error(e);
-    }
-    return new NetResponse(this.fallback);
+  public async delete(
+    endpoint: string,
+    payload?: unknown,
+    options: Omit<RequestOptions, "method" | "body"> = {},
+  ) {
+    return await this.request(endpoint, {
+      ...options,
+      method: "DELETE",
+      body: payload,
+    });
+  }
+  public async get(
+    endpoint: string,
+    options: Omit<RequestOptions, "method" | "body"> = {},
+  ) {
+    return await this.request(endpoint, options);
   }
 }

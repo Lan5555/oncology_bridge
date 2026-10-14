@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 class Particle {
   x = 0;
@@ -30,7 +30,12 @@ class Particle {
   update() {
     this.x += this.vx;
     this.y += this.vy;
-    if (this.x < 0 || this.x > this.width || this.y < 0 || this.y > this.height) {
+    if (
+      this.x < 0 ||
+      this.x > this.width ||
+      this.y < 0 ||
+      this.y > this.height
+    ) {
       this.reset();
     }
   }
@@ -49,7 +54,7 @@ export default function Particles() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     let width = 0;
@@ -91,14 +96,19 @@ export default function Particles() {
       raf = requestAnimationFrame(animate);
     };
 
-    window.addEventListener('resize', resize);
+    window.addEventListener("resize", resize);
     animate();
 
     return () => {
-      window.removeEventListener('resize', resize);
+      window.removeEventListener("resize", resize);
       cancelAnimationFrame(raf);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none w-full h-full z-0" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 pointer-events-none w-full h-full z-0"
+    />
+  );
 }

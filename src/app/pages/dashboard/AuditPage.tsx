@@ -1,25 +1,115 @@
+"use client";
 
-const AuditPage = () => {
+import { useEffect, useState } from "react";
+import { ClipboardList } from "lucide-react";
+import EmptyState from "@/app/components/EmptyState";
+import { AUDIT_SERVICE } from "@/app/services/audit-service/audit-service";
+import { unwrapArray } from "@/app/services/response-utils";
+
+export default function AuditPage({
+  adminMode = false,
+}: {
+  adminMode?: boolean;
+}) {
+  const [entries, setEntries] = useState<any[]>([]);
+  const [message, setMessage] = useState("");
+  const load = async () => {
+    const response = await AUDIT_SERVICE.list("page=1&limit=100", adminMode);
+    if (response.success) setEntries(unwrapArray(response.data));
+    else setMessage(response.message || "Audit history could not be loaded.");
+  };
+  useEffect(() => {
+    void load();
+  }, [adminMode]);
+  const verify = async () => {
+    const response = await AUDIT_SERVICE.verify(adminMode);
+    setMessage(
+      response.success
+        ? response.message || "Audit chain verified."
+        : response.message || "Audit chain verification failed.",
+    );
+  };
+  const exportCsv = async () => {
+    const response = await AUDIT_SERVICE.exportCsv(adminMode);
+    const value = (response.data as any)?.csv ?? response.data;
+    if (!response.success || !value) {
+      setMessage(response.message || "Audit export failed.");
+      return;
+    }
+    const blob = new Blob(
+      [typeof value === "string" ? value : JSON.stringify(value)],
+      { type: "text/csv" },
+    );
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "audit.csv";
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
   return (
     <div className="block animate-fade-up">
-      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap max-md:flex-col max-md:items-stretch max-md:gap-4">
-    <div className="[&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-g900 [&_h1]:tracking-[-0.4px] [&_p]:text-[12.5px] [&_p]:text-g500 [&_p]:mt-0.75"><h1>Audit Log</h1><p>Immutable activity trail · AES-256 field-level encryption</p></div>
-    <div className="flex gap-2 flex-wrap max-md:w-full max-md:justify-start">
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-1.75 rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Log</button>
-    </div>
-  </div>
-  <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4">
-    <div className="flex items-center justify-between mb-4 gap-2"><div><div className="text-[15px] font-bold text-g900">Event Stream</div><div className="text-xs text-g500 mt-0.5">All system actions · All roles · Real-time</div></div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--err)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">BREACH ALERT — Transit T-07 temperature exceeded 8°C</div><div className="text-[11px] text-g400 mt-0.5">System · Transfer ticket quarantined · Webhook sent to admin · Batch RX-1044-E flagged</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 13 · 10:47</div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--p)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">GS1 Scan — TZ-2204-A verified clean (Pharm. Usman)</div><div className="text-[11px] text-g400 mt-0.5">Role A · GTIN 0304817892 · LUTH · WAOAB Security cleared</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 13 · 10:31</div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--ok)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">Transfer approved — Trastuzumab ×4 (Dr. Okonkwo)</div><div className="text-[11px] text-g400 mt-0.5">Role C · Lagos Island GH → LASUTH · transfer_ticket #T-094</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 13 · 09:55</div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--p)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">Prescription sent to network — Patient #0492</div><div className="text-[11px] text-g400 mt-0.5">ICD-10 C50.4 · AXA Mansard · Trastuzumab ×2 · Clinical JSON packaged</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 13 · 09:30</div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--warn)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">Near-expiry flag — RX-0912-A (32 days remaining)</div><div className="text-[11px] text-g400 mt-0.5">System · item_status set to near_expiry · Broadcast to 6 recipient hubs within 50 miles</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 13 · 08:00</div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--ok)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">Stock ingested — 15 vials Trastuzumab (Pharm. Nwosu)</div><div className="text-[11px] text-g400 mt-0.5">Role A · POS webhook · Pharmacy X · Batch TZ-2211-A · Jan 2027</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 12 · 17:10</div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--p)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">New facility onboarded — Lagos Island GH</div><div className="text-[11px] text-g400 mt-0.5">Role C · Dr. Sotunde · IP whitelist set · 2 devices paired · Role B assigned</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 11 · 11:00</div></div>
-    <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0" style={{border: 'none'}}><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--ok)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">JWT token renewed — Pharm. Usman</div><div className="text-[11px] text-g400 mt-0.5">Session sliding-window renewal · EKO Hospital device</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">Jun 11 · 09:05</div></div>
-  </div>
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-g200 bg-linear-to-br from-w via-w to-pll p-5 shadow-sm">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-bold text-g900">
+            <ClipboardList className="size-5 text-p" aria-hidden="true" />
+            Audit Log
+          </h1>
+          <p className="mt-1 text-[12.5px] text-g500">
+            Read-only activity stream
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => void verify()}
+            className="rounded-lg border border-g200 bg-w px-3 py-2 text-xs font-semibold text-g700"
+          >
+            Verify hash chain
+          </button>
+          <button
+            onClick={() => void exportCsv()}
+            className="rounded-lg bg-p px-3 py-2 text-xs font-semibold text-white"
+          >
+            Export CSV
+          </button>
+        </div>
+      </header>
+      {message ? (
+        <p role="status" className="mb-4 text-sm text-g600">
+          {message}
+        </p>
+      ) : null}
+      <section className="rounded-xl border border-g200 bg-w p-5">
+        {entries.map((entry, index) => (
+          <article
+            className="border-b border-g100 py-4 last:border-0"
+            key={entry.id ?? index}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-g800">
+                {entry.type ?? entry.action ?? "Activity"}
+                {entry.object_type ? ` · ${entry.object_type}` : ""}
+              </h2>
+              <time className="text-xs text-g500">
+                {entry.at ? new Date(entry.at).toLocaleString("en-NG") : "—"}
+              </time>
+            </div>
+            <p className="mt-1 text-xs text-g500">
+              {entry.detail ?? entry.message ?? "—"}
+            </p>
+            <p className="mt-1 text-[11px] text-g400">
+              {entry.actor?.name ?? entry.actor ?? "System"}
+              {entry.severity ? ` · ${entry.severity}` : ""}
+            </p>
+          </article>
+        ))}
+        {!entries.length ? (
+          <EmptyState
+            icon={ClipboardList}
+            title="No audit events yet"
+            description="Recorded activity will appear here as users and services make changes."
+          />
+        ) : null}
+      </section>
     </div>
   );
 }
-export default AuditPage;

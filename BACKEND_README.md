@@ -73,11 +73,13 @@ Page access (enforce server-side too, `lib/accounts.ts`):
 
 **invoices**: `id`, `reference` (`OB-xxxxx`), `order_id`, `pharmacy_facility_id`, `status`, `total_naira`, `paystack_reference`, `paid_at`, `created_at`. **invoice_items**: `invoice_id`, `description`, `quantity`, `unit_price_naira`.
 
-**storage_units**: `id`, `facility_id`, `label` (e.g. `LUTH Fridge A`, `Transit T-07`), `kind` (`FRIDGE`/`TRANSIT`), `target_min` (2), `target_max` (8), `device_key`.
+**storage_units**: `id`, `facility_id`, `label`, `kind` (`FRIDGE`/`TRANSIT`), `target_min` (2), `target_max` (8), latest reading/status fields as needed. Migrate the legacy `device_key` field; do not return or persist raw device credentials here.
 
-**temperature_readings**: `id`, `unit_id`, `celsius`, `recorded_at` (index `unit_id, recorded_at`).
+**cold_chain_devices**: `id`, `facility_id`, `secret_ref` (secret-manager reference), `credential_fingerprint`, `status` (`ACTIVE`/`REVOKED`), `expected_interval_seconds`, `last_seen_at`, `created_at`, `rotated_at`. **cold_chain_device_units** maps a device to its permitted `unit_id` values.
 
-**cold_chain_events**: `id`, `unit_id`, `severity`, `message`, `action_taken`, `at`, `resolved_at`.
+**temperature_readings**: `id`, `unit_id`, `device_id`, `sequence`, `celsius`, `recorded_at`, `ingested_at` (index `unit_id, recorded_at`; unique `device_id, sequence` when sequence is present).
+
+**cold_chain_events**: `id`, `unit_id`, `severity`, `state`, `message`, `action_taken`, `first_breach_at`, `last_breach_at`, `observed_min_c`, `observed_max_c`, `at`, `resolved_at`.
 
 **audit_logs** (append-only, no UPDATE/DELETE grants): `id`, `at`, `actor_id`, `action` (BREACH_ALERT, GS1_SCAN, TRANSFER_APPROVED, PRESCRIPTION_SENT, NEAR_EXPIRY_FLAG, STOCK_INGESTION, FACILITY_ONBOARDED, JWT_RENEWED, VERIFICATION_DECISION, ...), `object_type`, `object_id`, `detail` (encrypted JSON), `ip`, `prev_hash`, `hash` (hash chain for immutability).
 
@@ -157,6 +159,11 @@ Do not trust `verification_status` from the client: re-run verification server-s
 - `GET /api/inventory/export.csv`.
 - `POST /api/inventory/:id/quarantine` and `POST /api/inventory/:id/dispose` (Breach modal confirm).
 
+### 4.5.1 Medicine catalog (`pg-medicines`)
+
+- `GET /api/medicines` -> persisted medicine records with `id`, `generic_name`, `brand`, `strength`, and `gtin`.
+- `POST /api/medicines` accepts `{generic_name,brand,strength,gtin}` and creates a catalog record. Enforce pharmacist and pharmacy-store permissions server-side; doctors may use catalog records when prescribing but cannot create them.
+
 ### 4.6 GS1 scan (`pg-scan`) - new
 
 - `POST /api/scans` `{gtin,lot,expiry,serial,facilityId,action,notes,clientUuid,clientTs}`. Validate GS1 (AI 01 GTIN-14 with check digit, 10 lot, 17 expiry YYMMDD, 21 serial); check serial not already dispensed/duplicated (counterfeit flag -> `FLAGGED`); upsert inventory; audit `GS1_SCAN`. Idempotent on `clientUuid`.
@@ -186,11 +193,63 @@ Do not trust `verification_status` from the client: re-run verification server-s
 
 ### 4.9 Cold chain (`pg-coldchain`) - new
 
-- IoT ingest: `POST /iot/readings` (device key auth, `{unitKey,celsius,ts}` array). On `<2` or `>8` create `cold_chain_events`, set linked inventory `Quarantined`, push notification + email to admins, audit `BREACH_ALERT`.
-- `GET /api/coldchain/units` -> `[{id,label,facility,currentC,status,history:[...]}]` (6 units on the page, includes transit `T-07`).
-- `GET /api/coldchain/history?hours=24` -> multi-series for `TemperatureHistoryChart`.
-- `GET /api/coldchain/events` -> breach log `[{at,severity,message,actionTaken}]`.
-- Realtime: SSE `GET /api/stream` or WebSocket for live temps and alerts.
+- The dashboard reads configured storage units from `GET /api/storage-units`, persisted breach events from `GET /api/cold-chain-events`, and recorded temperature history from `GET /api/coldchain/history?hours=24`. Return database-backed data only; never seed or fabricate telemetry.
+
+#### Device registration and authentication
+
+- Provision each sensor or gateway against one or more storage units and a facility. Keep the signing secret in the secret manager and store only its reference/fingerprint with the device registration. Support rotation/revocation, record permitted unit IDs and expected reporting interval, and never expose device secrets to the frontend or accept a user JWT as a sensor credential.
+- Accept ingest only over HTTPS. Identify each device with `X-Device-Id` and authenticate using `X-Request-Timestamp`, `X-Request-Nonce`, and `X-Request-Signature`. Compute the HMAC-SHA256 signature over `<timestamp>.<nonce>.<raw-request-body>` using the device secret resolved from the secret manager. Require a short timestamp tolerance, reject reused nonces, compare signatures in constant time, and rate-limit per device. Keep credentials out of logs and error responses.
+- Scope each reading to a registered device and storage unit assigned to that device's facility. Reject inactive/revoked devices, unknown units, cross-facility unit IDs, malformed JSON, non-finite temperatures, invalid timestamps, and readings outside configured sensor limits. Return useful `400`, `401`/`403`, `409` (replay/duplicate), and `429` responses without disclosing secrets.
+
+#### Ingest and breach processing
+
+- Implement `POST /iot/readings` as a machine-to-machine endpoint. Accept one or more readings:
+
+```json
+{
+  "readings": [
+    {
+      "unitId": "storage-unit-uuid",
+      "celsius": 5.2,
+      "recordedAt": "2026-10-14T12:30:00.000Z",
+      "sequence": 1842
+    }
+  ]
+}
+```
+
+- Validate the whole batch, then atomically persist accepted readings and required alert/outbox work. Enforce a unique device/sequence (or equivalent idempotency key) so retries cannot create duplicate readings. Return `202` with `{accepted,duplicates,eventIds}`; duplicate retries count as duplicates and must not re-trigger breach notifications.
+- This is a device-only endpoint. Do not add or call a browser-side client for this endpoint from a dashboard, and never expose signing credentials in frontend code.
+- Compare readings with the storage unit's configured `target_min` and `target_max` (default 2–8 °C; values exactly at either bound are in range). For an out-of-range reading, create or update one open `cold_chain_events` record for that unit/severity instead of creating an alert for every sample. Record first/last breach times, observed extremes, and affected inventory. When readings return in range, resolve the open event and preserve its full history; do not erase or rewrite readings.
+- Quarantine inventory linked through `inventory_items.storage_unit_id` while its unit is in breach. Notify facility cold-chain operators and administrators, append an immutable `BREACH_ALERT` audit event for each breach/resolution transition, and make notification/audit failures observable and retryable. Do not silently drop accepted readings if alert processing fails; enqueue processing transactionally or via an outbox.
+- Track last-seen time and expected reporting interval. Mark units `OFFLINE` and issue an operational alert after the configured missed-heartbeat threshold; recover the state when authenticated readings resume. Make heartbeat policy configurable per device/unit.
+
+#### Read APIs and real-time delivery
+
+- `GET /api/storage-units` (JWT; enforce facility/role scope) returns configured units with the latest persisted reading and freshness state, for example `{id,label,facility:{id,name},targetMin,targetMax,currentC,currentReadingAt,readingState}` where `readingState` is `NOMINAL`, `BREACH`, or `OFFLINE`. A missing sensor sample must remain `null`, never a made-up value.
+- `GET /api/cold-chain-events` (JWT; enforce facility/role scope) returns persisted events with stable `id`, `unitId`, `severity`, `message`, `actionTaken`, `at`, `resolvedAt`, and event state. Support paging and optional filters such as `unitId`, `status`, `from`, and `to`.
+- Implement `GET /api/coldchain/history?hours=24&unitId=<optional>` (JWT; enforce facility/role scope; default `hours=24`, validate and cap the requested range). Return readings in ascending time order and the series form already supported by the frontend chart:
+
+```json
+{
+  "readings": [
+    { "unitId": "storage-unit-uuid", "unitLabel": "Fridge A", "celsius": 5.2, "recordedAt": "2026-10-14T12:30:00.000Z" }
+  ],
+  "labels": ["12:30"],
+  "series": [
+    { "unitId": "storage-unit-uuid", "label": "Fridge A", "data": [5.2] }
+  ]
+}
+```
+
+- Implement authenticated `GET /api/coldchain/stream` as Server-Sent Events for the signed-in dashboard, using the user's bearer token and the same role/facility scope as the read APIs. The browser client should consume it with authenticated `fetch` streaming (native `EventSource` cannot attach the current bearer header). Emit `reading`, `breach`, `resolved`, `unit-status`, and `heartbeat` events, include an event ID for reconnection via `Last-Event-ID`, send periodic keepalives, and close/reject streams when the token expires or access is revoked. Never broadcast one facility's sensor data to another.
+- The frontend should replace its polling-only refresh with this stream when the endpoint is available, update the current reading/history/event list on incoming events, and reconnect with backoff. Keep the existing REST history and event endpoints as initial load and recovery sources.
+
+#### Operations and acceptance criteria
+
+- Add migrations and indexes for `(unit_id, recorded_at)`, device/sequence idempotency, unresolved event lookup, and facility-scoped event queries. Define retention and archival policy for raw readings without deleting active breach/audit evidence.
+- Add tests for valid ingest, bad/revoked credentials, signature tampering, replay, duplicate sequence, cross-facility access, threshold breach, event deduplication/resolution, inventory quarantine/recovery, notification/audit retry, history ordering/filters, stream authorization/reconnect, and missed-heartbeat alerts.
+- Configure device secrets through the backend secret manager or `IOT_DEVICE_KEYS`; never commit live keys. Provide a provisioning/rotation procedure and observable ingest metrics (accepted, rejected, duplicate, delayed, breach, offline) without logging credential material.
 
 ### 4.10 Expiry (`pg-expiry`) - new
 
@@ -272,7 +331,7 @@ Static. Hero buttons go to `/register` and `/portal`. Public flows use: invoice 
 ## 7. Seed data (to match the UI)
 
 - Facilities: LUTH (`LG-LUTH-001`), EKO Hospital, UCH Ibadan (`OY-UCH-002`), LASUTH, Lagos Island GH, MedPlus Ibadan; plus enough satellites for the 24-node network.
-- Storage units: LUTH Fridge A/B, EKO, UCH Ibadan, Lagos Island GH, Transit T-07.
+- Cold-chain storage units and readings must be provisioned as real facility data; do not seed demo telemetry for dashboard display.
 - Drugs: Trastuzumab (Herceptin), Rituximab (MabThera), Bevacizumab (Avastin), Pertuzumab, Cetuximab.
 - Insurers: AXA Mansard, Hygeia HMO, NHIA, Reliance HMO, Cash Pay.
 - Roles A/B/C, default settings (alert threshold 60 days, NGN).

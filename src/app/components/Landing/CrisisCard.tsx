@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 interface Bar {
   label: string;
   pct: number;
-  tone: 'red' | 'amber' | 'green';
+  tone: "red" | "amber" | "green";
 }
 
 const BARS: Bar[] = [
-  { label: 'Medication gap', pct: 50, tone: 'red' },
-  { label: 'Unverified stock', pct: 68, tone: 'red' },
-  { label: 'Expiry wastage', pct: 34, tone: 'amber' },
-  { label: 'Cold chain breaches', pct: 22, tone: 'amber' },
+  { label: "Medication gap", pct: 50, tone: "red" },
+  { label: "Unverified stock", pct: 68, tone: "red" },
+  { label: "Expiry wastage", pct: 34, tone: "amber" },
+  { label: "Cold chain breaches", pct: 22, tone: "amber" },
 ];
 
-const toneClass: Record<Bar['tone'], string> = {
-  red: 'bg-gradient-to-r from-red-500 to-orange-500',
-  amber: 'bg-gradient-to-r from-amber-500 to-yellow-400',
-  green: 'bg-gradient-to-r from-emerald-500 to-green-400',
+const toneClass: Record<Bar["tone"], string> = {
+  red: "bg-gradient-to-r from-red-500 to-orange-500",
+  amber: "bg-gradient-to-r from-amber-500 to-yellow-400",
+  green: "bg-gradient-to-r from-emerald-500 to-green-400",
 };
 
 export default function CrisisCard() {
@@ -28,7 +28,7 @@ export default function CrisisCard() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -38,16 +38,16 @@ export default function CrisisCard() {
           }
         });
       },
-      { threshold: 0.2 }
+      { threshold: 0.2 },
     );
-    
+
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
   return (
-    <div 
-      ref={ref} 
+    <div
+      ref={ref}
       className="bg-navy rounded-2xl p-8 w-full relative overflow-hidden"
     >
       {/* Background gradient overlay */}
@@ -70,11 +70,11 @@ export default function CrisisCard() {
               <div className="flex-1 h-1.5 bg-white/10 rounded-[3px] overflow-hidden">
                 <div
                   className={`h-full rounded-[3px] transition-all duration-1000 ease-out ${toneClass[bar.tone]}`}
-                  style={{ 
-                    width: visible ? `${bar.pct}%` : '0%',
-                    transitionProperty: 'width',
-                    transitionDuration: '1000ms',
-                    transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+                  style={{
+                    width: visible ? `${bar.pct}%` : "0%",
+                    transitionProperty: "width",
+                    transitionDuration: "1000ms",
+                    transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
                   }}
                 />
               </div>
@@ -90,7 +90,7 @@ export default function CrisisCard() {
           <div className="text-[11px] font-semibold text-white/30 uppercase tracking-[1px] mb-2.5">
             After Oncosourz
           </div>
-          
+
           <div className="flex items-center gap-2.5">
             <div className="text-[11.5px] text-white/50 w-27.5 shrink-0">
               Stock-out rate
@@ -99,11 +99,11 @@ export default function CrisisCard() {
               <div
                 className="h-full rounded-[3px] transition-all duration-1000 ease-out"
                 style={{
-                  width: visible ? '28%' : '0%',
-                  background: 'linear-gradient(90deg, #10B981, #34D399)',
-                  transitionProperty: 'width',
-                  transitionDuration: '1000ms',
-                  transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+                  width: visible ? "28%" : "0%",
+                  background: "linear-gradient(90deg, #10B981, #34D399)",
+                  transitionProperty: "width",
+                  transitionDuration: "1000ms",
+                  transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
               />
             </div>
@@ -111,7 +111,7 @@ export default function CrisisCard() {
               28%
             </div>
           </div>
-          
+
           <div className="text-[11px] text-white/25 mt-2">
             ↓ 44% reduction from baseline
           </div>

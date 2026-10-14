@@ -1,201 +1,452 @@
-'use client';
+"use client";
 
-import { ModalId } from "../lib/types";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import type { ModalId } from "@/app/lib/types";
+import { REPORT_SERVICE } from "@/app/services/report-service/report-service";
+import { TRANSFER_SERVICE } from "@/app/services/transfer-service/transfer-service";
+import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
+import { PRESCRIPTION_SERVICE } from "@/app/services/prescription-service/prescription-service";
+import { NOTIFICATION_SERVICE } from "@/app/services/notification-service/notification-service";
+import { unwrapArray } from "@/app/services/response-utils";
+import { MEDICINE_SERVICE } from "@/app/services/medicine-service/medicine-service";
+import { NETWORK_SERVICE } from "@/app/services/network-service/network-service";
+import { useProvider } from "@/app/providers/provider";
+import { BellOff, FilePlus2 } from "lucide-react";
+import EmptyState from "@/app/components/EmptyState";
 
-
-interface ModalsProps {
+interface Props {
   openModalId: ModalId | null;
   onCloseModal: (id: ModalId) => void;
 }
+const TITLES: Record<ModalId, string> = {
+  "modal-export": "Export report",
+  "modal-transfer": "New transfer request",
+  "modal-breach": "Dispose quarantined inventory",
+  "modal-prescription": "Create prescription",
+  "modal-notifications": "Notifications",
+  "modal-onboard": "Onboard a facility",
+  "modal-user": "Invite a user",
+};
 
+export default function Modals({ openModalId, onCloseModal }: Props) {
+  const [values, setValues] = useState<Record<string, string>>({
+    type: "CSV",
+    from: "",
+    to: "",
+    quantity: "1",
+    tnmStage: "",
+    insurer: "",
+    icd10: "",
+  });
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [medicines, setMedicines] = useState<any[]>([]);
+  const [pharmacies, setPharmacies] = useState<any[]>([]);
+  const [loadingPrescriptionOptions, setLoadingPrescriptionOptions] =
+    useState(false);
+  const [prescriptionOptionsMessage, setPrescriptionOptionsMessage] =
+    useState("");
+  const { userData } = useProvider();
+  const set =
+    (key: string) =>
+    (
+      event: ChangeEvent<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >,
+    ) =>
+      setValues((current) => ({ ...current, [key]: event.target.value }));
 
+  useEffect(() => {
+    if (openModalId !== "modal-notifications") return;
+    void NOTIFICATION_SERVICE.list().then((response) => {
+      if (response.success) setNotifications(unwrapArray(response.data));
+      else setMessage(response.message || "Notifications could not be loaded.");
+    });
+  }, [openModalId]);
 
-export default function Modals({ openModalId, onCloseModal }: ModalsProps) {
+  useEffect(() => {
+    if (openModalId !== "modal-prescription") return;
+    let current = true;
+    setLoadingPrescriptionOptions(true);
+    setMedicines([]);
+    setPharmacies([]);
+    setPrescriptionOptionsMessage("");
+    void Promise.all([MEDICINE_SERVICE.list(), NETWORK_SERVICE.getNetwork()])
+      .then(([medicineResponse, networkResponse]) => {
+        if (!current) return;
+        if (medicineResponse.success)
+          setMedicines(unwrapArray(medicineResponse.data));
+        else
+          setPrescriptionOptionsMessage(
+            medicineResponse.message || "Medicine catalog could not be loaded.",
+          );
+        if (networkResponse.success) {
+          const networkFacilities =
+            (networkResponse.data as any)?.facilities ?? networkResponse.data;
+          const activePharmacies = unwrapArray(networkFacilities).filter(
+            (facility: any) =>
+              (facility.facility_type ?? facility.facilityType) ===
+                "PHARMACY" && (facility.status ?? "ACTIVE") === "ACTIVE",
+          );
+          setPharmacies(activePharmacies);
+          const ownFacilityId = userData.user?.hospital?.id;
+          if (
+            ownFacilityId &&
+            activePharmacies.some((item: any) => item.id === ownFacilityId)
+          )
+            setValues((currentValues) => ({
+              ...currentValues,
+              pharmacyFacilityId:
+                currentValues.pharmacyFacilityId || ownFacilityId,
+            }));
+        } else {
+          setPrescriptionOptionsMessage(
+            networkResponse.message ||
+              "Pharmacy facilities could not be loaded.",
+          );
+        }
+      })
+      .finally(() => {
+        if (current) setLoadingPrescriptionOptions(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [openModalId, userData.user?.hospital?.id]);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    let response;
+    if (openModalId === "modal-export")
+      response = await REPORT_SERVICE.export({
+        type: values.type,
+        from: values.from,
+        to: values.to,
+      });
+    else if (openModalId === "modal-transfer")
+      response = await TRANSFER_SERVICE.create({
+        inventoryItemId: values.inventoryItemId,
+        recipientFacilityId: values.recipientFacilityId,
+        quantity: Number(values.quantity),
+      });
+    else if (openModalId === "modal-breach")
+      response = await INVENTORY_SERVICE.dispose(values.inventoryItemId);
+    else if (openModalId === "modal-prescription")
+      response = await PRESCRIPTION_SERVICE.create({
+        patient_ref: values.patientRef,
+        icd10: values.icd10,
+        tnm_stage: values.tnmStage,
+        insurer: values.insurer,
+        drug_id: values.drugId,
+        qty: Number(values.quantity),
+        pharmacy_facility_id: values.pharmacyFacilityId,
+        ...(userData.user?.id ? { prescriber_id: userData.user.id } : {}),
+      });
+    if (response && openModalId === "modal-export" && response.success) {
+      const csv = (response.data as any)?.csv;
+      if (csv) {
+        const blob = new Blob([csv], { type: "text/csv" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "oncosourz-report.csv";
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }
+    }
+    if (response)
+      setMessage(
+        response.message ||
+          (response.success ? "Request completed." : "Request failed."),
+      );
+    if (response?.success && openModalId === "modal-prescription") {
+      window.dispatchEvent(new Event("prescriptions:updated"));
+      setValues((current) => ({
+        ...current,
+        patientRef: "",
+        icd10: "",
+        tnmStage: "",
+        insurer: "",
+        drugId: "",
+        quantity: "1",
+      }));
+    }
+    setBusy(false);
+  };
+
+  if (!openModalId) return null;
+  const field = (
+    key: string,
+    label: string,
+    placeholder = "",
+    type = "text",
+  ) => (
+    <label className="mb-3 block text-xs font-semibold text-g600" key={key}>
+      {label}
+      <input
+        className="mt-1 w-full rounded-lg border border-g200 px-3 py-2.5 text-sm font-normal"
+        type={type}
+        value={values[key] ?? ""}
+        onChange={set(key)}
+        pattern={key === "icd10" ? "^C\\d{2}(\\.\\d{1,2})?$" : undefined}
+        min={type === "number" ? 1 : undefined}
+        step={type === "number" ? 1 : undefined}
+        placeholder={placeholder}
+        required
+      />
+    </label>
+  );
+  const select = (key: string, label: string, options: string[]) => (
+    <label className="mb-3 block text-xs font-semibold text-g600" key={key}>
+      {label}
+      <select
+        className="mt-1 w-full rounded-lg border border-g200 bg-white px-3 py-2.5 text-sm font-normal"
+        value={values[key] ?? ""}
+        onChange={set(key)}
+        required
+      >
+        <option value="" disabled>
+          Select {label.toLowerCase()}
+        </option>
+        {options.map((option) => (
+          <option key={option}>{option}</option>
+        ))}
+      </select>
+    </label>
+  );
+  const isForm = [
+    "modal-export",
+    "modal-transfer",
+    "modal-breach",
+    "modal-prescription",
+  ].includes(openModalId);
+
   return (
-    <>
-<div className={`fixed inset-0 bg-[rgba(15,23,42,0.6)] backdrop-blur-[4px] items-center justify-center z-[1000] ${openModalId === 'modal-export' ? ' flex' : ' hidden'}`} onClick={() => onCloseModal('modal-export')}>
-  <div className="bg-w rounded-2xl w-full max-w-[500px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] animate-modal-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
-    <div className="px-6 py-5 border-b border-g100 flex justify-between items-center">
-      <div className="text-[15px] font-bold text-g900">Export Network Data</div>
-      <button className="bg-transparent text-g400 cursor-pointer p-1 rounded-md hover:bg-g100 hover:text-g800" onClick={() => onCloseModal('modal-export')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 p-4"
+      onClick={() => onCloseModal(openModalId)}
+    >
+      <section
+        className="max-h-[90vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-w shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="flex items-center justify-between border-b border-g100 bg-g50/70 px-6 py-5">
+          <h2 className="flex items-center gap-2 text-[15px] font-bold text-g900">
+            {openModalId === "modal-prescription" ? (
+              <FilePlus2 className="size-4 text-p" aria-hidden="true" />
+            ) : null}
+            {TITLES[openModalId]}
+          </h2>
+          <button
+            className="text-g500"
+            onClick={() => onCloseModal(openModalId)}
+            type="button"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </header>
+        {openModalId === "modal-onboard" ? (
+          <div className="p-6">
+            <p className="text-sm leading-6 text-g600">
+              Facility registration collects licence and administrator details
+              together so the backend can create the facility and user in one
+              transaction.
+            </p>
+            <a
+              className="mt-4 inline-block rounded-lg bg-p px-4 py-2 text-sm font-semibold text-white"
+              href="/register"
+            >
+              Continue to facility registration
+            </a>
+          </div>
+        ) : null}
+        {openModalId === "modal-notifications" ? (
+          <div className="p-6">
+            {notifications.map((notification) => (
+              <article
+                className="flex items-start justify-between gap-3 border-b border-g100 py-3"
+                key={notification.id}
+              >
+                <div>
+                  <p className="text-sm font-semibold text-g800">
+                    {notification.title}
+                  </p>
+                  <p className="mt-1 text-xs text-g500">{notification.body}</p>
+                </div>
+                {!notification.read_at ? (
+                  <button
+                    className="text-xs font-semibold text-p"
+                    onClick={() =>
+                      void NOTIFICATION_SERVICE.markRead(notification.id).then(
+                        (response) => {
+                          if (response.success)
+                            setNotifications((list) =>
+                              list.map((item) =>
+                                item.id === notification.id
+                                  ? {
+                                      ...item,
+                                      read_at: new Date().toISOString(),
+                                    }
+                                  : item,
+                              ),
+                            );
+                        },
+                      )
+                    }
+                    type="button"
+                  >
+                    Mark read
+                  </button>
+                ) : null}
+              </article>
+            ))}
+            {!notifications.length ? (
+              <EmptyState
+                compact
+                icon={BellOff}
+                title="You're all caught up"
+                description="New account notifications will appear here."
+              />
+            ) : null}
+          </div>
+        ) : null}
+        {openModalId === "modal-user" ? (
+          <div className="p-6">
+            <p className="text-sm leading-6 text-g600">
+              The connected API supports listing and updating users, but it does
+              not expose a user invitation endpoint yet.
+            </p>
+          </div>
+        ) : null}
+        {isForm ? (
+          <form className="p-6" onSubmit={(event) => void submit(event)}>
+            {openModalId === "modal-export" ? (
+              <>
+                {select("type", "Report type", ["CSV", "PDF", "XLSX"])}
+                {field("from", "From date", "", "date")}
+                {field("to", "To date", "", "date")}
+              </>
+            ) : null}
+            {openModalId === "modal-transfer" ? (
+              <>
+                {field("inventoryItemId", "Inventory item ID", "UUID")}
+                {field("recipientFacilityId", "Recipient facility ID", "UUID")}
+                {field("quantity", "Quantity", "1", "number")}
+              </>
+            ) : null}
+            {openModalId === "modal-breach" ? (
+              <>
+                {field(
+                  "inventoryItemId",
+                  "Quarantined inventory item ID",
+                  "UUID",
+                )}
+                <p className="mb-3 text-xs text-err">
+                  Disposal is irreversible. Confirm the correct inventory item
+                  before continuing.
+                </p>
+              </>
+            ) : null}
+            {openModalId === "modal-prescription" ? (
+              <>
+                {field(
+                  "patientRef",
+                  "Pseudonymized patient reference",
+                  "Enter a coded reference (no patient name)",
+                )}
+                {field("icd10", "ICD-10 diagnosis", "Enter diagnosis code")}
+                {field("tnmStage", "TNM stage", "Enter clinical stage")}
+                {select("insurer", "Insurer", [
+                  "AXA Mansard",
+                  "Hygeia",
+                  "NHIA",
+                  "Reliance",
+                  "Cash Pay",
+                ])}
+                <label className="mb-3 block text-xs font-semibold text-g600">
+                  Medicine
+                  <select
+                    className="mt-1 w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal"
+                    value={values.drugId ?? ""}
+                    onChange={set("drugId")}
+                    required
+                  >
+                    <option value="" disabled>
+                      {loadingPrescriptionOptions
+                        ? "Loading medicine catalog…"
+                        : medicines.length
+                          ? "Select a medicine"
+                          : "No medicines available"}
+                    </option>
+                    {medicines.map((medicine) => (
+                      <option key={medicine.id} value={medicine.id}>
+                        {medicine.generic_name ?? medicine.name ?? "Medicine"}
+                        {medicine.strength ? ` · ${medicine.strength}` : ""}
+                        {medicine.brand ? ` (${medicine.brand})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {field("quantity", "Quantity", "1", "number")}
+                <label className="mb-3 block text-xs font-semibold text-g600">
+                  Pharmacy
+                  <select
+                    className="mt-1 w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal"
+                    value={values.pharmacyFacilityId ?? ""}
+                    onChange={set("pharmacyFacilityId")}
+                    required
+                  >
+                    <option value="" disabled>
+                      {loadingPrescriptionOptions
+                        ? "Loading pharmacies…"
+                        : "Select a verified pharmacy"}
+                    </option>
+                    {pharmacies.map((facility) => (
+                      <option key={facility.id} value={facility.id}>
+                        {facility.name ?? facility.hospital_name ?? "Pharmacy"}
+                        {facility.city ? ` · ${facility.city}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="mb-3 text-xs leading-5 text-g500">
+                  Your signed-in account will be recorded as the prescriber. Use
+                  a coded patient reference; do not enter a patient name.
+                </p>
+                {prescriptionOptionsMessage ? (
+                  <p className="mb-3 text-xs text-err" role="alert">
+                    {prescriptionOptionsMessage}
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+            {message ? (
+              <p role="status" className="mb-3 text-sm text-g600">
+                {message}
+              </p>
+            ) : null}
+            <footer className="flex justify-end gap-2 border-t border-g100 pt-4">
+              <button
+                className="rounded-lg border border-g200 px-4 py-2 text-sm text-g700"
+                onClick={() => onCloseModal(openModalId)}
+                type="button"
+              >
+                Close
+              </button>
+              <button
+                disabled={busy}
+                className="rounded-lg bg-p px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                type="submit"
+              >
+                {busy ? "Working…" : "Submit"}
+              </button>
+            </footer>
+          </form>
+        ) : null}
+      </section>
     </div>
-    <div className="p-6">
-      <div className="mb-4">
-        <label>Report Type</label>
-        <select><option>📄 Inventory Summary (PDF)</option><option>📊 Audit Trail (CSV)</option><option>❄️ Cold Chain Compliance (Excel)</option></select>
-      </div>
-      <div className="mb-4">
-        <label>Date Range</label>
-        <select><option>Last 30 Days</option><option>Current Quarter</option><option>Custom Range...</option></select>
-      </div>
-    </div>
-    <div className="px-6 py-4 bg-g50 flex justify-end gap-2">
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" onClick={() => onCloseModal('modal-export')}>Cancel</button>
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" onClick={() => onCloseModal('modal-export')}>Generate Report</button>
-    </div>
-  </div>
-</div>
-
-<div className={`fixed inset-0 bg-[rgba(15,23,42,0.6)] backdrop-blur-[4px] items-center justify-center z-[1000] ${openModalId === 'modal-transfer' ? ' flex' : ' hidden'}`} onClick={() => onCloseModal('modal-transfer')}>
-  <div className="bg-w rounded-2xl w-full max-w-[500px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] animate-modal-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
-    <div className="px-6 py-5 border-b border-g100 flex justify-between items-center">
-      <div className="text-[15px] font-bold text-g900">New Redistribution Request</div>
-      <button className="bg-transparent text-g400 cursor-pointer p-1 rounded-md hover:bg-g100 hover:text-g800" onClick={() => onCloseModal('modal-transfer')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div className="p-6">
-      <div className="mb-4">
-        <label>Select Drug from Surplus</label>
-        <select className="p-2"><option>Trastuzumab (Lot TZ-2204-B) - LUTH</option><option>Rituximab (Lot RX-0912-A) - EKO</option></select>
-      </div>
-      <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-        <div className="mb-4">
-          <label>Quantity</label>
-          <input type="number" defaultValue="1" min="1" className="p-2"/>
-        </div>
-        <div className="mb-4">
-          <label>Recipient Facility</label>
-          <select className="p-2"><option>LASUTH</option><option>Lagos Island GH</option><option>UCH Ibadan</option></select>
-        </div>
-      </div>
-      <div className="mb-4">
-        <label>Urgency Level</label>
-        <select className="p-2"><option>Standard (48h)</option><option>Urgent (24h)</option><option>Emergency (Same Day)</option></select>
-      </div>
-    </div>
-    <div className="px-6 py-4 bg-g50 flex justify-end gap-2">
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" onClick={() => onCloseModal('modal-transfer')}>Cancel</button>
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" onClick={() => onCloseModal('modal-transfer')}>Initiate Transfer</button>
-    </div>
-  </div>
-</div>
-
-<div className={`fixed inset-0 bg-[rgba(15,23,42,0.6)] backdrop-blur-[4px] items-center justify-center z-[1000] ${openModalId === 'modal-breach' ? ' flex' : ' hidden'}`} onClick={() => onCloseModal('modal-breach')}>
-  <div className="bg-w rounded-2xl w-full max-w-[500px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] animate-modal-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
-    <div className="p-6" style={{textAlign: 'center'}}>
-      <div className="size-10 rounded-full flex items-center justify-center mb-4" style={{background: 'var(--errl)', color: 'var(--err)', margin: '0 auto 1.5rem'}}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      </div>
-      <h3 style={{marginBottom: '8px'}}>Confirm Quarantine Action</h3>
-      <p style={{fontSize: '14px', color: 'var(--g500)', lineHeight: '1.5'}}>You are flagging 7 vials of Rituximab (Lot RX-1044-E) for disposal due to a sustained temperature breach of 11.2°C. This action is irreversible.</p>
-    </div>
-    <div className="px-6 py-4 bg-g50 flex justify-end gap-2" style={{justifyContent: 'center', background: 'var(--g50)', paddingBottom: '1.5rem'}}>
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" onClick={() => onCloseModal('modal-breach')}>Cancel</button>
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-errl text-[#991b1b] border border-[#fecaca] dk:text-w dk:border-err" onClick={() => onCloseModal('modal-breach')}>Confirm Disposal</button>
-    </div>
-  </div>
-</div>
-
-<div className={`fixed inset-0 bg-[rgba(15,23,42,0.6)] backdrop-blur-[4px] items-center justify-center z-[1000] ${openModalId === 'modal-prescription' ? ' flex' : ' hidden'}`} onClick={() => onCloseModal('modal-prescription')}>
-  <div className="bg-w rounded-2xl w-full max-w-[500px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] animate-modal-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
-    <div className="px-6 py-5 border-b border-g100 flex justify-between items-center">
-      <div className="text-[15px] font-bold text-g900">Create New Prescription</div>
-      <button className="bg-transparent text-g400 cursor-pointer p-1 rounded-md hover:bg-g100 hover:text-g800" onClick={() => onCloseModal('modal-prescription')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div className="p-6">
-      <div className="mb-4">
-        <label>Patient ID / Name</label>
-        <input type="text" placeholder="e.g. #0493 or John Doe" className="p-2"/>
-      </div>
-      <div className="mb-4">
-        <label>ICD-10 Diagnosis Code</label>
-        <select className="p-2"><option>🎗️ C50.4 — Breast cancer, upper-outer quadrant</option><option>🩸 C85.1 — B-cell lymphoma</option><option>💊 C18.7 — Colon cancer</option></select>
-      </div>
-      <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-        <div className="mb-4"><label>TNM Stage</label><select className="p-2"><option>❶ Stage I</option><option>❷ Stage II</option><option>❸ Stage IIIA</option><option>❹ Stage IV</option></select></div>
-        <div className="mb-4"><label>Insurer</label><select className="p-2"><option>🛡️ AXA Mansard</option><option>🏛️ NHIA</option><option>🏥 Hygeia HMO</option><option>💵 Cash Pay</option></select></div>
-      </div>
-      <div className="mb-4">
-        <label>Drug (HMO-filtered)</label>
-        <select className="p-2"><option>Trastuzumab</option><option>Pertuzumab</option><option>Rituximab</option></select>
-      </div>
-    </div>
-    <div className="px-6 py-4 bg-g50 flex justify-end gap-2">
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" onClick={() => onCloseModal('modal-prescription')}>Cancel</button>
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" onClick={() => onCloseModal('modal-prescription')}>Send to Network</button>
-    </div>
-  </div>
-</div>
-
-<div className={`fixed inset-0 bg-[rgba(15,23,42,0.6)] backdrop-blur-[4px] items-center justify-center z-[1000] ${openModalId === 'modal-notifications' ? ' flex' : ' hidden'}`} onClick={() => onCloseModal('modal-notifications')}>
-  <div className="bg-w rounded-2xl w-full max-w-[500px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] animate-modal-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
-    <div className="px-6 py-5 border-b border-g100 flex justify-between items-center">
-      <div className="text-[15px] font-bold text-g900">Notifications</div>
-      <button className="bg-transparent text-g400 cursor-pointer p-1 rounded-md hover:bg-g100 hover:text-g800" onClick={() => onCloseModal('modal-notifications')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div className="p-6" style={{padding: '0'}}>
-      <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--err)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">Cold Chain Breach</div><div className="text-[11px] text-g400 mt-0.5">Transit T-07 reached 11.2°C</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">10m ago</div></div>
-      <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--warn)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">Near-Expiry Alert</div><div className="text-[11px] text-g400 mt-0.5">Trastuzumab (Lot TZ-2204-B) expires in 38 days</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">1h ago</div></div>
-      <div className="flex gap-3 p-3 border-b border-g100 transition-colors duration-200 hover:bg-pll last:border-b-0"><div className="size-2.5 rounded-full shrink-0 mt-1 shadow-[0_0_0_3px_var(--w),0_0_0_4px_var(--g100)]" style={{background: 'var(--ok)'}}></div><div className="flex-1"><div className="text-[12.5px] font-medium text-g800">Transfer Approved</div><div className="text-[11px] text-g400 mt-0.5">Redistribution #T-094 confirmed by Admin</div></div><div className="text-[11px] text-g400 shrink-0 mt-[3px]">3h ago</div></div>
-    </div>
-    <div className="px-6 py-4 bg-g50 flex justify-end gap-2">
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800" style={{fontSize: '11px'}}>Mark all as read</button>
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" onClick={() => onCloseModal('modal-notifications')}>Close</button>
-    </div>
-  </div>
-</div>
-
-<div className={`fixed inset-0 bg-[rgba(15,23,42,0.6)] backdrop-blur-[4px] items-center justify-center z-[1000] ${openModalId === 'modal-onboard' ? ' flex' : ' hidden'}`} onClick={() => onCloseModal('modal-onboard')}>
-  <div className="bg-w rounded-2xl w-full max-w-[500px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] animate-modal-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
-    <div className="px-6 py-5 border-b border-g100 flex justify-between items-center">
-      <div className="text-[15px] font-bold text-g900">Onboard New Facility</div>
-      <button className="bg-transparent text-g400 cursor-pointer p-1 rounded-md hover:bg-g100 hover:text-g800" onClick={() => onCloseModal('modal-onboard')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div className="p-6">
-      <div className="mb-4">
-        <label>Facility Name</label>
-        <input type="text" placeholder="e.g. Reddington Hospital"/>
-      </div>
-      <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-        <div className="mb-4">
-          <label>Facility Type</label>
-          <select><option>📤 Donor Hub</option><option>📥 Recipient Hub</option><option>🛰️ Satellite Clinic</option></select>
-        </div>
-        <div className="mb-4">
-          <label>IP Whitelist</label>
-          <input type="text" placeholder="🌐 192.168.x.x"/>
-        </div>
-      </div>
-    </div>
-    <div className="px-6 py-4 bg-g50 flex justify-end gap-2">
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" onClick={() => onCloseModal('modal-onboard')}>Cancel</button>
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" onClick={() => onCloseModal('modal-onboard')}>Verify & Onboard</button>
-    </div>
-  </div>
-</div>
-
-<div className={`fixed inset-0 bg-[rgba(15,23,42,0.6)] backdrop-blur-[4px] items-center justify-center z-[1000] ${openModalId === 'modal-user' ? ' flex' : ' hidden'}`} onClick={() => onCloseModal('modal-user')}>
-  <div className="bg-w rounded-2xl w-full max-w-[500px] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)] animate-modal-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
-    <div className="px-6 py-5 border-b border-g100 flex justify-between items-center">
-      <div className="text-[15px] font-bold text-g900">Add New User</div>
-      <button className="bg-transparent text-g400 cursor-pointer p-1 rounded-md hover:bg-g100 hover:text-g800" onClick={() => onCloseModal('modal-user')}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div className="p-6">
-      <div className="mb-4">
-        <label>Full Name</label>
-        <input type="text" placeholder="e.g. Dr. Jane Doe"/>
-      </div>
-      <div className="mb-4">
-        <label>Email Address</label>
-        <input type="email" placeholder="jane.doe@facility.org"/>
-      </div>
-      <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-        <div className="mb-4">
-          <label>Assigned Role</label>
-          <select><option>Role A — Submitting Pharmacist</option><option>Role B — Requesting Pharmacist</option><option>Role C — Network Admin</option></select>
-        </div>
-        <div className="mb-4">
-          <label>Primary Facility</label>
-          <select><option>LUTH</option><option>EKO Hospital</option><option>UCH Ibadan</option><option>LASUTH</option></select>
-        </div>
-      </div>
-    </div>
-    <div className="px-6 py-4 bg-g50 flex justify-end gap-2">
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" onClick={() => onCloseModal('modal-user')}>Cancel</button>
-      <button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" onClick={() => onCloseModal('modal-user')}>Create User Account</button>
-    </div>
-  </div>
-</div>
-
-    </>
   );
 }

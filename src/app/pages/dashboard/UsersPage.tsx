@@ -1,36 +1,143 @@
-import { ModalId, PageId } from "../../lib/types";
+"use client";
 
+import { useEffect, useState } from "react";
+import { UsersRound } from "lucide-react";
+import EmptyState from "@/app/components/EmptyState";
+import type { ModalId, PageId } from "@/app/lib/types";
+import { USER_SERVICE } from "@/app/services/user-service/user-service";
+import { unwrapArray } from "@/app/services/response-utils";
 
-
-import type React from 'react';
-interface UsersPageProps {
+interface Props {
   onNav: (id: PageId) => void;
   onOpenModal: (id: ModalId) => void;
+  adminMode?: boolean;
 }
-
-const UsersPage: React.FC<UsersPageProps> = ({ onNav, onOpenModal }) => {
+export default function UsersPage({ onOpenModal, adminMode = false }: Props) {
+  const [users, setUsers] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [filter, setFilter] = useState("");
+  const [notice, setNotice] = useState("");
+  const load = async () => {
+    const [userResponse, roleResponse] = await Promise.all([
+      USER_SERVICE.list("take=50&skip=0", adminMode),
+      USER_SERVICE.roles(adminMode),
+    ]);
+    if (userResponse.success) setUsers(unwrapArray(userResponse.data));
+    else setNotice(userResponse.message || "Users could not be loaded.");
+    if (roleResponse.success) setRoles(unwrapArray(roleResponse.data));
+  };
+  useEffect(() => {
+    void load();
+  }, [adminMode]);
+  const deactivate = async (id: string) => {
+    const response = await USER_SERVICE.deactivate(id, adminMode);
+    setNotice(
+      response.message ||
+        (response.success
+          ? "User deactivated."
+          : "User could not be deactivated."),
+    );
+    if (response.success) await load();
+  };
+  const visibleUsers = users.filter(
+    (user) =>
+      !filter ||
+      String(user.role?.id ?? user.roleId ?? user.role_id ?? user.role) ===
+        filter,
+  );
   return (
     <div className="block animate-fade-up">
-      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap max-md:flex-col max-md:items-stretch max-md:gap-4">
-    <div className="[&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-g900 [&_h1]:tracking-[-0.4px] [&_p]:text-[12.5px] [&_p]:text-g500 [&_p]:mt-[3px]"><h1>User Management</h1><p>Role-based access control · Three-tier RBAC system</p></div>
-    <div className="flex gap-2 flex-wrap max-md:w-full max-md:justify-start"><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" onClick={() => onOpenModal('modal-user')}><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add User</button></div>
-  </div>
-
-  <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1" style={{marginBottom: '1rem'}}>
-    <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4" style={{borderTop: '3px solid var(--p)'}}><div className="flex items-center justify-between mb-4 gap-2"><div><div className="text-[15px] font-bold text-g900">Role A — Submitting Pharmacist</div></div></div><p style={{fontSize: '12px', color: 'var(--g500)', marginBottom: '10px'}}>Scan GS1, log inventory, flag surplus stock</p><div className="text-[28px] font-extrabold text-g900 tracking-[-1px] leading-none mb-2 flex items-baseline gap-1" style={{fontSize: '22px', marginBottom: '0'}}>14</div></div>
-    <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4" style={{borderTop: '3px solid var(--ac)'}}><div className="flex items-center justify-between mb-4 gap-2"><div><div className="text-[15px] font-bold text-g900">Role B — Requesting Pharmacist</div></div></div><p style={{fontSize: '12px', color: 'var(--g500)', marginBottom: '10px'}}>View availability, raise stock-out alerts, request transfers</p><div className="text-[28px] font-extrabold text-g900 tracking-[-1px] leading-none mb-2 flex items-baseline gap-1" style={{fontSize: '22px', marginBottom: '0'}}>18</div></div>
-    <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4" style={{borderTop: '3px solid var(--ok)'}}><div className="flex items-center justify-between mb-4 gap-2"><div><div className="text-[15px] font-bold text-g900">Role C — Network Admin</div></div></div><p style={{fontSize: '12px', color: 'var(--g500)', marginBottom: '10px'}}>Verify facilities, audit logs, approve transfers</p><div className="text-[28px] font-extrabold text-g900 tracking-[-1px] leading-none mb-2 flex items-baseline gap-1" style={{fontSize: '22px', marginBottom: '0'}}>3</div></div>
-  </div>
-
-  <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4">
-    <div className="flex items-center gap-2.5 py-[9px] border-b border-g100 last:border-b-0" style={{padding: '12px 0'}}><div className="size-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 [&_img]:size-full [&_img]:rounded-full [&_img]:object-cover" style={{background: 'var(--p)', width: '40px', height: '40px'}}><img src="https://images.unsplash.com/photo-1559839734-2b71f153678f?w=100&h=100&fit=crop" alt="AO"/></div><div><div className="text-[13px] font-semibold text-g800" style={{fontSize: '14px'}}>Dr. Adeola Okonkwo</div><div className="text-[11px] text-g400">Role C — Network Admin · <span style={{color: 'var(--p)', fontWeight: '600'}}>LUTH</span></div></div><div className="ml-auto flex gap-[5px]"><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]">Active</span><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" style={{padding: '4px 12px', fontSize: '11px'}}>Permissions</button><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800" style={{padding: '4px 8px', fontSize: '11px'}}>Edit</button></div></div>
-    <div className="flex items-center gap-2.5 py-[9px] border-b border-g100 last:border-b-0" style={{padding: '12px 0'}}><div className="size-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 [&_img]:size-full [&_img]:rounded-full [&_img]:object-cover" style={{background: 'var(--pd)', width: '40px', height: '40px'}}><img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=100&h=100&fit=crop" alt="BU"/></div><div><div className="text-[13px] font-semibold text-g800" style={{fontSize: '14px'}}>Pharm. Bisi Usman</div><div className="text-[11px] text-g400">Role A — Submitting Pharmacist · <span style={{color: 'var(--p)', fontWeight: '600'}}>EKO Hospital</span></div></div><div className="ml-auto flex gap-[5px]"><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]">Active</span><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" style={{padding: '4px 12px', fontSize: '11px'}}>Permissions</button><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800" style={{padding: '4px 8px', fontSize: '11px'}}>Edit</button></div></div>
-    <div className="flex items-center gap-2.5 py-[9px] border-b border-g100 last:border-b-0" style={{padding: '12px 0'}}><div className="size-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 [&_img]:size-full [&_img]:rounded-full [&_img]:object-cover" style={{background: 'var(--ac)', width: '40px', height: '40px'}}><img src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&h=100&fit=crop" alt="CN"/></div><div><div className="text-[13px] font-semibold text-g800" style={{fontSize: '14px'}}>Pharm. Chidi Nwosu</div><div className="text-[11px] text-g400">Role B — Requesting Pharmacist · <span style={{color: 'var(--p)', fontWeight: '600'}}>LASUTH</span></div></div><div className="ml-auto flex gap-[5px]"><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]">Active</span><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" style={{padding: '4px 12px', fontSize: '11px'}}>Permissions</button><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800" style={{padding: '4px 8px', fontSize: '11px'}}>Edit</button></div></div>
-    <div className="flex items-center gap-2.5 py-[9px] border-b border-g100 last:border-b-0" style={{padding: '12px 0'}}><div className="size-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 [&_img]:size-full [&_img]:rounded-full [&_img]:object-cover" style={{background: 'var(--ok)', width: '40px', height: '40px'}}><img src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=100&h=100&fit=crop" alt="FS"/></div><div><div className="text-[13px] font-semibold text-g800" style={{fontSize: '14px'}}>Dr. Funke Sotunde</div><div className="text-[11px] text-g400">Role C — Network Admin · <span style={{color: 'var(--p)', fontWeight: '600'}}>Ibadan</span></div></div><div className="ml-auto flex gap-[5px]"><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]">Active</span><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" style={{padding: '4px 12px', fontSize: '11px'}}>Permissions</button><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800" style={{padding: '4px 8px', fontSize: '11px'}}>Edit</button></div></div>
-    <div className="flex items-center gap-2.5 py-[9px] border-b border-g100 last:border-b-0" style={{padding: '12px 0'}}><div className="size-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 [&_img]:size-full [&_img]:rounded-full [&_img]:object-cover" style={{background: 'var(--g400)', width: '40px', height: '40px'}}><img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop" alt="ML"/></div><div><div className="text-[13px] font-semibold text-g800" style={{fontSize: '14px'}}>Dr. Musa Lawal</div><div className="text-[11px] text-g400">Role B — Requesting Pharmacist · <span style={{color: 'var(--p)', fontWeight: '600'}}>Lagos Island GH</span></div></div><div className="ml-auto flex gap-[5px]"><span className="inline-flex items-center gap-[3px] px-2 py-0.5 rounded-[20px] text-[11px] font-semibold whitespace-nowrap before:content-[''] before:size-[5px] before:rounded-full before:bg-current before:shrink-0 bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]">Pending</span><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p" style={{padding: '4px 12px', fontSize: '11px'}}>Permissions</button><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800" style={{padding: '4px 8px', fontSize: '11px'}}>Edit</button></div></div>
-  </div>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-g200 bg-linear-to-br from-w via-w to-pll p-5 shadow-sm">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-bold text-g900">
+            <UsersRound className="size-5 text-p" aria-hidden="true" />
+            Users & Roles
+          </h1>
+          <p className="mt-1 text-[12.5px] text-g500">
+            Manage access for network members
+          </p>
+        </div>
+        <button
+          className="rounded-lg bg-p px-4 py-2 text-sm font-semibold text-white"
+          onClick={() => onOpenModal("modal-user")}
+        >
+          Invite user
+        </button>
+      </header>
+      {notice ? (
+        <p role="status" className="mb-4 text-sm text-g600">
+          {notice}
+        </p>
+      ) : null}
+      <section className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
+        {roles.map((role) => (
+          <article
+            className="rounded-xl border border-g200 bg-w p-4"
+            key={role.id}
+          >
+            <h2 className="text-sm font-semibold text-g800">{role.name}</h2>
+            <p className="mt-1 text-xs text-g500">{role.description ?? ""}</p>
+            <p className="mt-3 text-lg font-bold text-g900">
+              {role.userCount ?? role.user_count ?? 0}
+            </p>
+          </article>
+        ))}
+      </section>
+      <section className="rounded-xl border border-g200 bg-w p-5">
+        <div className="mb-4 flex flex-wrap justify-between gap-3">
+          <h2 className="text-[15px] font-bold text-g900">Network users</h2>
+          <select
+            aria-label="Filter users by role"
+            className="rounded-lg border border-g200 px-3 py-2 text-xs"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+          >
+            <option value="">All roles</option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {visibleUsers.map((user) => (
+          <article
+            className="flex flex-wrap items-center justify-between gap-3 border-t border-g100 py-3"
+            key={user.id}
+          >
+            <div>
+              <h3 className="text-sm font-semibold text-g800">
+                {user.name ??
+                  `${user.first_name ?? ""} ${user.last_name ?? ""}`}
+              </h3>
+              <p className="text-xs text-g500">
+                {user.email} · {user.role?.name ?? user.role ?? "Member"} ·{" "}
+                {user.facility?.name ?? user.hospital?.name ?? "—"}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-g500">
+                {user.active === false ? "Inactive" : "Active"}
+              </span>
+              {user.active !== false ? (
+                <button
+                  className="rounded-md border border-g200 px-3 py-1.5 text-xs text-g700"
+                  onClick={() => void deactivate(user.id)}
+                >
+                  Deactivate
+                </button>
+              ) : null}
+            </div>
+          </article>
+        ))}
+        {!visibleUsers.length ? (
+          <EmptyState
+            icon={UsersRound}
+            title="No users found"
+            description="Try a different search, or add a user to get started."
+          />
+        ) : null}
+      </section>
     </div>
   );
 }
-
-export default UsersPage;
