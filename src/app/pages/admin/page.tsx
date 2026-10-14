@@ -57,29 +57,9 @@ import {
 } from 'lucide-react';
 import { ACCOUNT_TYPES, AccountType, VerificationStatus, getAccountInfo } from '@/app/lib/accounts';
 import { VERIFICATION_SERVICE } from '@/app/services/verification-service/verification-service';
+import { MOCK_SETTLEMENT_SUMMARY, MOCK_VERIFICATION_APPLICATIONS, type RegistryResult } from '@/app/services/bridge-data/bridge-mock-service';
 
-type RegistryResult = 'MATCH' | 'NO_MATCH' | 'UNAVAILABLE';
-
-interface Application {
-  id: string;
-  name: string;
-  accountType: AccountType;
-  license: string;
-  workplace: string;
-  submitted: string;
-  registryResult: RegistryResult;
-  status: VerificationStatus;
-}
-
-const INITIAL_APPLICATIONS: Application[] = [
-  { id: 'a1', name: 'Dr. Chidinma Okafor', accountType: 'DOCTOR', license: 'MDCN/R/48211', workplace: 'LUTH, Lagos', submitted: '12m ago', registryResult: 'MATCH', status: 'MANUAL_REVIEW' },
-  { id: 'a2', name: 'Ph. Tunde Balogun', accountType: 'PHARMACIST', license: 'PCN/20987', workplace: 'UCH, Ibadan', submitted: '1h ago', registryResult: 'MATCH', status: 'MANUAL_REVIEW' },
-  { id: 'a3', name: 'HealthPlus Ikeja', accountType: 'PHARMACY_STORE', license: 'PCN/PREM/5543', workplace: 'Ikeja, Lagos', submitted: '3h ago', registryResult: 'UNAVAILABLE', status: 'MANUAL_REVIEW' },
-  { id: 'a4', name: 'Dr. Aisha Bello', accountType: 'DOCTOR', license: 'MDCN/R/51034', workplace: 'EKO Hospital, Lagos', submitted: '5h ago', registryResult: 'NO_MATCH', status: 'MANUAL_REVIEW' },
-  { id: 'a5', name: 'Ph. Emeka Eze', accountType: 'PHARMACIST', license: 'PCN/18842', workplace: 'LASUTH, Lagos', submitted: 'Yesterday', registryResult: 'MATCH', status: 'VERIFIED' },
-  { id: 'a6', name: 'Greenfield Pharmacy', accountType: 'PHARMACY_STORE', license: 'PCN/PREM/3021', workplace: 'Ibadan North', submitted: 'Yesterday', registryResult: 'MATCH', status: 'VERIFIED' },
-  { id: 'a7', name: 'Dr. Samuel Ade', accountType: 'DOCTOR', license: 'MDCN/R/00012', workplace: 'Unknown clinic', submitted: '2d ago', registryResult: 'NO_MATCH', status: 'REJECTED' },
-];
+type Application = (typeof MOCK_VERIFICATION_APPLICATIONS)[number];
 
 const TYPE_ICONS: Record<AccountType, typeof Stethoscope> = {
   DOCTOR: Stethoscope,
@@ -100,7 +80,7 @@ interface AdminPageProps {
 
 const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const [section, setSection] = useState<'overview' | 'verification' | 'roles' | 'integrations' | 'users' | 'facilities' | 'audit'>('overview');
-  const [applications, setApplications] = useState<Application[]>(INITIAL_APPLICATIONS);
+  const [applications, setApplications] = useState<Application[]>(MOCK_VERIFICATION_APPLICATIONS);
   const [statusFilter, setStatusFilter] = useState<'REVIEW' | 'VERIFIED' | 'REJECTED' | 'ALL'>('REVIEW');
   const [typeFilter, setTypeFilter] = useState<AccountType | 'ALL'>('ALL');
   const [rechecking, setRechecking] = useState<string | null>(null);
@@ -235,6 +215,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     { label: 'Total value', value: '\u20a64.2M', change: '+15%', icon: DollarSign, trend: 'up', color: '#15803D' },
     { label: 'Pending verifications', value: String(pendingCount), change: 'needs review', icon: UserCheck, trend: 'down', color: '#0E7490' },
   ];
+  const formatMockNaira = (amount: number) =>
+    new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(amount);
 
   const activityFeed = [
     { action: 'Licence PCN/20987 sent for manual review', time: '1h ago', user: 'Verification', icon: UserCheck },
@@ -679,6 +661,32 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                     })}
                   </div>
                 </div>
+
+                <section className={`rounded-xl border p-5 ${cardClasses}`} aria-labelledby="settlement-monitor-title">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className={`font-mono text-[11px] uppercase tracking-[0.2em] ${mutedText}`}>Payments</p>
+                      <h2 id="settlement-monitor-title" className={`mt-1 font-display text-lg font-semibold ${headingText}`}>Paystack settlement monitor</h2>
+                    </div>
+                    <span className="rounded-md border border-[#e7c89b] bg-[#fff8eb] px-2.5 py-1 text-xs font-semibold text-[#80521e]">DEMO DATA</span>
+                  </div>
+                  <p className={`mt-3 max-w-[720px] text-sm leading-6 ${mutedText}`}>
+                    Illustrative figures only. No live Paystack transactions, commission calculation, settlement confirmation, or bank payout is connected.
+                  </p>
+                  <div className="mt-5 grid grid-cols-3 gap-3 max-sm:grid-cols-1">
+                    {[
+                      { label: 'Mock transactions', value: String(MOCK_SETTLEMENT_SUMMARY.transactionCount) },
+                      { label: 'Mock volume', value: formatMockNaira(MOCK_SETTLEMENT_SUMMARY.transactionVolumeNaira) },
+                      { label: 'Mock platform fees', value: formatMockNaira(MOCK_SETTLEMENT_SUMMARY.platformFeesNaira) },
+                      { label: 'Mock payouts queued', value: String(MOCK_SETTLEMENT_SUMMARY.payoutsQueued) },
+                    ].map(({ label, value }) => (
+                      <div className={`rounded-lg border p-3 ${borderColor}`} key={label}>
+                        <p className={`text-xs ${mutedText}`}>{label}</p>
+                        <p className={`mt-1 font-mono text-sm font-medium ${headingText}`}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
 
                 {/* Quick Actions */}
                 <div>

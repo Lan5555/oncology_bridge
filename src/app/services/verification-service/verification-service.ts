@@ -6,7 +6,7 @@ export interface VerificationResult {
 }
 
 class VerificationService {
-  /** Same-origin call; the registry lookup runs server-side in /api/verify-license. */
+  /** Registry lookup is owned by the backend; falls back to manual review if unreachable. */
   public async verifyLicense(payload: { licenseNumber: string; registry: LicenseRegistry; lastName?: string }): Promise<VerificationResult> {
     try {
       const res = await fetch('/api/verify-license', {

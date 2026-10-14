@@ -121,7 +121,13 @@ const DashboardView: React.FC = () => {
       <div className="flex min-h-[calc(100vh-64px)]">
         <Sidebar sidebarOpen={sidebarOpen} activePage={activePage} onNav={handleNav} allowedPages={allowedPages} accountType={accountType} />
 
-        <main className="flex-1 px-8 py-7 overflow-x-hidden max-w-[calc(100vw-var(--sidebar-w))] max-lg:max-w-[100vw] max-lg:w-full max-lg:px-4 max-lg:py-5 max-md:p-4">{!isVerified && activePage !== 'pg-settings' ? <VerificationGate /> : pageComponents[activePage]}</main>
+        <main className="flex-1 px-8 py-7 overflow-x-hidden max-w-[calc(100vw-var(--sidebar-w))] max-lg:max-w-[100vw] max-lg:w-full max-lg:px-4 max-lg:py-5 max-md:p-4">
+          <div className="mb-5 border-l-2 border-amber-500 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-950" role="status">
+            <strong className="mr-2">DEMO DATA</strong>
+            Operational records and summary figures are sample fixtures. Changes are not saved to your external backend.
+          </div>
+          {!isVerified && activePage !== 'pg-settings' ? <VerificationGate /> : pageComponents[activePage]}
+        </main>
       </div>
 
       <Modals openModalId={openModalId} onCloseModal={() => setOpenModalId(null)} />

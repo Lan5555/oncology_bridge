@@ -1,5 +1,7 @@
 import { ModalId, PageId } from "../../lib/types";
-import { JSX, useState } from "react";
+import { type FormEvent, JSX, useState } from "react";
+import { BRIDGE_DATA_SERVICE, MOCK_ORDERS } from "@/app/services/bridge-data/bridge-mock-service";
+import Link from "next/link";
 
 import type React from 'react';
 interface PrescriptionsPageProps {
@@ -27,28 +29,42 @@ const TAB_CONFIG: { id: PrescriptionTab; label: string; icon: JSX.Element }[] = 
   },
 ];
 
-const PRESCRIPTION_DATA: Record<PrescriptionTab, Array<{ id: string; code: string; drug: string; insurer: string; pharmacy: string; status: string; order: string; statusClass: string; orderClass: string }>> = {
-  active: [
-    { id: '#0492', code: 'C50.4', drug: 'Trastuzumab ×2', insurer: 'AXA Mansard', pharmacy: 'Lagos Island GH', status: 'Cleared', order: 'In Transit', statusClass: 'bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]', orderClass: 'bg-pl text-pdd dk:bg-[rgba(96,165,250,0.16)] dk:text-[#dbeafe]' },
-    { id: '#0475', code: 'C18.7', drug: 'Bevacizumab ×3', insurer: 'Hygeia HMO', pharmacy: 'UCH Ibadan', status: 'Cleared', order: 'Dispensed', statusClass: 'bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]', orderClass: 'bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]' },
-  ],
-  awaiting: [
-    { id: '#0481', code: 'C85.1', drug: 'Rituximab ×4', insurer: 'NHIA', pharmacy: 'LUTH Pharmacy', status: 'Pending', order: 'Held', statusClass: 'bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]', orderClass: 'bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]' },
-    { id: '#0468', code: 'C50.9', drug: 'Pertuzumab ×2', insurer: 'Reliance HMO', pharmacy: 'EKO Hospital', status: 'API Routing', order: 'Waiting', statusClass: 'bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]', orderClass: 'bg-g100 text-g600' },
-  ],
-  completed: [
-    { id: '#0460', code: 'C34.1', drug: 'Cetuximab ×1', insurer: 'Cash Pay', pharmacy: 'LASUTH', status: 'Paystack ✓', order: 'Ready', statusClass: 'bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]', orderClass: 'bg-pl text-pdd dk:bg-[rgba(96,165,250,0.16)] dk:text-[#dbeafe]' },
-    { id: '#0455', code: 'C50.3', drug: 'Pertuzumab ×1', insurer: 'NHIA', pharmacy: 'LUTH Pharmacy', status: 'Cleared', order: 'Delivered', statusClass: 'bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]', orderClass: 'bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]' },
-  ],
-};
-
 const PrescriptionsPage: React.FC<PrescriptionsPageProps> = ({ onNav, onOpenModal }) => {
   const [activeTab, setActiveTab] = useState<PrescriptionTab>('active');
-  const rows = PRESCRIPTION_DATA[activeTab];
+  const [stockQuery, setStockQuery] = useState('');
+  const [stockLocation, setStockLocation] = useState('');
+  const [stockStatus, setStockStatus] = useState('');
+  const [quantityByStockId, setQuantityByStockId] = useState<Record<string, string>>({});
+  const [generatedInvoiceRef, setGeneratedInvoiceRef] = useState<string | null>(null);
+  const [invoiceError, setInvoiceError] = useState('');
+  const [stockResults, setStockResults] = useState<Awaited<ReturnType<typeof BRIDGE_DATA_SERVICE.searchStock>> | null>(null);
+  const rows = MOCK_ORDERS[activeTab];
   const counts = {
-    active: PRESCRIPTION_DATA.active.length,
-    awaiting: PRESCRIPTION_DATA.awaiting.length,
-    completed: PRESCRIPTION_DATA.completed.length,
+    active: MOCK_ORDERS.active.length,
+    awaiting: MOCK_ORDERS.awaiting.length,
+    completed: MOCK_ORDERS.completed.length,
+  };
+
+  const searchStock = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const results = await BRIDGE_DATA_SERVICE.searchStock(stockQuery, stockLocation);
+    setStockResults(results);
+    setGeneratedInvoiceRef(null);
+    setStockStatus(`${results.length} mock stock ${results.length === 1 ? 'match' : 'matches'}; no live inventory was queried.`);
+  };
+
+  const generateDemoInvoice = (stockId: string) => {
+    const reference = BRIDGE_DATA_SERVICE.createDemoInvoiceReference(
+      stockId,
+      Number(quantityByStockId[stockId] ?? 1),
+    );
+    if (!reference) {
+      setGeneratedInvoiceRef(null);
+      setInvoiceError('Enter a whole quantity within the available demo stock.');
+      return;
+    }
+    setInvoiceError('');
+    setGeneratedInvoiceRef(reference);
   };
 
   return (
@@ -57,6 +73,90 @@ const PrescriptionsPage: React.FC<PrescriptionsPageProps> = ({ onNav, onOpenModa
         <div className="[&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-g900 [&_h1]:tracking-[-0.4px] [&_p]:text-[12.5px] [&_p]:text-g500 [&_p]:mt-[3px]"><h1>Prescriptions</h1><p>Structured clinical orders · ICD-10 coded · HMO-matched</p></div>
         <div className="flex gap-2 flex-wrap max-md:w-full max-md:justify-start"><button className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd" onClick={() => onOpenModal('modal-prescription')}><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Prescription</button></div>
       </div>
+
+      <section className="mb-4 grid grid-cols-[1fr_auto] items-end gap-5 rounded-xl border border-g200 bg-w p-5 max-md:grid-cols-1" aria-labelledby="stock-search-title">
+        <form className="grid grid-cols-[1fr_180px_auto] items-end gap-3 max-md:grid-cols-1" onSubmit={searchStock}>
+          <div>
+            <label htmlFor="stock-search" id="stock-search-title">Search oncology stock</label>
+            <input
+              autoComplete="off"
+              className="rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm text-g800 outline-none focus:border-p"
+              id="stock-search"
+              onChange={(event) => setStockQuery(event.target.value)}
+              placeholder="Generic name or brand"
+              value={stockQuery}
+            />
+          </div>
+          <div>
+            <label htmlFor="stock-location">Location</label>
+            <input
+              className="rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm text-g800 outline-none focus:border-p"
+              id="stock-location"
+              onChange={(event) => setStockLocation(event.target.value)}
+              placeholder="City or facility"
+              value={stockLocation}
+            />
+          </div>
+          <button className="rounded-lg bg-p px-4 py-2.5 text-sm font-semibold text-white hover:bg-pd" type="submit">Search network</button>
+        </form>
+        <div className="min-w-[220px] text-right max-md:text-left">
+          <button className="rounded-lg border border-g200 bg-g50 px-4 py-2.5 text-sm font-semibold text-g400" disabled title="Available after the server-side payment integration is connected" type="button">
+            Live Paystack Link
+          </button>
+          <p className="mt-2 text-[11px] leading-5 text-g500">Use a result below to create a non-payable demo invoice link.</p>
+        </div>
+        <p aria-live="polite" className="col-span-2 text-xs text-g500 max-md:col-span-1">
+          {stockStatus || "Search by generic name, brand, or location. Results are sample data for integration."}
+        </p>
+        {stockResults ? (
+          <div className="col-span-2 grid gap-2 max-md:col-span-1" aria-label="Mock stock search results">
+            {stockResults.length ? stockResults.map((item) => (
+              <article className="grid grid-cols-[1fr_auto] items-center gap-4 border-t border-g100 py-3 text-sm max-sm:grid-cols-1" key={item.id}>
+                <div>
+                  <p className="font-semibold text-g800">{item.drug} <span className="font-normal text-g500">({item.brand})</span></p>
+                  <p className="mt-1 text-xs text-g500">{item.location} · Batch {item.batchNumber} · Expires {item.expiresOn}</p>
+                </div>
+                <div className="flex items-end gap-2 max-sm:flex-wrap">
+                  <div>
+                    <label className="mb-1 text-[11px] text-g500" htmlFor={`stock-quantity-${item.id}`}>Qty</label>
+                    <input
+                      className="w-20 rounded-md border border-g200 px-2 py-2 text-sm"
+                      id={`stock-quantity-${item.id}`}
+                      max={item.availableQuantity}
+                      min="1"
+                      onChange={(event) => {
+                        setQuantityByStockId((quantities) => ({ ...quantities, [item.id]: event.target.value }));
+                        setGeneratedInvoiceRef(null);
+                        setInvoiceError('');
+                      }}
+                      type="number"
+                      value={quantityByStockId[item.id] ?? "1"}
+                    />
+                  </div>
+                  <div className="text-right max-sm:text-left">
+                  <p className="font-semibold text-g700">{item.availableQuantity} available</p>
+                  <p className="mt-1 text-xs text-g500">{item.status} · Demo</p>
+                  </div>
+                  <button
+                    className="rounded-md border border-g200 px-3 py-2 text-xs font-semibold text-g700 hover:border-p hover:text-p disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={item.availableQuantity === 0}
+                    onClick={() => generateDemoInvoice(item.id)}
+                    type="button"
+                  >
+                    Generate demo invoice
+                  </button>
+                </div>
+              </article>
+            )) : <p className="border-t border-g100 py-3 text-sm text-g500">No mock results match this search.</p>}
+            {generatedInvoiceRef ? (
+              <p aria-live="polite" className="border-t border-g100 py-3 text-sm text-g700">
+                Demo invoice ready: <Link className="font-semibold text-p underline" href={`/pay/${encodeURIComponent(generatedInvoiceRef)}`}>{generatedInvoiceRef}</Link>. No reservation or payment was made.
+              </p>
+            ) : null}
+            {invoiceError ? <p aria-live="polite" className="py-3 text-sm text-err">{invoiceError}</p> : null}
+          </div>
+        ) : null}
+      </section>
 
       <div className="grid grid-cols-[1.55fr_1fr] gap-4 max-lg:grid-cols-1">
         <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4">

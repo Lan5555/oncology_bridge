@@ -20,6 +20,12 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Frontend Data Integration
+
+`src/app/services/bridge-data/bridge-mock-service.ts` is the adapter for the currently mocked invoice lookup, stock search, inventory fixtures, prescription orders, verification queue, settlement summary, and research inquiry. Its `BRIDGE_DATA_SERVICE` methods return demo data only; edits and payment simulations are not persisted or sent to a provider.
+
+When connecting the external backend, replace the adapter methods with calls to the corresponding API while keeping the UI-facing types stable. Keep Paystack initialization and verification server-side; never expose a secret key through a `NEXT_PUBLIC_` variable. Authentication, facility registration, and licence verification already have separate service classes under `src/app/services/`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

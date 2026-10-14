@@ -1,133 +1,11 @@
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import type { ModalId, PageId } from "../../lib/types";
+import { MOCK_INVENTORY_RECORDS, type MockInventoryRecord } from "@/app/services/bridge-data/bridge-mock-service";
 
 interface InventoryPageProps {
   onNav: (id: PageId) => void;
   onOpenModal: (id: ModalId) => void;
 }
-
-const INVENTORY_RECORDS = [
-  {
-    id: "1",
-    drug: "Trastuzumab",
-    gtin: "GTIN 0304817892",
-    lot: "TZ-2204-B",
-    facility: "LUTH",
-    qty: 8,
-    expiry: "Aug 3, 2026",
-    temp: "2°C–8°C ✓",
-    status: "Near Expiry",
-    statusStyle: "bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]",
-    actionLabel: "Transfer",
-    actionClass: "bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800",
-    category: "expiry",
-  },
-  {
-    id: "2",
-    drug: "Rituximab",
-    gtin: "GTIN 0812944031",
-    lot: "RX-0912-A",
-    facility: "EKO Hospital",
-    qty: 5,
-    expiry: "Jul 28, 2026",
-    temp: "2°C–8°C ✓",
-    status: "Critical Expiry",
-    statusStyle: "bg-errl text-[#7f1d1d] dk:bg-[#4b0f0f] dk:text-[#fee2e2]",
-    actionLabel: "Redistribute",
-    actionClass: "bg-p text-white hover:bg-pd",
-    category: "expiry",
-  },
-  {
-    id: "3",
-    drug: "Bevacizumab",
-    gtin: "GTIN 0519273447",
-    lot: "BV-1103-C",
-    facility: "UCH Ibadan",
-    qty: 12,
-    expiry: "Sep 12, 2026",
-    temp: "2°C–8°C ✓",
-    status: "Near Expiry",
-    statusStyle: "bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]",
-    actionLabel: "Transfer",
-    actionClass: "bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800",
-    category: "expiry",
-  },
-  {
-    id: "4",
-    drug: "Trastuzumab",
-    gtin: "GTIN 0304817893",
-    lot: "TZ-2211-A",
-    facility: "Lagos Island GH",
-    qty: 20,
-    expiry: "Jan 15, 2027",
-    temp: "2°C–8°C ✓",
-    status: "In Stock",
-    statusStyle: "bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]",
-    actionLabel: "View",
-    actionClass: "bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800",
-    category: "all",
-  },
-  {
-    id: "5",
-    drug: "Pertuzumab",
-    gtin: "GTIN 0321847920",
-    lot: "PT-0707-D",
-    facility: "Lagos Island GH",
-    qty: 3,
-    expiry: "Sep 5, 2026",
-    temp: "2°C–8°C ✓",
-    status: "Near Expiry",
-    statusStyle: "bg-warnl text-[#78350f] dk:bg-[#331f04] dk:text-[#fef3c7]",
-    actionLabel: "Transfer",
-    actionClass: "bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800",
-    category: "expiry",
-  },
-  {
-    id: "6",
-    drug: "Rituximab",
-    gtin: "GTIN 0812945002",
-    lot: "RX-1044-E",
-    facility: "LASUTH",
-    qty: 7,
-    expiry: "Jul 22, 2026",
-    temp: "Breach — 11.2°C",
-    status: "Quarantined",
-    statusStyle: "bg-errl text-[#7f1d1d] dk:bg-[#4b0f0f] dk:text-[#fee2e2]",
-    actionLabel: "Inspect",
-    actionClass: "bg-errl text-[#991b1b] border border-[#fecaca] dk:text-w dk:border-err",
-    category: "quarantine",
-  },
-  {
-    id: "7",
-    drug: "Cetuximab",
-    gtin: "GTIN 0621847001",
-    lot: "CE-0310-B",
-    facility: "LUTH",
-    qty: 9,
-    expiry: "Mar 20, 2027",
-    temp: "2°C–8°C ✓",
-    status: "In Stock",
-    statusStyle: "bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]",
-    actionLabel: "View",
-    actionClass: "bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800",
-    category: "all",
-  },
-  {
-    id: "8",
-    drug: "Bevacizumab",
-    gtin: "GTIN 0519273448",
-    lot: "BV-1210-F",
-    facility: "UCH Ibadan",
-    qty: 15,
-    expiry: "Feb 8, 2027",
-    temp: "2°C–8°C ✓",
-    status: "In Stock",
-    statusStyle: "bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]",
-    actionLabel: "View",
-    actionClass: "bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800",
-    category: "all",
-  },
-];
 
 const TAB_OPTIONS = [
   { id: "all", label: "All Stock" },
@@ -138,7 +16,13 @@ const TAB_OPTIONS = [
 
 const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
   const [activeTab, setActiveTab] = useState("all");
-  const visibleRows = INVENTORY_RECORDS.filter((record) =>
+  const [inventoryRecords, setInventoryRecords] = useState<MockInventoryRecord[]>(MOCK_INVENTORY_RECORDS);
+  const [drugName, setDrugName] = useState("");
+  const [batchNumber, setBatchNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [intakeStatus, setIntakeStatus] = useState("");
+  const visibleRows = inventoryRecords.filter((record) =>
     activeTab === "all"
       ? true
       : activeTab === "redistributed"
@@ -175,6 +59,59 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
           </button>
         </div>
       </div>
+
+      <form
+        className="mb-6 grid grid-cols-[1.2fr_1fr_1fr_120px_auto] items-end gap-3 rounded-xl border border-g200 bg-w p-5 max-xl:grid-cols-2 max-md:grid-cols-1"
+        onSubmit={(event: FormEvent<HTMLFormElement>) => {
+          event.preventDefault();
+          const parsedQuantity = Number(quantity);
+          if (!drugName.trim() || !batchNumber.trim() || !expiryDate || parsedQuantity < 1) return;
+          setInventoryRecords((records) => [
+            {
+              id: crypto.randomUUID(),
+              drug: drugName.trim(),
+              gtin: "Manual entry",
+              lot: batchNumber.trim(),
+              facility: "This facility",
+              qty: parsedQuantity,
+              expiry: new Date(`${expiryDate}T00:00:00`).toLocaleDateString("en-NG", { dateStyle: "medium" }),
+              temp: "Not recorded",
+              status: "In Stock",
+              statusStyle: "bg-okl text-[#065f46] dk:bg-[#064e3b] dk:text-[#d1fae5]",
+              actionLabel: "View",
+              actionClass: "bg-transparent text-g600 border border-g200 hover:bg-g50 hover:text-g800",
+              category: "all",
+            },
+            ...records,
+          ]);
+          setDrugName("");
+          setBatchNumber("");
+          setExpiryDate("");
+          setQuantity("");
+          setIntakeStatus("Batch added to this browser session only. It has not been saved to the inventory service.");
+        }}
+      >
+        <div>
+          <label htmlFor="intake-drug">Drug name</label>
+          <input className="rounded-lg border border-g200 px-3 py-2.5 text-sm" id="intake-drug" onChange={(event) => setDrugName(event.target.value)} required value={drugName} />
+        </div>
+        <div>
+          <label htmlFor="intake-batch">Batch number</label>
+          <input className="rounded-lg border border-g200 px-3 py-2.5 text-sm" id="intake-batch" onChange={(event) => setBatchNumber(event.target.value)} required value={batchNumber} />
+        </div>
+        <div>
+          <label htmlFor="intake-expiry">Expiration date</label>
+          <input className="rounded-lg border border-g200 px-3 py-2.5 text-sm" id="intake-expiry" min={new Date().toISOString().slice(0, 10)} onChange={(event) => setExpiryDate(event.target.value)} required type="date" value={expiryDate} />
+        </div>
+        <div>
+          <label htmlFor="intake-quantity">Quantity</label>
+          <input className="rounded-lg border border-g200 px-3 py-2.5 text-sm" id="intake-quantity" min="1" onChange={(event) => setQuantity(event.target.value)} required type="number" value={quantity} />
+        </div>
+        <button className="rounded-lg bg-p px-4 py-2.5 text-sm font-semibold text-white hover:bg-pd" type="submit">Add batch</button>
+        <p aria-live="polite" className="col-span-full text-xs text-g500">
+          {intakeStatus || "New batches are only kept for this browser session until inventory persistence is connected."}
+        </p>
+      </form>
 
       <div
         className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-[0.9rem] mb-6 max-md:grid-cols-1"
