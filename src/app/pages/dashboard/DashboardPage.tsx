@@ -29,11 +29,15 @@ import {
   ScanLine,
   ShieldCheck,
   Thermometer,
+  Users,
 } from "lucide-react";
 
 interface DashboardPageProps {
   onNav: (id: PageId) => void;
   onOpenModal: (id: ModalId) => void;
+  canManageFacilityUsers?: boolean;
+  showFacilityTeam?: boolean;
+  allowedPages?: PageId[] | null;
 }
 
 const ROLE_SECTIONS: Record<
@@ -101,6 +105,9 @@ const ROLE_SECTIONS: Record<
 const DashboardPage: React.FC<DashboardPageProps> = ({
   onNav,
   onOpenModal,
+  canManageFacilityUsers = false,
+  showFacilityTeam = canManageFacilityUsers,
+  allowedPages = null,
 }) => {
   const { userData } = useProvider();
   const accountType = userData.user?.account_type;
@@ -124,6 +131,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           description: "Create and manage medicine identifiers.",
         },
       ];
+  const visibleSections = sections.filter(
+    (item) => !allowedPages || allowedPages.includes(item.page),
+  );
   const isStore = accountType === "PHARMACY_STORE";
   const canViewColdChain =
     !accountType || accountType === "DOCTOR" || accountType === "PHARMACIST";
@@ -276,7 +286,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       <section className="mb-6">
         <h2 className="mb-3 text-base font-bold text-g900">Your workspace</h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {sections.map((item) => (
+          {visibleSections.map((item) => (
             <button
               key={item.page}
               onClick={() => onNav(item.page)}
@@ -314,6 +324,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               </span>
             </button>
           ))}
+          {showFacilityTeam ? (
+            <button
+              type="button"
+              onClick={() => onNav("pg-users")}
+              className="group rounded-xl border border-g200 bg-w p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-p hover:shadow-md"
+            >
+              <span className="mb-3 flex size-9 items-center justify-center rounded-xl bg-pl text-p transition group-hover:scale-105">
+                <Users className="size-4" aria-hidden="true" />
+              </span>
+              <span className="text-sm font-bold text-g900">{canManageFacilityUsers ? "Manage facility team" : "Facility team"}</span>
+              <span className="mt-1 block text-sm text-g500">{canManageFacilityUsers ? "Invite team members and manage access for your facility." : "Open facility team access and management information."}</span>
+            </button>
+          ) : null}
         </div>
       </section>
 

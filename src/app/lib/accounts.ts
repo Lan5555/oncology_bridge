@@ -61,16 +61,14 @@ export const getAccountInfo = (type?: AccountType) =>
 const ALWAYS: PageId[] = ["pg-dashboard", "pg-settings"];
 
 const VERIFIED_BY_TYPE: Record<AccountType, PageId[]> = {
-  DOCTOR: ["pg-network", "pg-prescriptions", "pg-coldchain", "pg-expiry"],
+  DOCTOR: ["pg-prescriptions", "pg-coldchain", "pg-expiry"],
   PHARMACIST: [
-    "pg-network",
     "pg-prescriptions",
     "pg-coldchain",
     "pg-expiry",
     "pg-medicines",
   ],
   PHARMACY_STORE: [
-    "pg-network",
     "pg-scan",
     "pg-inventory",
     "pg-medicines",
@@ -79,15 +77,45 @@ const VERIFIED_BY_TYPE: Record<AccountType, PageId[]> = {
   ],
 };
 
-/** Returns null for legacy accounts with no account type (full access). */
+/** Resolve visible workspaces from server grants, with least-privilege legacy defaults. */
 export function allowedPages(
   type?: AccountType,
   status?: VerificationStatus,
+  serverAllowedPages?: string[],
+  permissions: string[] = [],
+  canManageFacilityUsers = permissions.includes("facility.users.manage"),
 ): PageId[] | null {
-  if (!type) return null;
-  return status === "VERIFIED"
-    ? [...ALWAYS, ...VERIFIED_BY_TYPE[type]]
-    : ALWAYS;
+  if (type && status !== "VERIFIED") return ALWAYS;
+  const knownPages = new Set<PageId>([
+    "pg-dashboard", "pg-inventory", "pg-medicines", "pg-scan",
+    "pg-transfers", "pg-prescriptions", "pg-coldchain", "pg-expiry",
+    "pg-network", "pg-facilities", "pg-users", "pg-audit", "pg-settings",
+  ]);
+  const rolePages = type ? VERIFIED_BY_TYPE[type] : [];
+  const backendPages = serverAllowedPages?.filter(
+    (page): page is PageId =>
+      knownPages.has(page as PageId) &&
+      (!type || VERIFIED_BY_TYPE[type].includes(page as PageId)),
+  ) ?? [];
+  // Preserve the standard workspace tools for each verified account type even
+  // when an older backend response omits them from allowed_pages. Server page
+  // grants can add only tools within that account type's workspace; separately
+  // permission-gated facility and network tools are handled below.
+  const pages = [...new Set([...ALWAYS, ...rolePages, ...backendPages])];
+  const requiredPermission: Partial<Record<PageId, string>> = {
+    "pg-network": "network.read",
+    "pg-facilities": "facility.read",
+    "pg-audit": "audit.read",
+  };
+  const permissionPages = (Object.entries(requiredPermission) as [PageId, string][])
+    .filter(([, permission]) => permissions.includes(permission))
+    .map(([page]) => page);
+  const grantedPages = [...new Set([...pages, ...permissionPages])];
+  return grantedPages.filter((page) => {
+    if (page === "pg-users") return canManageFacilityUsers;
+    const required = requiredPermission[page];
+    return !required || permissions.includes(required);
+  });
 }
 
 export const VERIFICATION_COPY: Record<

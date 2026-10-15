@@ -42,10 +42,10 @@ Product: a live, GS1-authenticated inventory, verification and redistribution ne
 
 Page access (enforce server-side too, `lib/accounts.ts`):
 - Always: `pg-dashboard`, `pg-settings`.
-- Verified `DOCTOR` / `PHARMACIST`: `pg-network`, `pg-prescriptions`, `pg-coldchain`, `pg-expiry`.
-- Verified `PHARMACY_STORE`: `pg-network`, `pg-scan`, `pg-inventory`, `pg-transfers`, `pg-expiry`.
+- Verified professional accounts get their role-specific clinical/pharmacy pages; `pg-network` additionally requires `network.read`.
+- Verified `PHARMACY_STORE`: `pg-scan`, `pg-inventory`, `pg-transfers`, `pg-expiry` plus any explicitly granted catalogue pages.
 - Unverified users: only dashboard + settings (`VerificationGate` is shown). Every other endpoint returns 403 `NOT_VERIFIED`.
-- `pg-facilities`, `pg-users`, `pg-audit` and `/admin`: Network Admin (Role C) only.
+- `pg-facilities` and `pg-audit` require `facility.read` and `audit.read` respectively. `pg-users` is shown for linked facility members as a team access page; management actions and pending join requests require `facility.users.manage`. `/admin` is restricted to ADMIN/SUPERADMIN operator accounts.
 
 ---
 
@@ -126,7 +126,7 @@ Response `data`: `{ status, registryResult }`.
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/hospital/api/register-facility` | Public (registration). Creates facility + admin user + license record in one transaction; sets status `PENDING`; returns `data:{facility,admin,token}`. 409 on duplicate email/license. |
+| POST | `/hospital/api/register-facility` | Public (registration). Creates facility + inactive admin user + license record in one transaction; facility is `PENDING`, user verification is `MANUAL_REVIEW`; returns `data:{facility,admin}` with no token. 409 on duplicate email/license; 429 when rate-limited. |
 | GET | `/hospital/api/find-all-facilities` | Admin. Supports `?status=&q=&page=&limit=`. Returns `data:{facilities, counts:{total,active,pending,suspended}}`. |
 | GET | `/hospital/api/find-one-facility/:id` | |
 | PATCH | `/hospital/api/update-one-facility/:id` | status, ip_whitelist, details, devices. Audit every change. |
@@ -141,7 +141,7 @@ Register payload:
   "admin": { "first_name": "", "last_name": "", "email": "", "phone": "", "password": "", "device_id": "" }
 }
 ```
-Do not trust `verification_status` from the client: re-run verification server-side.
+The registration endpoint accepts `license.verification_status` and `license.registry_result` for payload compatibility only and ignores both submitted values. Create the initial admin as inactive with `verification_status=MANUAL_REVIEW`; an authorized admin review controls activation.
 
 ### 4.4 Dashboard (`pg-dashboard`) - new
 
@@ -163,6 +163,8 @@ Do not trust `verification_status` from the client: re-run verification server-s
 
 - `GET /api/medicines` -> persisted medicine records with `id`, `generic_name`, `brand`, `strength`, and `gtin`.
 - `POST /api/medicines` accepts `{generic_name,brand,strength,gtin}` and creates a catalog record. Enforce pharmacist and pharmacy-store permissions server-side; doctors may use catalog records when prescribing but cannot create them.
+- `PATCH /api/medicines/:id` accepts only `{generic_name,brand,strength,gtin}` and returns the updated record. Validate field lengths and GTIN format/uniqueness; do not permit clients to change IDs, facility ownership, audit fields, or unrelated inventory data.
+- `DELETE /api/medicines/:id` removes the catalog entry from active use. Prefer a soft delete when inventory, prescriptions, or historical scans reference it; preserve those records and audit the actor, medicine ID, and removal time. Return a stable success envelope or `404` for an unknown ID. Enforce pharmacist and pharmacy-store permissions server-side for both mutations.
 
 ### 4.6 GS1 scan (`pg-scan`) - new
 
@@ -262,7 +264,11 @@ Do not trust `verification_status` from the client: re-run verification server-s
 
 ### 4.12 Users and roles (`pg-users`, modal-user) - new
 
-- `GET /api/roles` (with user counts), `GET /api/users?role=&facilityId=`, `POST /api/users` `{name,email,roleId,facilityId}` (sends invite email), `PATCH /api/users/:id`, `POST /api/users/:id/deactivate`, `GET/PUT /api/roles/:id/permissions`.
+- `GET /api/roles` (with user counts), `GET /api/users?role=&facilityId=`, `POST /api/users` (sends a scoped facility invitation), `GET /api/facility-membership-requests?status=PENDING`, `POST /api/facility-membership-requests/:id/approve|reject`, `PATCH /users/api/update-one-user/:id` for allowed profile fields or deactivation, `DELETE /users/api/delete-one-user/:id` for audited soft deletion, `GET/PUT /api/roles/:id/permissions`.
+- Public registration supports `GET /hospital/api/public-facilities?status=ACTIVE&q=&page=1&limit=50` and `POST /hospital/api/register-user-to-facility`. Joining a facility creates a pending membership request; the selected facility must be active, and membership approval remains separate from licence verification.
+- Authenticated user data should return server-derived `allowed_pages` and `can_manage_facility_users` claims. The UI uses them for navigation only; API authorization must enforce role permissions, licence status, user status, and facility membership on every request.
+- For a facility-scoped session, `GET /api/users` returns only users in the caller's facility. Return `can_manage_facility_users: true`, `facility.users.manage` and the `pg-users` page grant for the designated primary facility admin. The facility team page remains discoverable to linked members, but invite, edit, decision and removal controls are shown only to managers and every endpoint enforces that same scope and permission. Keep the join-request panel visible with an empty state when no requests are pending.
+- Approving a facility join request marks membership approved and attaches the facility. Set the user's `active=true` only when the facility is active, licence verification is `VERIFIED`, and account setup is complete; otherwise keep the user inactive and return `user.active`, current licence/facility status, and the unmet `activation_gate` in the decision response. Membership approval must never change the licence result.
 
 ### 4.13 Audit (`pg-audit`) - new
 
@@ -275,11 +281,13 @@ Do not trust `verification_status` from the client: re-run verification server-s
 
 ### 4.15 Admin console (`/admin`) - new
 
-- Admin login: separate `POST /admin/api/login` (replace `localStorage.adminAuth="1"`, which is not secure); role C JWT only, MFA required.
-- `GET /admin/api/verifications?status=MANUAL_REVIEW` -> `[{id,name,accountType,license,workplace,submittedAt,registryResult,status}]`.
-- `POST /admin/api/verifications/:id/approve|reject` `{reason}` -> sets user `verification_status`, emails the user, audit `VERIFICATION_DECISION`.
-- `POST /admin/api/verifications/:id/recheck` -> re-run registry lookup.
-- Overview, integrations (registry/Paystack/insurer health), users, facilities and audit sections reuse the endpoints above plus `GET /admin/api/integrations/health`.
+- Admin login uses existing `POST /auth/api/login`. The deployed roles are `ADMIN` (id 1) and `SUPERADMIN` (id 4); both are operator identities and must bypass facility/licence review checks, while remaining active and subject to MFA/role checks. Do not return “Registration is awaiting facility and license review” for these roles. Enforce role-specific permissions on every admin route; consider reserving global/destructive actions for `SUPERADMIN`.
+- `GET /admin/api/verifications?status=ALL&page=1&limit=50&q=` returns registration applications including applicant identity/email, account type, licence/registry result, facility details/status, application status, and submission time. Support `ALL`, `PENDING`, `MANUAL_REVIEW`, `VERIFIED`, `REJECTED`.
+- `POST /admin/api/verifications/:id/approve` `{reason?}` transactionally sets application/user verification to `VERIFIED`, activates the facility and initial admin, records reviewer/time, notifies the user, and audits `VERIFICATION_DECISION`.
+- `POST /admin/api/verifications/:id/reject` `{reason}` requires a reason, sets application/user to `REJECTED`, keeps the user inactive, rejects the facility, notifies the user, and audits the decision.
+- `POST /admin/api/verifications/:id/recheck` re-runs lookup using the stored licence; update evidence only and do not auto-approve.
+- Facility status management uses `GET /hospital/api/find-all-facilities`, `GET /hospital/api/find-one-facility/:id`, `PATCH /hospital/api/update-one-facility/:id`, and soft-delete `DELETE /hospital/api/delete-one-facility/:id`. Validate transitions and audit every mutation.
+- Overview, users, roles, and audit reuse their authenticated API routes; `GET /api/settlements/summary` returns the payment summary and `GET /admin/api/integrations/health` returns safe integration status metadata only. See `ADMIN_PORTAL_BACKEND_SPEC.md` for full request/response shapes and acceptance checks.
 
 ### 4.16 Research / WAOB (`/research`, `/waob`, landing) - new
 

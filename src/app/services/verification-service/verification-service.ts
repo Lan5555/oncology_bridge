@@ -30,7 +30,7 @@ class VerificationService extends CoreService {
     return await this.get(Routes.VERIFICATION_APPLICATIONS(status));
   }
   public async decideApplication(id: string, payload: unknown) {
-    return await this.send(Routes.ADMIN_VERIFICATION_DECISION(id), payload);
+    return await this.send(Routes.VERIFICATION_APPLICATION_DECISION(id), payload);
   }
 }
 

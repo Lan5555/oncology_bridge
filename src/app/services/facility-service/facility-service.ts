@@ -4,6 +4,12 @@ class FacilityService extends CoreService {
   public async registerFacility(payload: Record<string, any>) {
     return await this.send(Routes.REGISTER_FACILITY, payload, { auth: false });
   }
+  public async publicFacilities(q = "") {
+    return await this.get(Routes.PUBLIC_FACILITIES({ q, status: "ACTIVE", limit: 50 }), { auth: false });
+  }
+  public async registerUserToFacility(payload: Record<string, any>) {
+    return await this.send(Routes.REGISTER_TO_FACILITY, payload, { auth: false });
+  }
   public async findAllFacilities(
     params: Record<string, string | number | undefined> = {},
     admin = false,
@@ -18,10 +24,10 @@ class FacilityService extends CoreService {
     payload: Record<string, any>,
     admin = false,
   ) {
-    return await super.update(Routes.FACILITY(id), payload, { admin });
+    return await super.update(Routes.UPDATE_FACILITY(id), payload, { admin });
   }
   public async deleteOneFacility(id: string, admin = false) {
-    return await this.delete(Routes.FACILITY(id), undefined, { admin });
+    return await this.delete(Routes.DELETE_FACILITY(id), undefined, { admin });
   }
 }
 export const FACILITY_SERVICE: FacilityService = new FacilityService();

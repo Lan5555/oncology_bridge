@@ -4,6 +4,7 @@ import {
   BadgeCheck,
   Building2,
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -19,6 +20,8 @@ import {
   Store,
   User,
   UserCogIcon,
+  Search,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -33,8 +36,10 @@ import { FacilityResponse } from "../models/facility-model";
 import { UserResponse } from "../models/user-model";
 import { useProvider } from "../providers/provider";
 import { AUTH_SERVICE } from "../services/auth-service/auth-service";
+import { DASHBOARD_SERVICE } from "../services/dashboard-service/dashboard-service";
 import { FACILITY_SERVICE } from "../services/facility-service/facility-service";
 import { VERIFICATION_SERVICE } from "../services/verification-service/verification-service";
+import { unwrapArray } from "../services/response-utils";
 
 interface AuthPagesProps {
   view: AuthView;
@@ -70,6 +75,15 @@ export default function AuthPages({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [registrationNotice, setRegistrationNotice] = useState("");
+  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
+  const [registrationMode, setRegistrationMode] = useState<"CREATE_FACILITY" | "JOIN_FACILITY">("CREATE_FACILITY");
+  const [publicFacilities, setPublicFacilities] = useState<any[]>([]);
+  const [facilitiesLoading, setFacilitiesLoading] = useState(false);
+  const [facilitiesError, setFacilitiesError] = useState("");
+  const [facilitySearch, setFacilitySearch] = useState("");
+  const [selectedFacilityId, setSelectedFacilityId] = useState("");
+  const [publicStats, setPublicStats] = useState<Record<string, unknown> | null>(null);
 
   // Login
   const [email, setEmail] = useState<string>("");
@@ -101,6 +115,44 @@ export default function AuthPages({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    let current = true;
+    void DASHBOARD_SERVICE.publicStats().then((response) => {
+      if (current && response.success && response.data && typeof response.data === "object") {
+        setPublicStats(response.data as Record<string, unknown>);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (view !== "register" || registrationMode !== "JOIN_FACILITY") return;
+    let current = true;
+    const timer = window.setTimeout(() => {
+      setFacilitiesLoading(true);
+      setFacilitiesError("");
+      void FACILITY_SERVICE.publicFacilities(facilitySearch.trim())
+        .then((response) => {
+          if (!current) return;
+          if (!response.success) {
+            setFacilitiesError(response.message || "Facilities could not be loaded.");
+            setPublicFacilities([]);
+            return;
+          }
+          setPublicFacilities(unwrapArray(response.data));
+        })
+        .finally(() => {
+          if (current) setFacilitiesLoading(false);
+        });
+    }, 250);
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [view, registrationMode, facilitySearch]);
 
   // --- Theme tokens: white surfaces + dark navy/blue accent ---
   const shellClasses = isDark
@@ -151,6 +203,30 @@ export default function AuthPages({
     setSubmitting(true);
     const payload = { email, password };
     const res = await AUTH_SERVICE.signIn(payload);
+    const responseCode = (res.code ?? "").toUpperCase();
+    const responseMessage = res.message ?? "";
+    const pendingReview =
+      [
+        "FACILITY_REVIEW_PENDING",
+        "FACILITY_MEMBERSHIP_PENDING",
+        "LICENSE_REVIEW_PENDING",
+        "LICENCE_REVIEW_PENDING",
+        "ACCOUNT_PENDING_REVIEW",
+        "PENDING_REVIEW",
+      ].includes(responseCode) ||
+      (/await(?:ing|s)|pending/i.test(responseMessage) &&
+        /(facility|licen[cs]e|account).*(review|approval)|review.*(facility|licen[cs]e|account)/i.test(
+          responseMessage,
+        ));
+    if (pendingReview) {
+      const message =
+        responseMessage ||
+        "Your account is awaiting facility and licence review. You cannot sign in until the review is complete.";
+      setRegistrationNotice(message);
+      toast.info(message);
+      setSubmitting(false);
+      return;
+    }
     if (res.success && res.data) {
       toast.success(res.message);
       const user = UserResponse.fromJson(res.data);
@@ -175,59 +251,102 @@ export default function AuthPages({
       lastName:
         accountType === "PHARMACY_STORE" ? undefined : adminLastName.trim(),
     });
-    const payload = {
-      account_type: accountType,
-      license: {
-        number: licenseNumber.trim(),
-        registry: info.registry,
-        verification_status: verification.status,
-        registry_result: verification.registryResult,
-      },
-      facility: {
-        name: facilityName,
-        facility_type: facilityType,
-        email: isStore ? facilityEmail : workEmail,
-        phone: facilityPhone,
-        address: isStore
-          ? facilityAddress
-          : `${facilityCity}, ${facilityState}`,
-        city: facilityCity,
-        state: facilityState,
-      },
-      admin: {
-        first_name: adminFirstName,
-        last_name: adminLastName,
-        phone: adminPhone,
-        email: workEmail,
-        password: confirmPassword,
-        device_id: getOrCreateDeviceID(),
-      },
+    const licensePayload = {
+      number: licenseNumber.trim(),
+      registry: info.registry,
+      // Compatibility only; the backend performs authoritative verification.
+      verification_status: verification.status,
+      registry_result: verification.registryResult,
     };
-    const res = await FACILITY_SERVICE.registerFacility(payload);
+    const selectedFacility = publicFacilities.find(
+      (facility) => String(facility.id) === selectedFacilityId,
+    );
+    const payload = registrationMode === "JOIN_FACILITY"
+      ? {
+          account_type: accountType,
+          facility_id: selectedFacilityId,
+          license: licensePayload,
+          user: {
+            first_name: adminFirstName,
+            last_name: adminLastName,
+            phone: adminPhone,
+            email: workEmail,
+            password: confirmPassword,
+            device_id: getOrCreateDeviceID(),
+          },
+        }
+      : {
+          account_type: accountType,
+          license: licensePayload,
+          facility: {
+            name: facilityName,
+            facility_type: facilityType,
+            email: isStore ? facilityEmail : workEmail,
+            phone: facilityPhone,
+            address: isStore
+              ? facilityAddress
+              : `${facilityCity}, ${facilityState}`,
+            city: facilityCity,
+            state: facilityState,
+          },
+          admin: {
+            first_name: adminFirstName,
+            last_name: adminLastName,
+            phone: adminPhone,
+            email: workEmail,
+            password: confirmPassword,
+            device_id: getOrCreateDeviceID(),
+          },
+        };
+    const res = registrationMode === "JOIN_FACILITY"
+      ? await FACILITY_SERVICE.registerUserToFacility(payload)
+      : await FACILITY_SERVICE.registerFacility(payload);
     if (res.success && res.data) {
       setSubmitting(false);
-      const facility = FacilityResponse.fromJson(res.data);
+      const facility = registrationMode === "JOIN_FACILITY"
+        ? FacilityResponse.fromJson({
+            facility: selectedFacility,
+            admin: (res.data as any).user ?? (res.data as any).admin,
+          })
+        : FacilityResponse.fromJson(res.data);
       setFacilityResponse(facility);
-      onShowAuth("login");
-      toast.success(res.message);
+      setRegistrationNotice(
+        res.message ||
+          (registrationMode === "JOIN_FACILITY"
+            ? "Your request to join this facility was submitted. The facility administrator must review it, and your licence must be verified before access is enabled."
+            : "Your registration was received and is awaiting facility and licence review."),
+      );
+      setRegistrationSubmitted(true);
+      toast.success("Registration submitted for review.");
     } else {
-      toast.error(res.message);
+      const message =
+        res.status === 409
+          ? res.message || "This email or licence is already registered."
+          : res.status === 429
+            ? res.message ||
+              "Too many registration attempts. Please wait before trying again."
+            : res.message;
+      toast.error(message);
       setSubmitting(false);
-      console.log(res.message);
     }
   };
 
   const isStore = accountType === "PHARMACY_STORE";
   const accountInfo = getAccountInfo(accountType ?? undefined);
-  const step1Valid = accountType !== null;
-  const step2Valid = Boolean(
-    facilityName.trim() &&
-      facilityType &&
-      facilityPhone.trim() &&
-      facilityCity.trim() &&
-      facilityState.trim() &&
-      (!isStore || (facilityEmail.trim() && facilityAddress.trim())),
+  const selectedFacility = publicFacilities.find(
+    (facility) => String(facility.id) === selectedFacilityId,
   );
+  const step1Valid = accountType !== null;
+  const step2Valid = registrationMode === "JOIN_FACILITY"
+    ? Boolean(selectedFacilityId && selectedFacility)
+    : Boolean(
+        facilityName.trim() &&
+          facilityType &&
+          facilityPhone.trim() &&
+          facilityCity.trim() &&
+          facilityState.trim() &&
+          (!isStore || (facilityEmail.trim() && facilityAddress.trim())),
+      );
   const passwordsMatch =
     registerPassword.length > 0 && registerPassword === confirmPassword;
   const step3Valid = Boolean(
@@ -263,13 +382,27 @@ export default function AuthPages({
   ];
 
   const networkBadges = [
-    "GS1 DataMatrix Verification",
-    "Cold Chain Monitoring",
-    "AES-256 Encryption",
-    "Role-Based Access Control",
-    "Audit Logging",
-    "Offline Sync",
+    "GS1 medicine scanning",
+    "Batch and expiry checks",
+    "Cold-chain records",
+    "Role-based access",
+    "Auditable activity",
+    "Offline scan queue",
   ];
+
+  const publicMetric = (...keys: string[]) => {
+    for (const key of keys) {
+      const value = publicStats?.[key];
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+    }
+    return null;
+  };
+  const formatCount = (value: number | null) =>
+    value === null ? "—" : new Intl.NumberFormat("en-NG", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+  const recoveredValue = publicMetric("valueRecoveredNaira");
+  const formatRecoveredValue = () => recoveredValue === null
+    ? "—"
+    : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", notation: "compact", maximumFractionDigits: 1 }).format(recoveredValue);
 
   // Prevent hydration mismatch by not rendering dynamic content until mounted
   if (!isMounted) {
@@ -400,17 +533,17 @@ export default function AuthPages({
             </h1>
             <div className="mt-4 h-1 w-20 rounded-full bg-[#4C8DFF]/60" />
             <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-[#C3D3EC]">
-              Secure collaboration platform connecting verified oncology
-              facilities for inventory visibility, medicine verification, and
-              safe redistribution across Nigeria.
+              A secure collaboration platform for oncology facilities across
+              the Lagos–Ibadan corridor, supporting medicine visibility,
+              verification, and safer stock redistribution.
             </p>
           </div>
 
           <div className="mt-8 flex gap-6">
             {[
-              { label: "Facilities", value: "24+" },
-              { label: "Transactions", value: "1.2K" },
-              { label: "Uptime", value: "99.9%" },
+              { label: "Active facilities", value: formatCount(publicMetric("nodes", "facilityCount", "activeFacilities")) },
+              { label: "GS1 checks", value: formatCount(publicMetric("gs1AuthenticatedVials", "gs1Checks", "gs1Scans")) },
+              { label: "Value recovered", value: formatRecoveredValue() },
             ].map((stat) => (
               <div key={stat.label}>
                 <div className="text-2xl font-bold text-white">
@@ -527,6 +660,15 @@ export default function AuthPages({
                 </p>
               </div>
 
+              {registrationNotice && (
+                <div
+                  role="status"
+                  className={`mt-4 rounded-lg border px-4 py-3 text-sm ${isDark ? "border-amber-500/30 bg-amber-500/10 text-amber-200" : "border-amber-200 bg-amber-50 text-amber-900"}`}
+                >
+                  {registrationNotice}
+                </div>
+              )}
+
               <form className="mt-6 space-y-4" onSubmit={handleLogin}>
                 <div>
                   <label
@@ -582,6 +724,8 @@ export default function AuthPages({
                     onClick={() => {
                       onShowAuth("register");
                       setRegisterStep(1);
+                      setRegistrationSubmitted(false);
+                      setRegistrationNotice("");
                     }}
                     className="text-sm font-medium transition-colors"
                     style={{ color: accent }}
@@ -680,6 +824,8 @@ export default function AuthPages({
                   onClick={() => {
                     onShowAuth("register");
                     setRegisterStep(1);
+                    setRegistrationSubmitted(false);
+                    setRegistrationNotice("");
                   }}
                   className={`text-sm transition-colors ${mutedText}`}
                 >
@@ -693,6 +839,77 @@ export default function AuthPages({
                 </button>
               </div>
             </>
+          ) : registrationSubmitted ? (
+            <section aria-labelledby="registration-status-title" className="py-3">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1B3A6B]/10 text-[#1B3A6B] dark:bg-[#4C8DFF]/15 dark:text-[#8BB5FF]">
+                <Clock className="h-8 w-8" aria-hidden="true" />
+              </div>
+              <div className="mt-6 text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1B3A6B] dark:text-[#8BB5FF]">
+                  {registrationMode === "JOIN_FACILITY" ? "Join request received" : "Application received"}
+                </p>
+                <h2
+                  id="registration-status-title"
+                  className={`mt-2 text-2xl font-bold tracking-tight ${headingText}`}
+                >
+                  Verification is in progress
+                </h2>
+                <p className={`mx-auto mt-3 max-w-md text-sm leading-6 ${mutedText}`}>
+                  {registrationMode === "JOIN_FACILITY"
+                    ? "Your request is with the selected facility and our licence review team. We’ll let you know when both decisions are complete."
+                    : "Your facility and licence details are with our review team. We’ll let you know when a decision is made."} Your account will be ready to sign in after approval.
+                </p>
+              </div>
+
+              <ol className="mt-8 space-y-4">
+                <li className="flex items-start gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className={`text-sm font-semibold ${headingText}`}>{registrationMode === "JOIN_FACILITY" ? "Join request submitted" : "Registration submitted"}</p>
+                    <p className={`mt-0.5 text-xs ${mutedText}`}>Your details have been received securely.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-300">
+                    <Clock className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className={`text-sm font-semibold ${headingText}`}>{registrationMode === "JOIN_FACILITY" ? "Facility membership and licence review" : "Facility and licence review"}</p>
+                    <p className={`mt-0.5 text-xs ${mutedText}`}>{registrationMode === "JOIN_FACILITY" ? "The facility administrator reviews your access request; our team verifies your licence." : "We’re checking the submitted information before enabling access."}</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${isDark ? "border-[#29456F] text-[#8CA0BE]" : "border-[#D5DFEC] text-slate"}`}>
+                    3
+                  </span>
+                  <div>
+                    <p className={`text-sm font-semibold ${headingText}`}>Sign in after approval</p>
+                    <p className={`mt-0.5 text-xs ${mutedText}`}>Your account remains inactive while review is pending.</p>
+                  </div>
+                </li>
+              </ol>
+
+              <div className={`mt-7 rounded-xl border p-4 text-sm leading-6 ${isDark ? "border-[#29456F] bg-[#0A1628]/70 text-[#C7D4E8]" : "border-[#DCE6F2] bg-[#F6F9FD] text-[#40516B]"}`}>
+                <div className="flex items-start gap-2.5">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#4C8DFF]" aria-hidden="true" />
+                  <p>{registrationNotice}</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onShowAuth("login")}
+                className="mt-6 w-full rounded-lg py-3 text-sm font-semibold text-white transition-colors hover:opacity-90"
+                style={{ backgroundColor: accent }}
+              >
+                Return to sign in
+              </button>
+              <p className={`mt-3 text-center text-xs ${mutedText}`}>
+                You can sign in once your facility and licence are approved.
+              </p>
+            </section>
           ) : (
             <>
               {/* Header */}
@@ -774,6 +991,33 @@ export default function AuthPages({
               <form className="mt-8 space-y-5" onSubmit={handleRegisterSubmit}>
                 {registerStep === 1 && (
                   <div className="space-y-4">
+                    <section className={`rounded-xl border p-4 ${borderColor}`} aria-labelledby="registration-path-title">
+                      <h3 id="registration-path-title" className={`text-sm font-semibold ${headingText}`}>How would you like to register?</h3>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        {([
+                          ["CREATE_FACILITY", "Create a facility", "Register a new hospital, clinic, cancer center or pharmacy."],
+                          ["JOIN_FACILITY", "Join an existing facility", "Find your workplace and request access."],
+                        ] as const).map(([mode, title, description]) => {
+                          const selected = registrationMode === mode;
+                          return (
+                            <button
+                              key={mode}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => setRegistrationMode(mode)}
+                              className={`rounded-xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 ${selected ? "shadow-md" : borderColor}`}
+                              style={selected ? { borderColor: accent, backgroundColor: isDark ? "rgba(76,141,255,0.1)" : "rgba(27,58,107,0.05)" } : undefined}
+                            >
+                              <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: selected ? accent : undefined }}>
+                                {mode === "CREATE_FACILITY" ? <Building2 className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                                {title}
+                              </span>
+                              <span className={`mt-1 block text-xs leading-5 ${mutedText}`}>{description}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
                     <div className="flex items-center gap-2">
                       <BadgeCheck
                         className="h-4 w-4"
@@ -842,12 +1086,14 @@ export default function AuthPages({
                       <h3
                         className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}
                       >
-                        {isStore
-                          ? "Pharmacy Information"
-                          : "Where You Practice"}
+                        {registrationMode === "CREATE_FACILITY"
+                          ? isStore ? "Create pharmacy facility" : "Create facility"
+                          : "Choose your facility"}
                       </h3>
                     </div>
 
+                    {registrationMode === "CREATE_FACILITY" ? (
+                      <>
                     <div>
                       <label
                         className={`mb-1.5 block text-sm font-medium ${labelText}`}
@@ -981,6 +1227,45 @@ export default function AuthPages({
                         />
                       </div>
                     </div>
+                      </>
+                    ) : (
+                      <div className="space-y-3 animate-fade-up">
+                        <label className={`block text-sm font-medium ${labelText}`}>
+                          Find your facility
+                          <span className="relative mt-1.5 block">
+                            <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`} />
+                            <input value={facilitySearch} onChange={(event) => { setFacilitySearch(event.target.value); setSelectedFacilityId(""); }} placeholder="Search by facility name, city or code" className={`${inputClasses} pl-10`} />
+                          </span>
+                        </label>
+                        {facilitiesLoading && <p className={`rounded-lg border p-4 text-sm ${borderColor} ${mutedText}`}>Loading active facilities…</p>}
+                        {facilitiesError && <div role="alert" className={`rounded-lg border p-4 text-sm ${isDark ? "border-red-400/30 text-red-200" : "border-red-200 bg-red-50 text-red-800"}`}>{facilitiesError}</div>}
+                        {!facilitiesLoading && !facilitiesError && publicFacilities.length === 0 && <p className={`rounded-lg border border-dashed p-5 text-center text-sm ${borderColor} ${mutedText}`}>No active facilities found. Try another search, or choose Create a facility.</p>}
+                        <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                          {publicFacilities.map((facility) => {
+                            const selected = selectedFacilityId === String(facility.id);
+                            return (
+                              <button
+                                key={facility.id}
+                                type="button"
+                                aria-pressed={selected}
+                                onClick={() => setSelectedFacilityId(String(facility.id))}
+                                className={`flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-all duration-200 hover:-translate-y-px ${selected ? "shadow-sm" : borderColor}`}
+                                style={selected ? { borderColor: accent, backgroundColor: isDark ? "rgba(76,141,255,0.08)" : "rgba(27,58,107,0.04)" } : undefined}
+                              >
+                                <Building2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color: accent }} />
+                                <span className="min-w-0 flex-1">
+                                  <span className={`block text-sm font-semibold ${headingText}`}>{facility.name}</span>
+                                  <span className={`mt-0.5 block text-xs ${mutedText}`}>{String(facility.facility_type ?? facility.facilityType ?? "Facility").replaceAll("_", " ")} · {[facility.city, facility.state].filter(Boolean).join(", ") || "Location not listed"}</span>
+                                  {facility.hospital_code && <span className={`mt-1 block font-mono text-[10px] ${mutedText}`}>Code {facility.hospital_code}</span>}
+                                </span>
+                                <span className={`mt-0.5 h-4 w-4 rounded-full border ${selected ? "border-4" : ""}`} style={{ borderColor: selected ? accent : isDark ? "#496184" : "#CBD5E1" }} />
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className={`rounded-lg border p-3 text-xs leading-5 ${borderColor} ${mutedText}`}>Your request will go to the selected facility for approval. The facility administrator and network verification workflow must approve access before tools are enabled.</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -991,7 +1276,9 @@ export default function AuthPages({
                       <h3
                         className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}
                       >
-                        {isStore ? "Primary Administrator" : "Your Details"}
+                        {registrationMode === "CREATE_FACILITY" && isStore
+                          ? "Primary Administrator"
+                          : "Your Details"}
                       </h3>
                     </div>
 
@@ -1136,9 +1423,11 @@ export default function AuthPages({
                         className={`mt-0.5 h-4 w-4 shrink-0 ${mutedText}`}
                       />
                       <p className={`text-xs leading-relaxed ${mutedText}`}>
-                        {isStore
-                          ? "The first administrator will manage your pharmacy account and can later invite staff."
-                          : "Use the name exactly as it appears on your professional licence; it is matched against the registry."}
+                        {registrationMode === "JOIN_FACILITY"
+                          ? "Your request will be linked to the selected facility. Use the name exactly as it appears on your professional licence."
+                          : isStore
+                            ? "The first administrator will manage your pharmacy account and can later invite staff."
+                            : "Use the name exactly as it appears on your professional licence; it is matched against the registry."}
                       </p>
                     </div>
                   </div>
@@ -1233,15 +1522,14 @@ export default function AuthPages({
                             style={{ backgroundColor: accent }}
                           />
                           Your licence is checked against the public registry,
-                          then reviewed by the Oncosourz team.
+                          then reviewed by {registrationMode === "JOIN_FACILITY" ? "the facility administrator and " : ""}Oncosourz.
                         </li>
                         <li className="flex items-start gap-2">
                           <span
                             className="mt-1.5 h-1 w-1 shrink-0 rounded-full"
                             style={{ backgroundColor: accent }}
                           />
-                          Until you are verified you can sign in but only see
-                          your overview and settings.
+                          Your account stays limited to overview and settings until both facility access and licence review are approved.
                         </li>
                         <li className="flex items-start gap-2">
                           <span
@@ -1268,18 +1556,18 @@ export default function AuthPages({
                           {accountInfo?.label ?? "—"}
                         </span>
                         <span className={mutedText}>
-                          {isStore ? "Pharmacy" : "Workplace"}
+                          {registrationMode === "JOIN_FACILITY" ? "Selected facility" : isStore ? "Pharmacy" : "Workplace"}
                         </span>
                         <span
                           className={`text-right font-medium ${headingText}`}
                         >
-                          {facilityName || "—"}
+                          {registrationMode === "JOIN_FACILITY" ? selectedFacility?.name ?? "—" : facilityName || "—"}
                         </span>
                         <span className={mutedText}>Type</span>
                         <span
                           className={`text-right font-medium ${headingText}`}
                         >
-                          {facilityType || "—"}
+                          {registrationMode === "JOIN_FACILITY" ? String(selectedFacility?.facility_type ?? "—").replaceAll("_", " ") : facilityType || "—"}
                         </span>
                         <span className={mutedText}>Administrator</span>
                         <span

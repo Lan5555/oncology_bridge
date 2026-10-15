@@ -19,9 +19,17 @@ export class Routes {
   static RESET_PASSWORD = "/auth/api/reset-password";
 
   static REGISTER_FACILITY = "/hospital/api/register-facility";
+  static PUBLIC_FACILITIES = (params: Record<string, string | number | undefined>) =>
+    `/hospital/api/public-facilities${query(params)}`;
+  static REGISTER_TO_FACILITY = "/hospital/api/register-user-to-facility";
   static FACILITIES = (params: Record<string, string | number | undefined>) =>
-    `/api/facilities${query(params)}`;
-  static FACILITY = (facilityId: string) => `/api/facilities/${id(facilityId)}`;
+    `/hospital/api/find-all-facilities${query(params)}`;
+  static FACILITY = (facilityId: string) =>
+    `/hospital/api/find-one-facility/${id(facilityId)}`;
+  static UPDATE_FACILITY = (facilityId: string) =>
+    `/hospital/api/update-one-facility/${id(facilityId)}`;
+  static DELETE_FACILITY = (facilityId: string) =>
+    `/hospital/api/delete-one-facility/${id(facilityId)}`;
 
   static VERIFY_LICENSE = "/api/verify-license";
   static ME = "/api/me";
@@ -105,18 +113,44 @@ export class Routes {
   static NOTIFICATION_READ = (notificationId: string) =>
     `/api/notifications/${id(notificationId)}/read`;
 
+  // The current backend exposes the shared login endpoint; authorization for
+  // admin APIs is still enforced by the backend using the returned Role C JWT.
   static ADMIN_LOGIN = Routes.SIGN_IN;
   static ADMIN_VERIFICATIONS = (status = "MANUAL_REVIEW") =>
-    `/api/verification-applications${query({ status })}`;
-  static ADMIN_VERIFICATION_DECISION = (verificationId: string) =>
-    `/api/verification-applications/${id(verificationId)}/decision`;
+    `/admin/api/verifications${query({ status, page: 1, limit: 50 })}`;
+  static ADMIN_VERIFICATION_DECISION = (
+    verificationId: string,
+    decision: "approve" | "reject",
+  ) => `/admin/api/verifications/${id(verificationId)}/${decision}`;
+  static ADMIN_VERIFICATION_RECHECK = (verificationId: string) =>
+    `/admin/api/verifications/${id(verificationId)}/recheck`;
   static SETTLEMENTS_SUMMARY = "/api/settlements/summary";
+  static ADMIN_INTEGRATIONS_HEALTH = "/admin/api/integrations/health";
+  static ADMIN_INTEGRATION_CONFIG = (key: string) =>
+    `/admin/api/integrations/${id(key)}/configuration`;
+  static ADMIN_INTEGRATION_TEST = (key: string) =>
+    `/admin/api/integrations/${id(key)}/test`;
+  static ADMIN_INTEGRATION_SYNC = (key: string) =>
+    `/admin/api/integrations/${id(key)}/sync`;
   static VERIFICATION_APPLICATIONS = (status = "MANUAL_REVIEW") =>
     `/api/verification-applications${query({ status })}`;
   static VERIFICATION_APPLICATION = (applicationId: string) =>
     `/api/verification-applications/${id(applicationId)}`;
+  static VERIFICATION_APPLICATION_DECISION = (applicationId: string) =>
+    `${Routes.VERIFICATION_APPLICATION(applicationId)}/decision`;
   static USER_UPDATE = (userId: string) =>
     `/users/api/update-one-user/${id(userId)}`;
+  static USERS_CREATE = "/api/users";
+  static FACILITY_MEMBERSHIP_REQUESTS = (status = "PENDING") =>
+    `/api/facility-membership-requests${query({ status })}`;
+  static FACILITY_MEMBERSHIP_DECISION = (
+    requestId: string,
+    decision: "approve" | "reject",
+  ) => `/api/facility-membership-requests/${id(requestId)}/${decision}`;
+  static FACILITY_MEMBERSHIP_LICENSE_CHECK = (requestId: string) =>
+    `/api/facility-membership-requests/${id(requestId)}/license-check`;
+  static USER_DELETE = (userId: string) =>
+    `/users/api/delete-one-user/${id(userId)}`;
   static RESEARCH_INQUIRIES = "/api/research/inquiries";
   static RESEARCH_STATS = "/api/research/stats";
 }

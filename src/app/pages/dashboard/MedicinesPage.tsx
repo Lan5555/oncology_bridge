@@ -4,7 +4,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { MEDICINE_SERVICE } from "@/app/services/medicine-service/medicine-service";
 import { unwrapArray } from "@/app/services/response-utils";
 import EmptyState from "@/app/components/EmptyState";
-import { Pill } from "lucide-react";
+import { Edit2, Pill, Trash2, X } from "lucide-react";
 
 type Medicine = {
   id: string;
@@ -22,6 +22,8 @@ export default function MedicinesPage() {
   const [gtin, setGtin] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [editTarget, setEditTarget] = useState<Medicine | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Medicine | null>(null);
 
   const load = async () => {
     const response = await MEDICINE_SERVICE.list();
@@ -59,6 +61,46 @@ export default function MedicinesPage() {
     setBusy(false);
   };
 
+  const updateMedicine = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editTarget || !genericName.trim()) return;
+    setBusy(true);
+    const response = await MEDICINE_SERVICE.update(editTarget.id, {
+      generic_name: genericName.trim(),
+      brand: brand.trim() || null,
+      strength: strength.trim() || null,
+      gtin: gtin.trim() || null,
+    });
+    setNotice(response.message || (response.success ? "Medicine updated." : "Medicine could not be updated."));
+    if (response.success) {
+      setEditTarget(null);
+      setGenericName(""); setBrand(""); setStrength(""); setGtin("");
+      await load();
+    }
+    setBusy(false);
+  };
+
+  const startEdit = (medicine: Medicine) => {
+    setEditTarget(medicine);
+    setGenericName(medicine.generic_name ?? "");
+    setBrand(medicine.brand ?? "");
+    setStrength(medicine.strength ?? "");
+    setGtin(medicine.gtin ?? "");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const deleteMedicine = async () => {
+    if (!deleteTarget) return;
+    setBusy(true);
+    const response = await MEDICINE_SERVICE.remove(deleteTarget.id);
+    setNotice(response.message || (response.success ? "Medicine removed from the catalog." : "Medicine could not be removed."));
+    if (response.success) {
+      setDeleteTarget(null);
+      await load();
+    }
+    setBusy(false);
+  };
+
   return (
     <div className="block animate-fade-up">
       <header className="mb-6 rounded-2xl border border-g200 bg-linear-to-br from-w via-w to-pll p-5 shadow-sm">
@@ -76,12 +118,12 @@ export default function MedicinesPage() {
         </p>
       ) : null}
       <form
-        onSubmit={createMedicine}
+        onSubmit={editTarget ? updateMedicine : createMedicine}
         className="mb-6 grid gap-3 rounded-xl border border-g200 bg-w p-5 md:grid-cols-2"
       >
         <h2 className="flex items-center gap-2 text-[15px] font-bold text-g900 md:col-span-2">
           <Pill className="size-4 text-p" aria-hidden="true" />
-          Add a medicine
+          {editTarget ? "Edit medicine" : "Add a medicine"}
         </h2>
         <label className="grid gap-1 text-xs font-semibold text-g600">
           Generic name
@@ -122,8 +164,9 @@ export default function MedicinesPage() {
           disabled={busy}
           className="w-fit rounded-lg bg-p px-4 py-2 text-sm font-semibold text-w disabled:opacity-60"
         >
-          {busy ? "Saving…" : "Create medicine"}
+          {busy ? "Saving…" : editTarget ? "Save changes" : "Create medicine"}
         </button>
+        {editTarget ? <button type="button" onClick={() => { setEditTarget(null); setGenericName(""); setBrand(""); setStrength(""); setGtin(""); }} className="w-fit rounded-lg border border-g200 px-4 py-2 text-sm font-semibold text-g600">Cancel edit</button> : null}
       </form>
       <section className="rounded-xl border border-g200 bg-w p-5">
         <h2 className="mb-3 flex items-center gap-2 text-[15px] font-bold text-g900">
@@ -137,7 +180,7 @@ export default function MedicinesPage() {
                 key={medicine.id}
                 className="flex flex-wrap items-center justify-between gap-2 py-3"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-semibold text-g800">
                     {medicine.generic_name ?? "Unnamed medicine"}
                     {medicine.brand ? ` · ${medicine.brand}` : ""}
@@ -146,6 +189,10 @@ export default function MedicinesPage() {
                     {medicine.strength ?? "Strength not specified"}
                     {medicine.gtin ? ` · GTIN ${medicine.gtin}` : ""}
                   </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button type="button" aria-label={`Edit ${medicine.generic_name ?? "medicine"}`} onClick={() => startEdit(medicine)} className="inline-flex items-center gap-1.5 rounded-lg border border-g200 px-3 py-2 text-xs font-semibold text-g700 hover:bg-g50"><Edit2 className="size-3.5" /> Edit</button>
+                  <button type="button" aria-label={`Delete ${medicine.generic_name ?? "medicine"}`} onClick={() => setDeleteTarget(medicine)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"><Trash2 className="size-3.5" /> Delete</button>
                 </div>
               </article>
             ))}
@@ -158,6 +205,14 @@ export default function MedicinesPage() {
           />
         )}
       </section>
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setDeleteTarget(null); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="delete-medicine-title" className="w-full max-w-md rounded-2xl border border-g200 bg-w p-5 shadow-xl">
+            <div className="flex items-start justify-between gap-4"><div><h2 id="delete-medicine-title" className="text-lg font-bold text-g900">Remove medicine?</h2><p className="mt-2 text-sm text-g600">{deleteTarget.generic_name}{deleteTarget.brand ? ` · ${deleteTarget.brand}` : ""} will be removed from the catalog. Existing records may remain in historical transactions.</p></div><button type="button" aria-label="Close" disabled={busy} onClick={() => setDeleteTarget(null)} className="rounded-lg p-1.5 text-g500 hover:bg-g50"><X className="size-4" /></button></div>
+            <div className="mt-5 flex justify-end gap-2"><button type="button" disabled={busy} onClick={() => setDeleteTarget(null)} className="rounded-lg border border-g200 px-4 py-2 text-sm font-semibold text-g700">Cancel</button><button type="button" disabled={busy} onClick={() => void deleteMedicine()} className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Removing…" : "Remove medicine"}</button></div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

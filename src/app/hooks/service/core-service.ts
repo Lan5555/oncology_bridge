@@ -68,6 +68,7 @@ export class CoreService {
         success: false,
         message: "Set NEXT_PUBLIC_BASE_URL to your backend API origin.",
         data: null,
+        status: 0,
       });
     }
     const session = this.getSession(options.admin);
@@ -126,11 +127,23 @@ export class CoreService {
             ? ""
             : (parsed?.message ?? response.statusText),
         data: isEnvelope ? (parsed.data ?? null) : parsed,
+        status: response.status,
+        code:
+          typeof parsed?.code === "string"
+            ? parsed.code
+            : typeof parsed?.error?.code === "string"
+              ? parsed.error.code
+              : undefined,
       });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Network request failed.";
-      return new NetResponse({ success: false, message, data: null });
+      return new NetResponse({
+        success: false,
+        message,
+        data: null,
+        status: 0,
+      });
     }
   }
 
@@ -156,8 +169,12 @@ export class CoreService {
       body: payload,
     });
   }
-  public async put(endpoint: string, payload: unknown) {
-    return await this.request(endpoint, { method: "PUT", body: payload });
+  public async put(
+    endpoint: string,
+    payload: unknown,
+    options: Omit<RequestOptions, "method" | "body"> = {},
+  ) {
+    return await this.request(endpoint, { ...options, method: "PUT", body: payload });
   }
   public async delete(
     endpoint: string,

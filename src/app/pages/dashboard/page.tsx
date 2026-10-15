@@ -22,11 +22,30 @@ import { allowedPages as getAllowedPages } from "@/app/lib/accounts";
 import { useProvider } from "@/app/providers/provider";
 
 const DashboardView: React.FC = () => {
-  const { userData } = useProvider();
+  const { userData, sessionReady } = useProvider();
   const accountType = userData.user?.account_type;
   const verification = userData.user?.verification_status;
-  const allowedPages = getAllowedPages(accountType, verification);
+  const rawPermissions = [
+    ...(userData.user?.permissions ?? []),
+    ...(userData.user?.role?.permissions ?? []).map((permission) =>
+      typeof permission === "string" ? permission : permission.key ?? permission.name ?? "",
+    ),
+  ];
+  const canManageFacilityUsers =
+    userData.user?.can_manage_facility_users === true ||
+    rawPermissions.includes("facility.users.manage");
   const isVerified = !accountType || verification === "VERIFIED";
+  const showFacilityTeam = isVerified && canManageFacilityUsers;
+  const baseAllowedPages = getAllowedPages(
+    accountType,
+    verification,
+    userData.user?.allowed_pages,
+    rawPermissions,
+    canManageFacilityUsers,
+  );
+  const allowedPages = baseAllowedPages && showFacilityTeam
+    ? [...new Set([...baseAllowedPages, "pg-users" as PageId])]
+    : baseAllowedPages;
   const defaultPage: PageId =
     accountType === "DOCTOR" || accountType === "PHARMACIST"
       ? "pg-prescriptions"
@@ -57,6 +76,7 @@ const DashboardView: React.FC = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!sessionReady) return;
     const target = window.localStorage.getItem("adminTarget");
     if (target) {
       const valid = [
@@ -76,18 +96,20 @@ const DashboardView: React.FC = () => {
       ];
       if (
         valid.includes(target) &&
+        (target !== "pg-users" || showFacilityTeam) &&
         (!allowedPages || allowedPages.includes(target as PageId))
       ) {
         setActivePage(target as PageId);
       }
       window.localStorage.removeItem("adminTarget");
     }
-  }, []);
+  }, [allowedPages, showFacilityTeam, sessionReady]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
   const toggleSidebar = () => setSidebarOpen((v) => !v);
 
   const handleNav = (id: PageId) => {
+    if (id === "pg-users" && !showFacilityTeam) return;
     if (allowedPages && !allowedPages.includes(id)) return;
     setActivePage(id);
     if (typeof window !== "undefined" && window.innerWidth <= 960) {
@@ -99,7 +121,13 @@ const DashboardView: React.FC = () => {
 
   const pageComponents: Record<PageId, React.ReactNode> = {
     "pg-dashboard": (
-      <DashboardPage onNav={handleNav} onOpenModal={setOpenModalId} />
+      <DashboardPage
+        onNav={handleNav}
+        onOpenModal={setOpenModalId}
+        canManageFacilityUsers={canManageFacilityUsers}
+        showFacilityTeam={showFacilityTeam}
+        allowedPages={allowedPages}
+      />
     ),
     "pg-inventory": (
       <InventoryPage onNav={handleNav} onOpenModal={setOpenModalId} />
@@ -118,7 +146,13 @@ const DashboardView: React.FC = () => {
     "pg-facilities": (
       <FacilitiesPage onNav={handleNav} onOpenModal={setOpenModalId} />
     ),
-    "pg-users": <UsersPage onNav={handleNav} onOpenModal={setOpenModalId} />,
+    "pg-users": (
+      <UsersPage
+        onNav={handleNav}
+        onOpenModal={setOpenModalId}
+        canManageFacilityUsers={canManageFacilityUsers}
+      />
+    ),
     "pg-audit": <AuditPage />,
     "pg-settings": <SettingsPage />,
   };
@@ -140,6 +174,9 @@ const DashboardView: React.FC = () => {
           onNav={handleNav}
           allowedPages={allowedPages}
           accountType={accountType}
+          verificationStatus={verification}
+          canManageFacilityUsers={canManageFacilityUsers}
+          showFacilityTeam={showFacilityTeam}
         />
 
         <main className="min-w-0 flex-1 overflow-x-hidden bg-g50/60 px-8 py-7 max-lg:w-full max-lg:px-4 max-lg:py-5 max-md:p-4">

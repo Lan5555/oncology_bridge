@@ -10,6 +10,9 @@ export class User {
   public license_number: string = "";
   public verification_status: VerificationStatus = "VERIFIED";
   public hospital?: Facility;
+  public facility?: Facility;
+  public facility_id?: string;
+  public facilityId?: string;
   public first_name: string = "";
   public last_name: string = "";
   public email: string = "";
@@ -17,6 +20,9 @@ export class User {
   public device_id: string = "";
   public allowed_ip: string = "";
   public active: boolean = false;
+  public permissions: string[] = [];
+  public allowed_pages?: string[];
+  public can_manage_facility_users: boolean = false;
   public last_login: Date | null = null;
   public created_at: Date | null = null;
   public updated_at: Date | null = null;
@@ -28,6 +34,7 @@ export class User {
       if (init.created_at) this.created_at = new Date(init.created_at);
       if (init.updated_at) this.updated_at = new Date(init.updated_at);
       if (init.hospital) this.hospital = Facility.fromJson(init.hospital);
+      if (init.facility) this.facility = Facility.fromJson(init.facility);
       if (init.role) this.role = Role.fromJson(init.role);
     }
   }
@@ -37,16 +44,34 @@ export class User {
    */
   public static fromJson(json: string | Record<string, any>): User {
     const data = typeof json === "string" ? JSON.parse(json) : json;
+    const rawVerificationStatus = String(
+      data.license?.verification_status ??
+      data.license?.status ??
+      data.license_status ??
+      data.licenseStatus ??
+      data.license_verification_status ??
+      data.licenseVerificationStatus ??
+      data.verification_status ??
+      data.verificationStatus ??
+      (data.account_type ? "PENDING" : "VERIFIED"),
+    ).toUpperCase();
+    const verificationStatus: VerificationStatus =
+      rawVerificationStatus === "APPROVED"
+        ? "VERIFIED"
+        : ["PENDING", "MANUAL_REVIEW", "VERIFIED", "REJECTED"].includes(rawVerificationStatus)
+          ? rawVerificationStatus as VerificationStatus
+          : data.account_type ? "PENDING" : "VERIFIED";
 
     return new User({
       id: data.id,
       role: data.role,
       account_type: data.account_type,
       license_number: data.license_number ?? "",
-      verification_status:
-        data.verification_status ??
-        (data.account_type ? "PENDING" : "VERIFIED"),
-      hospital: data.hospital,
+      verification_status: verificationStatus,
+      hospital: data.hospital ?? data.facility,
+      facility: data.facility ?? data.hospital,
+      facility_id: data.facility_id ?? data.facilityId ?? data.hospital_id,
+      facilityId: data.facilityId ?? data.facility_id ?? data.hospital_id,
       first_name: data.first_name ?? "",
       last_name: data.last_name ?? "",
       email: data.email ?? "",
@@ -54,6 +79,17 @@ export class User {
       device_id: data.device_id ?? "",
       allowed_ip: data.allowed_ip ?? "",
       active: Boolean(data.active),
+      permissions: Array.isArray(data.permissions)
+        ? data.permissions
+            .map((permission: any) =>
+              typeof permission === "string"
+                ? permission
+                : permission?.key ?? permission?.name,
+            )
+            .filter((permission: unknown): permission is string => typeof permission === "string")
+        : [],
+      allowed_pages: Array.isArray(data.allowed_pages) ? data.allowed_pages : undefined,
+      can_manage_facility_users: Boolean(data.can_manage_facility_users),
       last_login: data.last_login ? new Date(data.last_login) : null,
       created_at: data.created_at ? new Date(data.created_at) : null,
       updated_at: data.updated_at ? new Date(data.updated_at) : null,

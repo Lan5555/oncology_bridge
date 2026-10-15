@@ -2,6 +2,8 @@ export interface Net {
   success: boolean;
   message: string;
   data: any;
+  status?: number;
+  code?: string;
 }
 
 export class NetResponse {
@@ -16,5 +18,13 @@ export class NetResponse {
   }
   get data() {
     return this.response.data;
+  }
+
+  get status() {
+    return this.response.status;
+  }
+
+  get code() {
+    return this.response.code;
   }
 }
