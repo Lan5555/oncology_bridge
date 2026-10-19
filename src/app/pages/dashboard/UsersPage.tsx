@@ -1,6 +1,4 @@
 "use client";
-import { notifyResult } from "@/app/lib/notifications";
-
 
 import {
   AlertCircle,
@@ -24,7 +22,12 @@ import { type FormEvent, useCallback, useEffect, useState } from "react";
 import EmptyState from "@/app/components/EmptyState";
 import management from "@/app/components/Management.module.css";
 import { useManagementDialog } from "@/app/hooks/useManagementDialog";
-import { type AccountType, getAccountInfo } from "@/app/lib/accounts";
+import {
+  type AccountType,
+  getAccountInfo,
+  getRegistryLabel,
+} from "@/app/lib/accounts";
+import { notifyResult } from "@/app/lib/notifications";
 import type { ModalId, PageId } from "@/app/lib/types";
 import { FACILITY_SERVICE } from "@/app/services/facility-service/facility-service";
 import { unwrapArray } from "@/app/services/response-utils";
@@ -113,7 +116,10 @@ export default function UsersPage({
   const [membershipReviewTarget, setMembershipReviewTarget] =
     useState<any>(null);
   const [registryChecks, setRegistryChecks] = useState<
-    Record<string, { result: string; status: string; checkedAt: string }>
+    Record<
+      string,
+      { result: string; status: string; checkedAt: string; evidence: string }
+    >
   >({});
   const [registryCheckLoading, setRegistryCheckLoading] = useState<
     string | null
@@ -155,22 +161,13 @@ export default function UsersPage({
   });
   const canManageUsers = adminMode || canManageFacilityUsers;
   const checkApplicantLicense = async (request: any) => {
-    const applicant = request.user ?? request.applicant ?? {};
-    const licenseNumber =
-      applicant.license_number ??
-      applicant.license?.number ??
-      request.license_number ??
-      request.license?.number;
-    if (!licenseNumber) {
-      setNotice(
-        "The applicant’s licence number is missing, so a registry lookup cannot be run.",
-      );
-      return;
-    }
+    if (registryCheckLoading !== null) return;
     const requestId = String(request.id);
     setRegistryCheckLoading(requestId);
-    const response =
-      await USER_SERVICE.checkFacilityMembershipLicense(requestId);
+    const response = await USER_SERVICE.lookupFacilityMembershipLicense(
+      requestId,
+      adminMode,
+    );
     notifyResult(
       response,
       "Licence check completed.",
@@ -189,11 +186,27 @@ export default function UsersPage({
       payload?.license_review ??
       payload?.review ??
       payload;
+    setMembershipRequests((current) =>
+      current.map((item) =>
+        String(item.id) === requestId
+          ? { ...item, facility_license_review: result }
+          : item,
+      ),
+    );
+    setMembershipReviewTarget((current: any) =>
+      current && String(current.id) === requestId
+        ? { ...current, facility_license_review: result }
+        : current,
+    );
     setRegistryChecks((current) => ({
       ...current,
       [requestId]: {
         result:
-          result.registry_result ?? result.registryResult ?? "UNAVAILABLE",
+          result.result ??
+          result.registry_result ??
+          result.registryResult ??
+          "UNAVAILABLE",
+        evidence: result.evidence ?? "",
         status: result.status ?? result.verification_status ?? "MANUAL_REVIEW",
         checkedAt:
           result.checked_at ?? result.checkedAt ?? new Date().toISOString(),
@@ -1042,10 +1055,10 @@ export default function UsersPage({
                 detailTarget.licenseNumber ??
                 detailTarget.license?.number ??
                 detailTarget.license;
-              const licenseRegistry =
-                detailTarget.license_registry ??
-                detailTarget.licenseRegistry ??
-                detailTarget.license?.registry;
+              const licenseRegistry = getRegistryLabel(
+                detailTarget,
+                detailTarget.license,
+              );
               const registryResult =
                 detailTarget.registry_result ??
                 detailTarget.registryResult ??
@@ -1380,9 +1393,11 @@ export default function UsersPage({
             (savedCheck
               ? {
                   result:
+                    savedCheck.result ??
                     savedCheck.registry_result ??
                     savedCheck.registryResult ??
                     "UNAVAILABLE",
+                  evidence: savedCheck.evidence ?? "",
                   status:
                     savedCheck.status ??
                     savedCheck.verification_status ??
@@ -1495,7 +1510,13 @@ export default function UsersPage({
                       <div>
                         <dt className="text-xs text-g500">Issuing registry</dt>
                         <dd className="mt-0.5 font-medium text-g800">
-                          {accountInfo?.registryName ?? "Not provided"}
+                          {getRegistryLabel(
+                            membershipReviewTarget.facility_license_review,
+                            membershipReviewTarget.facilityLicenseReview,
+                            applicant.license,
+                            applicant,
+                            membershipReviewTarget,
+                          )}
                         </dd>
                       </div>
                       <div>
@@ -1523,24 +1544,32 @@ export default function UsersPage({
                     </dl>
                   </section>
                 </div>
-                <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-4">
+                <div className="mt-4 rounded-xl border border-g200 bg-g50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h3 className="text-sm font-semibold text-sky-950">
+                      <h3 className="text-sm font-semibold text-g900">
                         Registry lookup
                       </h3>
-                      <p className="mt-1 max-w-lg text-xs leading-5 text-sky-900">
+                      <p className="mt-1 max-w-lg text-xs leading-5 text-g600">
                         A fresh lookup provides evidence for your facility
                         decision. It does not change the authoritative licence
                         status or replace network licence approval.
                       </p>
                       {localCheck ? (
-                        <p className="mt-2 text-xs font-semibold text-sky-950">
+                        <p className="mt-2 text-xs font-semibold text-g900">
                           Latest lookup:{" "}
                           {localCheck.result.replaceAll("_", " ")} ·{" "}
-                          {new Date(localCheck.checkedAt).toLocaleString(
-                            "en-NG",
-                          )}
+                          {localCheck.checkedAt &&
+                          !Number.isNaN(Date.parse(localCheck.checkedAt))
+                            ? new Date(localCheck.checkedAt).toLocaleString(
+                                "en-NG",
+                              )
+                            : "Time unavailable"}
+                        </p>
+                      ) : null}
+                      {localCheck?.evidence ? (
+                        <p className="mt-2 max-w-lg whitespace-pre-wrap break-words text-xs leading-5 text-g700">
+                          {localCheck.evidence}
                         </p>
                       ) : null}
                     </div>
@@ -1549,10 +1578,8 @@ export default function UsersPage({
                       onClick={() =>
                         void checkApplicantLicense(membershipReviewTarget)
                       }
-                      disabled={
-                        registryCheckLoading === requestId || !licenseNumber
-                      }
-                      className="rounded-lg border border-sky-300 bg-w px-3 py-2 text-xs font-semibold text-sky-900 disabled:opacity-50"
+                      disabled={registryCheckLoading !== null}
+                      className="rounded-lg border border-g200 bg-w px-3 py-2 text-xs font-semibold text-p disabled:opacity-50"
                     >
                       {registryCheckLoading === requestId
                         ? "Checking registry…"

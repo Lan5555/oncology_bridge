@@ -1,10 +1,10 @@
 "use client";
+import BrandLogo from "./BrandLogo";
 
 import type { PageId } from "../lib/types";
 import { useProvider } from "../providers/provider";
 import { useRouter } from "next/navigation";
 import {
-  Activity,
   ArrowLeftRight,
   Bell,
   Boxes,
@@ -80,7 +80,7 @@ export default function TopNav({
           <Menu className="size-[18px]" aria-hidden="true" />
         </button>
         <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-p to-ac text-white shadow-sm">
-          <Activity className="size-5" strokeWidth={2.2} aria-hidden="true" />
+          <BrandLogo markOnly className="size-9 rounded-lg bg-white" />
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-extrabold tracking-tight text-g900">

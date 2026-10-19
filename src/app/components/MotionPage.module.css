@@ -1,0 +1,32 @@
+.page [data-motion-card] {
+  transition:
+    transform 240ms ease,
+    box-shadow 240ms ease,
+    border-color 240ms ease;
+}
+.page a > svg {
+  transition: transform 220ms ease;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .page [data-motion-card]:hover {
+    transform: translateY(-5px);
+    border-color: color-mix(
+      in srgb,
+      var(--landing-accent) 50%,
+      var(--landing-border)
+    );
+    box-shadow: 0 12px 30px #071b2b12;
+  }
+  .page a:hover > svg:last-child {
+    transform: translateX(3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

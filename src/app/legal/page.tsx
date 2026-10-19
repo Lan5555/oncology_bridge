@@ -33,7 +33,7 @@ export default function LegalNoticePage() {
             className="mt-3 inline-block text-sm font-semibold text-[#126b5d]"
             href="/research#partnership-inquiry"
           >
-            Contact the DPO
+            <span id="dpo-contact">Contact the DPO</span>
           </Link>
         </section>
         <section

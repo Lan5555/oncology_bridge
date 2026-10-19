@@ -26,18 +26,16 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
   const [inventoryRecords, setInventoryRecords] = useState<InventoryRecord[]>(
     [],
   );
-  const [inventoryStats, setInventoryStats] = useState({
-    totalVials: 0,
-    gs1VerifiedPct: 0,
-    nearExpiry: 0,
-    quarantined: 0,
-  });
+  const [inventoryStats, setInventoryStats] = useState<
+    Record<string, number | null>
+  >({});
   const [drugName, setDrugName] = useState("");
   const [batchNumber, setBatchNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [quantity, setQuantity] = useState("");
   const [intakeStatus, setIntakeStatus] = useState("");
   const loadInventory = async () => {
+    setInventoryStats({});
     const response = await INVENTORY_SERVICE.list(
       `category=${encodeURIComponent(activeTab)}&page=1&limit=100`,
     );
@@ -49,22 +47,22 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
     const rows = unwrapArray(result?.items ? result.items : result);
     setInventoryRecords(
       rows.map((item: any) => {
-        const status = item.status ?? "In Stock";
+        const status = item.status ?? "Not recorded";
         const quarantine = status.toLowerCase().includes("quarantin");
         const expiry =
           status.toLowerCase().includes("expir") || item.category === "expiry";
         const style = quarantine
-          ? "bg-errl text-[#7f1d1d]"
+          ? "bg-errl text-[var(--status-error)]"
           : expiry
-            ? "bg-warnl text-[#78350f]"
-            : "bg-okl text-[#065f46]";
+            ? "bg-warnl text-[var(--status-warn)]"
+            : "bg-okl text-[var(--status-good)]";
         return {
           id: item.id,
           drug: item.drug ?? item.medicine?.generic_name ?? "N/A",
           gtin: item.gtin ?? "N/A",
           lot: item.lot ?? item.batchNumber ?? "N/A",
           facility: item.facility?.name ?? item.facility ?? "N/A",
-          qty: item.qty ?? item.quantity ?? 0,
+          qty: item.qty ?? item.quantity ?? Number.NaN,
           expiry: item.expiry
             ? new Date(item.expiry).toLocaleDateString("en-NG", {
                 dateStyle: "medium",
@@ -75,7 +73,7 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
           statusStyle: style,
           actionLabel: quarantine ? "Dispose" : "Quarantine",
           actionClass: quarantine
-            ? "bg-errl text-[#991b1b] border border-[#fecaca]"
+            ? "bg-errl text-[var(--status-error)] border border-[#fecaca]"
             : "bg-transparent text-g600 border border-g200 hover:bg-g50",
           category:
             item.category ??
@@ -85,10 +83,10 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
     );
     if (result?.stats)
       setInventoryStats({
-        totalVials: result.stats.totalVials ?? 0,
-        gs1VerifiedPct: result.stats.gs1VerifiedPct ?? 0,
-        nearExpiry: result.stats.nearExpiry ?? 0,
-        quarantined: result.stats.quarantined ?? 0,
+        totalVials: result.stats.totalVials ?? null,
+        gs1VerifiedPct: result.stats.gs1VerifiedPct ?? null,
+        nearExpiry: result.stats.nearExpiry ?? null,
+        quarantined: result.stats.quarantined ?? null,
       });
   };
   useEffect(() => {
@@ -257,93 +255,41 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
         </p>
       </form>
 
-      <div
-        className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-[0.9rem] mb-6 max-md:grid-cols-1"
-        style={{ gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))" }}
+      <section
+        aria-label="Inventory summary"
+        className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
       >
-        <div className="bg-w border border-g200 rounded-xl p-5 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-default relative overflow-hidden z-[1] hover:-translate-y-1 hover:shadow-[0_12px_20px_-5px_rgba(0,0,0,0.1)] hover:border-p before:content-[''] before:absolute before:-top-[20%] before:-right-[10%] before:size-[100px] before:bg-current before:opacity-[0.03] before:rounded-full before:-z-1">
-          <div className="flex justify-between items-center mb-2.5">
-            <span className="text-[11px] font-semibold text-g400 uppercase tracking-[0.5px]">
-              Total Vials
-            </span>
-            <div className="size-8 rounded-lg flex items-center justify-center [&_svg]:size-[16px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-pl text-pd">
-              <svg viewBox="0 0 24 24" role="img" aria-label="Vials">
-                <path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
-              </svg>
-            </div>
-          </div>
-          <div className="text-[28px] font-extrabold text-g900 tracking-[-1px] leading-none mb-2 flex items-baseline gap-1">
-            {inventoryStats.totalVials.toLocaleString()}
-          </div>
-          <div className="flex items-center gap-[3px] text-[11.5px] font-medium [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-[2.5] text-good">
-            <svg viewBox="0 0 24 24" role="img" aria-label="Increase">
-              <polyline points="18,15 12,9 6,15" />
-            </svg>
-            +42 today
-          </div>
-        </div>
-        <div className="bg-w border border-g200 rounded-xl p-5 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-default relative overflow-hidden z-[1] hover:-translate-y-1 hover:shadow-[0_12px_20px_-5px_rgba(0,0,0,0.1)] hover:border-p before:content-[''] before:absolute before:-top-[20%] before:-right-[10%] before:size-[100px] before:bg-current before:opacity-[0.03] before:rounded-full before:-z-1">
-          <div className="flex justify-between items-center mb-2.5">
-            <span className="text-[11px] font-semibold text-g400 uppercase tracking-[0.5px]">
-              Verified GS1
-            </span>
-            <div className="size-8 rounded-lg flex items-center justify-center [&_svg]:size-[16px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-okl text-good">
-              <svg viewBox="0 0 24 24" role="img" aria-label="Verified">
-                <polyline points="20,6 9,17 4,12" />
-              </svg>
-            </div>
-          </div>
-          <div className="text-[28px] font-extrabold text-g900 tracking-[-1px] leading-none mb-2 flex items-baseline gap-1">
-            {inventoryStats.gs1VerifiedPct}%
-          </div>
-          <div className="flex items-center gap-[3px] text-[11.5px] font-medium [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-[2.5] text-good">
-            <svg viewBox="0 0 24 24" role="img" aria-label="Increase">
-              <polyline points="18,15 12,9 6,15" />
-            </svg>
-            GS1 verified
-          </div>
-        </div>
-        <div className="bg-w border border-g200 rounded-xl p-5 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-default relative overflow-hidden z-[1] hover:-translate-y-1 hover:shadow-[0_12px_20px_-5px_rgba(0,0,0,0.1)] hover:border-p before:content-[''] before:absolute before:-top-[20%] before:-right-[10%] before:size-[100px] before:bg-current before:opacity-[0.03] before:rounded-full before:-z-1">
-          <div className="flex justify-between items-center mb-2.5">
-            <span className="text-[11px] font-semibold text-g400 uppercase tracking-[0.5px]">
-              Near Expiry
-            </span>
-            <div className="size-8 rounded-lg flex items-center justify-center [&_svg]:size-[16px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-warnl text-warn">
-              <svg viewBox="0 0 24 24" role="img" aria-label="Clock">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v4l3 3" />
-              </svg>
-            </div>
-          </div>
-          <div className="text-[28px] font-extrabold text-g900 tracking-[-1px] leading-none mb-2 flex items-baseline gap-1">
-            {inventoryStats.nearExpiry}
-          </div>
-          <div className="flex items-center gap-[3px] text-[11.5px] font-medium [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-[2.5] text-warn">
-            &lt;60 days remaining
-          </div>
-        </div>
-        <div className="bg-w border border-g200 rounded-xl p-5 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-default relative overflow-hidden z-[1] hover:-translate-y-1 hover:shadow-[0_12px_20px_-5px_rgba(0,0,0,0.1)] hover:border-p before:content-[''] before:absolute before:-top-[20%] before:-right-[10%] before:size-[100px] before:bg-current before:opacity-[0.03] before:rounded-full before:-z-1">
-          <div className="flex justify-between items-center mb-2.5">
-            <span className="text-[11px] font-semibold text-g400 uppercase tracking-[0.5px]">
-              Quarantined
-            </span>
-            <div className="size-8 rounded-lg flex items-center justify-center [&_svg]:size-[16px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 bg-errl text-err">
-              <svg viewBox="0 0 24 24" role="img" aria-label="Shield">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-            </div>
-          </div>
-          <div className="text-[28px] font-extrabold text-g900 tracking-[-1px] leading-none mb-2 flex items-baseline gap-1">
-            {inventoryStats.quarantined}
-          </div>
-          <div className="flex items-center gap-[3px] text-[11.5px] font-medium [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-[2.5] text-err">
-            <svg viewBox="0 0 24 24" role="img" aria-label="Drop">
-              <polyline points="6,9 12,15 18,9" />
-            </svg>
-            Temp breach T-07
-          </div>
-        </div>
-      </div>
+        {[
+          ["Total vials", inventoryStats.totalVials, "Recorded inventory"],
+          [
+            "Verified GS1",
+            inventoryStats.gs1VerifiedPct,
+            "Barcode verification share",
+          ],
+          [
+            "Near expiry",
+            inventoryStats.nearExpiry,
+            "Stock approaching expiry",
+          ],
+          ["Quarantined", inventoryStats.quarantined, "Stock held for review"],
+        ]
+          .filter(
+            ([, value]) => typeof value === "number" && Number.isFinite(value),
+          )
+          .map(([label, value, description]) => (
+            <article
+              key={String(label)}
+              className="rounded-xl border border-g200 bg-w p-5"
+            >
+              <h2 className="text-xs font-semibold text-g500">{label}</h2>
+              <p className="my-2 text-2xl font-bold text-g900">
+                {Number(value).toLocaleString()}
+                {label === "Verified GS1" ? "%" : ""}
+              </p>
+              <p className="text-xs text-g500">{description}</p>
+            </article>
+          ))}
+      </section>
 
       <div className="bg-w border border-g200 rounded-xl p-6 shadow-[0_16px_40px_rgba(15,23,42,0.04)] [&+&]:mt-4">
         <div className="flex flex-wrap border-b border-g200 rounded-full bg-g50 p-1 gap-2 overflow-x-auto mb-5 max-[520px]:p-1.5 max-[520px]:gap-[0.4rem]">
@@ -391,7 +337,9 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
                   </td>
                   <td data-label="Facility">{row.facility}</td>
                   <td data-label="Qty">
-                    <strong>{row.qty}</strong>
+                    <strong>
+                      {Number.isFinite(row.qty) ? row.qty : "Not recorded"}
+                    </strong>
                   </td>
                   <td data-label="Expiry Date">{row.expiry}</td>
                   <td data-label="Temp Status">

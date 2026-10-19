@@ -2,286 +2,410 @@
 
 import {
   ArrowRight,
+  Building2,
+  Check,
+  CheckCircle2,
   Database,
   Dna,
   FileCheck2,
   Globe2,
+  Loader2,
+  Mail,
   Microscope,
+  ShieldCheck,
 } from "lucide-react";
-import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
+import { toast } from "sonner";
+import Footer from "@/app/components/Landing/Footer";
+import Nav from "@/app/components/Landing/Nav";
+import MotionPage from "@/app/components/MotionPage";
 import { BRIDGE_DATA_SERVICE } from "@/app/services/bridge-data/bridge-data-service";
+import styles from "./ResearchPage.module.css";
 
 const CAPABILITIES = [
   {
     icon: Database,
-    eyebrow: "01 / Clinical data",
-    title: "Structured phenotype capture",
-    body: "Translate clinical notes into standardized ICD-10 diagnoses, TNM staging, and biomarker profiles linked to coded biological sample IDs.",
+    eyebrow: "Clinical data",
+    title: "Structured research information",
+    body: "Discuss how clinical phenotype records, diagnosis coding and biomarker information can support a well-defined research programme.",
   },
   {
     icon: FileCheck2,
-    eyebrow: "02 / Governance",
-    title: "Data sovereignty and ethics",
-    body: "Design for NDPA 2023 handling of sensitive personal data, local hosting requirements, auditable consent, and institution-led access controls.",
+    eyebrow: "Governance",
+    title: "Consent and institutional oversight",
+    body: "Start with the study's consent requirements, access responsibilities and ethics review needs when planning a collaboration.",
   },
   {
     icon: Dna,
-    eyebrow: "03 / Site operations",
-    title: "Longitudinal site coordination",
-    body: "Coordinate recruitment, baseline sampling, liquid biopsy tracking, and 12-month follow-up cycles across regional teaching hospitals.",
+    eyebrow: "Site operations",
+    title: "Coordination across clinical sites",
+    body: "Explore the practical needs of participating sites, sample tracking and follow-up workflows as part of your project scope.",
   },
 ];
-
 const PARTNERS = [
-  "Biopharma consortiums",
-  "Academic biobanks",
-  "Clinical trial organizations",
+  {
+    title: "Biopharma & industry",
+    body: "Discuss oncology programmes and clinical-site collaboration.",
+    icon: Building2,
+  },
+  {
+    title: "Academic institutions",
+    body: "Explore research partnerships and biobank coordination.",
+    icon: Microscope,
+  },
+  {
+    title: "Clinical research teams",
+    body: "Outline study operations and participating-site needs.",
+    icon: Globe2,
+  },
 ];
+type Field = "organization" | "representativeName" | "email" | "projectScope";
 
 export default function ResearchPage() {
-  const [notice, setNotice] = useState("");
-
+  const [submitting, setSubmitting] = useState(false);
+  const submissionLock = useRef(false);
+  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  const [notice, setNotice] = useState<{
+    success: boolean;
+    text: string;
+  } | null>(null);
   const submitInquiry = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const result = await BRIDGE_DATA_SERVICE.submitPartnershipInquiry({
-      organization: String(formData.get("organization") ?? ""),
-      name: String(formData.get("representativeName") ?? ""),
-      projectScope: String(formData.get("projectScope") ?? ""),
-      email: String(formData.get("email") ?? ""),
-    });
-    setNotice(
-      result.success
+    if (submissionLock.current) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const fields = {
+      organization: String(data.get("organization") ?? "").trim(),
+      representativeName: String(data.get("representativeName") ?? "").trim(),
+      email: String(data.get("email") ?? "").trim(),
+      projectScope: String(data.get("projectScope") ?? "").trim(),
+    };
+    const nextErrors: Partial<Record<Field, string>> = {};
+    for (const key of Object.keys(fields) as Field[])
+      if (!fields[key]) nextErrors[key] = "Please complete this field.";
+    setErrors(nextErrors);
+    setNotice(null);
+    const invalid = (Object.keys(nextErrors) as Field[])[0];
+    if (invalid) {
+      form.querySelector<HTMLElement>('[name="' + invalid + '"]')?.focus();
+      return;
+    }
+    submissionLock.current = true;
+    setSubmitting(true);
+    const toastId = toast.loading("Sending your partnership inquiry...");
+    try {
+      const result = await BRIDGE_DATA_SERVICE.submitPartnershipInquiry({
+        organization: fields.organization,
+        name: fields.representativeName,
+        email: fields.email,
+        projectScope: fields.projectScope,
+      });
+      const text = result.success
         ? result.reference
-          ? `Inquiry submitted. Reference: ${result.reference}.`
-          : result.message || "Inquiry submitted."
-        : result.message || "The inquiry could not be sent. Please try again.",
-    );
+          ? "Inquiry submitted. Reference: " + result.reference + "."
+          : result.message || "Your partnership inquiry has been submitted."
+        : result.message ||
+          "Your inquiry could not be sent. Your details are still here so you can try again.";
+      setNotice({ success: result.success, text });
+      if (result.success) {
+        toast.success(text, { id: toastId });
+        form.reset();
+      } else toast.error(text, { id: toastId });
+    } catch {
+      const text =
+        "Your inquiry could not be sent. Please try again. Your details have been kept.";
+      setNotice({ success: false, text });
+      toast.error(text, { id: toastId });
+    } finally {
+      submissionLock.current = false;
+      setSubmitting(false);
+    }
   };
-
   return (
-    <main className="min-h-screen bg-[#f5f7f4] text-[#16312d]">
-      <header className="border-b border-[#dce5df] bg-white">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-7 py-4 max-[600px]:px-5">
-          <Link
-            href="/"
-            className="font-display text-lg font-extrabold text-[#173b35]"
-          >
-            Oncosourz
-          </Link>
-          <nav
-            className="flex items-center gap-6 text-sm font-medium text-[#53665f] max-[600px]:gap-3 max-[600px]:text-xs"
-            aria-label="Main navigation"
-          >
-            <Link href="/" className="hover:text-[#126b5d]">
-              Home
-            </Link>
-            <Link href="/portal" className="hover:text-[#126b5d]">
-              Bridge Portal
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-md bg-[#173b35] px-4 py-2 font-bold text-white hover:bg-[#126b5d]"
-            >
-              Log in
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <section className="mx-auto grid max-w-[1200px] grid-cols-[1fr_0.84fr] items-center gap-14 px-7 pb-20 pt-16 max-[800px]:grid-cols-1 max-[600px]:px-5 max-[600px]:pt-10">
-        <div>
-          <p className="mb-5 inline-flex items-center gap-2 text-xs font-bold uppercase text-[#a04f2a]">
-            <Globe2 className="size-4" aria-hidden="true" /> West African
-            Oncology Bridge (WAOB)
-          </p>
-          <h1 className="max-w-[700px] font-display text-[clamp(2.5rem,5vw,4.25rem)] font-extrabold leading-[1.07] text-[#173b35]">
-            WAOB Infrastructure: Bridging African Clinical Sites with Global
-            Genomic Research.
-          </h1>
-          <p className="mt-6 max-w-[660px] text-base leading-8 text-[#52665f]">
-            Compliant digital site coordination, dynamic consent management, and
-            FHIR-structured clinical phenotype data pipelines across West
-            Africa.
-          </p>
-          <a
-            className="mt-8 inline-flex items-center gap-2 rounded-md bg-[#a04f2a] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#7e3c20]"
-            href="#partnership-inquiry"
-          >
-            Request a partnership briefing{" "}
-            <ArrowRight className="size-4" aria-hidden="true" />
-          </a>
-        </div>
-        <div
-          aria-label="Researcher reviewing clinical laboratory samples"
-          className="relative min-h-[360px] overflow-hidden border border-[#d3ded7] bg-[#dce9e2] bg-cover bg-center max-[800px]:min-h-[280px]"
-          role="img"
-          style={{
-            backgroundImage:
-              "url(https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&q=85&w=1100)",
-          }}
-        >
-          <div className="absolute inset-x-0 bottom-0 bg-[#173b35]/90 px-5 py-4 text-sm font-semibold text-white">
-            Clinical sites connected to consent-led, structured research data
-          </div>
-          <div className="absolute right-4 top-4 flex size-12 items-center justify-center bg-white/90 text-[#a04f2a]">
-            <Microscope className="size-6" aria-hidden="true" />
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-[#dce5df] bg-white px-7 py-16 max-[600px]:px-5">
-        <div className="mx-auto max-w-[1200px]">
-          <p className="mb-3 text-xs font-bold uppercase text-[#a04f2a]">
-            Research infrastructure
-          </p>
-          <h2 className="max-w-[600px] font-display text-3xl font-extrabold leading-tight text-[#173b35]">
-            Built for the realities of multi-site oncology research.
-          </h2>
-          <div className="mt-9 grid grid-cols-3 gap-8 max-[760px]:grid-cols-1">
-            {CAPABILITIES.map(({ icon: Icon, ...item }) => (
-              <article
-                className="border-t border-[#ccd9d1] pt-5"
-                key={item.title}
-              >
-                <Icon
-                  className="mb-6 size-6 text-[#a04f2a]"
-                  aria-hidden="true"
-                />
-                <p className="mb-2 text-[11px] font-bold uppercase text-[#73847b]">
-                  {item.eyebrow}
-                </p>
-                <h3 className="mb-3 font-display text-lg font-bold text-[#173b35]">
-                  {item.title}
-                </h3>
-                <p className="text-sm leading-7 text-[#53665f]">{item.body}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#eaf0eb] px-7 py-14 max-[600px]:px-5">
-        <div className="mx-auto grid max-w-[1200px] grid-cols-[0.7fr_1fr] gap-10 max-[760px]:grid-cols-1">
-          <div>
-            <p className="mb-3 text-xs font-bold uppercase text-[#a04f2a]">
-              Partner pathways
+    <MotionPage className={styles.page}>
+      <Nav />
+      <main>
+        <section className={styles.hero}>
+          <div data-reveal className={styles.heroCopy}>
+            <p className={styles.eyebrow}>
+              <Globe2 size={16} /> Enterprise &amp; Research
             </p>
-            <h2 className="font-display text-2xl font-extrabold leading-tight text-[#173b35]">
-              Designed for collaboration across the research lifecycle.
-            </h2>
-          </div>
-          <ul className="grid grid-cols-3 gap-4 max-[600px]:grid-cols-1">
-            {PARTNERS.map((partner) => (
-              <li
-                className="border-l-2 border-[#a04f2a] py-2 pl-4 text-sm font-semibold leading-6 text-[#314d45]"
-                key={partner}
-              >
-                {partner}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section className="px-7 py-20 max-[600px]:px-5" id="partnership-inquiry">
-        <div className="mx-auto grid max-w-[1200px] grid-cols-[0.8fr_1fr] gap-14 max-[800px]:grid-cols-1">
-          <div>
-            <p className="mb-3 text-xs font-bold uppercase text-[#a04f2a]">
-              Partnership inquiry
+            <h1>
+              Connect local expertise.
+              <br />
+              <span>Build meaningful research partnerships.</span>
+            </h1>
+            <p className={styles.lead}>
+              Bring your organisation's oncology research and clinical-site
+              collaboration needs to Oncosourz. Start with a clear conversation
+              about the people, processes and scope behind your programme.
             </p>
-            <h2 className="font-display text-3xl font-extrabold leading-tight text-[#173b35]">
-              Start with a focused briefing.
-            </h2>
-            <p className="mt-4 max-w-[440px] text-sm leading-7 text-[#53665f]">
-              Tell us about your organization and research scope. Please do not
-              include participant names, health records, or other sensitive
-              personal data.
+            <a href="#partnership-inquiry" className={styles.primary}>
+              Discuss a partnership <ArrowRight size={17} />
+            </a>
+            <p className={styles.heroNote}>
+              <ShieldCheck size={16} /> A focused starting point for
+              institutional collaboration.
             </p>
           </div>
-          <form
-            className="grid grid-cols-2 gap-x-5 gap-y-4 border border-[#d6e0d9] bg-white p-6 max-[560px]:grid-cols-1"
-            onSubmit={submitInquiry}
-          >
-            <label
-              className="text-xs font-bold text-[#314d45]"
-              htmlFor="organization"
-            >
-              Organization name
-              <input
-                className="mt-2 rounded-md border border-[#cbd7d0] bg-white px-3 py-3 text-sm font-normal outline-none focus:border-[#126b5d] focus:ring-2 focus:ring-[#126b5d]/15"
-                id="organization"
-                name="organization"
-                required
-              />
-            </label>
-            <label
-              className="text-xs font-bold text-[#314d45]"
-              htmlFor="representative-title"
-            >
-              Representative name
-              <input
-                className="mt-2 rounded-md border border-[#cbd7d0] bg-white px-3 py-3 text-sm font-normal outline-none focus:border-[#126b5d] focus:ring-2 focus:ring-[#126b5d]/15"
-                id="representative-name"
-                name="representativeName"
-                required
-              />
-            </label>
-            <label
-              className="col-span-2 text-xs font-bold text-[#314d45] max-[560px]:col-span-1"
-              htmlFor="project-scope"
-            >
-              Project scope
-              <textarea
-                className="mt-2 min-h-32 resize-y rounded-md border border-[#cbd7d0] bg-white px-3 py-3 text-sm font-normal outline-none focus:border-[#126b5d] focus:ring-2 focus:ring-[#126b5d]/15"
-                id="project-scope"
-                name="projectScope"
-                required
-              />
-            </label>
-            <label
-              className="col-span-2 text-xs font-bold text-[#314d45] max-[560px]:col-span-1"
-              htmlFor="contact-email"
-            >
-              Direct contact email
-              <input
-                className="mt-2 rounded-md border border-[#cbd7d0] bg-white px-3 py-3 text-sm font-normal outline-none focus:border-[#126b5d] focus:ring-2 focus:ring-[#126b5d]/15"
-                id="contact-email"
-                name="email"
-                required
-                type="email"
-              />
-            </label>
-            <div className="col-span-2 max-[560px]:col-span-1">
-              <button
-                className="inline-flex items-center gap-2 rounded-md bg-[#173b35] px-5 py-3 text-sm font-bold text-white hover:bg-[#126b5d]"
-                type="submit"
-              >
-                Send inquiry{" "}
-                <ArrowRight className="size-4" aria-hidden="true" />
-              </button>
-              {notice ? (
-                <p aria-live="polite" className="mt-3 text-sm text-[#8d3d25]">
-                  {notice}
-                </p>
-              ) : null}
+          <div data-reveal className={styles.researchVisual}>
+            <div
+              className={styles.image}
+              role="img"
+              aria-label="Laboratory equipment and clinical research setting"
+            />
+            <div className={styles.visualCaption}>
+              <span className={styles.visualIcon}>
+                <Microscope size={23} />
+              </span>
+              <div>
+                <strong>West African Oncology Bridge</strong>
+                <p>Connecting clinical sites and research conversations.</p>
+              </div>
             </div>
-          </form>
-        </div>
-      </section>
-
-      <footer className="border-t border-[#dce5df] bg-[#173b35] px-7 py-6 text-sm text-white/75 max-[600px]:px-5">
-        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4">
-          <span>Oncosourz Ltd. · WAOB research infrastructure</span>
-          <Link
-            href="/"
-            className="font-semibold text-white hover:text-[#bee7d7]"
-          >
-            Return to Oncosourz
-          </Link>
-        </div>
-      </footer>
-    </main>
+          </div>
+        </section>
+        <section
+          className={styles.section}
+          aria-labelledby="collaboration-heading"
+        >
+          <div className={styles.inner}>
+            <div data-reveal className={styles.sectionHeading}>
+              <div>
+                <p className={styles.eyebrow}>Areas for collaboration</p>
+                <h2 id="collaboration-heading">
+                  Built around the practical
+                  <br />
+                  needs of oncology research.
+                </h2>
+              </div>
+              <p>
+                Use the briefing to identify your project priorities and discuss
+                an appropriate collaboration scope.
+              </p>
+            </div>
+            <div className={styles.cardGrid}>
+              {CAPABILITIES.map(({ icon: Icon, ...item }) => (
+                <article
+                  data-reveal
+                  data-motion-card
+                  key={item.title}
+                  className={styles.card}
+                >
+                  <span className={styles.icon}>
+                    <Icon size={24} />
+                  </span>
+                  <p className={styles.eyebrow}>{item.eyebrow}</p>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+        <section className={styles.pathways} aria-labelledby="partner-heading">
+          <div className={styles.inner}>
+            <p className={styles.eyebrow}>Partner pathways</p>
+            <h2 id="partner-heading">
+              Different organisations.
+              <br />A shared interest in better oncology care.
+            </h2>
+            <div className={styles.partnerGrid}>
+              {PARTNERS.map(({ title, body, icon: Icon }) => (
+                <article data-reveal key={title}>
+                  <Icon size={22} />
+                  <div>
+                    <h3>{title}</h3>
+                    <p>{body}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+        <section
+          className={styles.inquiry}
+          id="partnership-inquiry"
+          aria-labelledby="inquiry-title"
+        >
+          <div className={styles.inquiryGrid}>
+            <aside data-reveal className={styles.inquiryIntro}>
+              <p className={styles.eyebrow}>Let's start a conversation</p>
+              <h2 id="inquiry-title">
+                Tell us what you'd
+                <br />
+                like to build together.
+              </h2>
+              <p>
+                Share a little about your organisation and the project you have
+                in mind. A clear overview helps frame the next conversation.
+              </p>
+              <div className={styles.briefing}>
+                <h3>A useful starting point</h3>
+                {[
+                  "Your organisation and its role",
+                  "The research question or operational need",
+                  "The sites, region or collaboration scope",
+                  "What you would like to discuss next",
+                ].map((item) => (
+                  <p key={item}>
+                    <Check size={16} />
+                    {item}
+                  </p>
+                ))}
+              </div>
+              <div className={styles.privacyNote}>
+                <ShieldCheck size={20} />
+                <p>
+                  Use this form for business inquiries. Please leave out
+                  participant names, patient records and other sensitive
+                  personal information.
+                </p>
+              </div>
+            </aside>
+            <form
+              data-reveal
+              onSubmit={submitInquiry}
+              className={styles.form}
+              aria-busy={submitting}
+            >
+              <div className={styles.formHeader}>
+                <span className={styles.icon}>
+                  <Mail size={21} />
+                </span>
+                <div>
+                  <h3>Partnership inquiry</h3>
+                  <p>All fields are required.</p>
+                </div>
+              </div>
+              <fieldset disabled={submitting} className={styles.fields}>
+                <legend className="sr-only">
+                  Organisation and project details
+                </legend>
+                <div className={styles.field}>
+                  <label htmlFor="organization">
+                    Organisation name <span aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="organization"
+                    name="organization"
+                    autoComplete="organization"
+                    placeholder="Your organisation"
+                    required
+                    maxLength={200}
+                    aria-invalid={Boolean(errors.organization)}
+                    aria-describedby={
+                      errors.organization ? "organization-error" : undefined
+                    }
+                  />
+                  {errors.organization ? (
+                    <span id="organization-error" className={styles.fieldError}>
+                      {errors.organization}
+                    </span>
+                  ) : null}
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="representative-name">
+                    Your full name <span aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="representative-name"
+                    name="representativeName"
+                    autoComplete="name"
+                    placeholder="First and last name"
+                    required
+                    maxLength={160}
+                    aria-invalid={Boolean(errors.representativeName)}
+                    aria-describedby={
+                      errors.representativeName ? "name-error" : undefined
+                    }
+                  />
+                  {errors.representativeName ? (
+                    <span id="name-error" className={styles.fieldError}>
+                      {errors.representativeName}
+                    </span>
+                  ) : null}
+                </div>
+                <div className={styles.fullField}>
+                  <label htmlFor="contact-email">
+                    Contact email <span aria-hidden="true">*</span>
+                  </label>
+                  <input
+                    id="contact-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    placeholder="you@organisation.com"
+                    required
+                    maxLength={254}
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? "email-error" : undefined}
+                  />
+                  {errors.email ? (
+                    <span id="email-error" className={styles.fieldError}>
+                      {errors.email}
+                    </span>
+                  ) : null}
+                </div>
+                <div className={styles.fullField}>
+                  <label htmlFor="project-scope">
+                    What would you like to discuss?{" "}
+                    <span aria-hidden="true">*</span>
+                  </label>
+                  <textarea
+                    id="project-scope"
+                    name="projectScope"
+                    rows={6}
+                    placeholder="Describe your project, goals and the collaboration you are looking for."
+                    required
+                    maxLength={4000}
+                    aria-invalid={Boolean(errors.projectScope)}
+                    aria-describedby={
+                      errors.projectScope
+                        ? "scope-help scope-error"
+                        : "scope-help"
+                    }
+                  />
+                  <span id="scope-help" className={styles.helper}>
+                    A brief overview is enough. Up to 4,000 characters.
+                  </span>
+                  {errors.projectScope ? (
+                    <span id="scope-error" className={styles.fieldError}>
+                      {errors.projectScope}
+                    </span>
+                  ) : null}
+                </div>
+              </fieldset>
+              {notice ? (
+                <output
+                  className={styles.result}
+                  data-success={notice.success}
+                  aria-live="polite"
+                >
+                  {notice.success ? <CheckCircle2 size={19} /> : null}
+                  <span>{notice.text}</span>
+                </output>
+              ) : null}
+              <div className={styles.formFooter}>
+                <p>Your inquiry will be sent to the Oncosourz team.</p>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className={styles.primary}
+                >
+                  {submitting ? (
+                    <Loader2 size={17} className="animate-spin" />
+                  ) : null}
+                  {submitting ? "Sending inquiry..." : "Send inquiry"}
+                  {!submitting ? <ArrowRight size={17} /> : null}
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+      <Footer />
+    </MotionPage>
   );
 }

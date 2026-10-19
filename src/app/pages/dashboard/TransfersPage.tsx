@@ -73,18 +73,22 @@ export default function TransfersPage({ onOpenModal }: Props) {
       </header>
       <div className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
         {[
-          ["Pending requests", stats.pending ?? 0],
-          ["Recent deliveries", stats.recentDeliveries ?? 0],
-          ["Quarantined breaches", stats.quarantinedBreaches ?? 0],
-        ].map(([label, value]) => (
-          <article
-            className="rounded-xl border border-g200 bg-w p-4"
-            key={String(label)}
-          >
-            <p className="text-xs text-g500">{label}</p>
-            <p className="mt-1 text-xl font-bold text-g900">{value}</p>
-          </article>
-        ))}
+          ["Pending requests", stats.pending],
+          ["Recent deliveries", stats.recentDeliveries],
+          ["Quarantined breaches", stats.quarantinedBreaches],
+        ]
+          .filter(
+            ([, value]) => typeof value === "number" && Number.isFinite(value),
+          )
+          .map(([label, value]) => (
+            <article
+              className="rounded-xl border border-g200 bg-w p-4"
+              key={String(label)}
+            >
+              <p className="text-xs text-g500">{label}</p>
+              <p className="mt-1 text-xl font-bold text-g900">{value}</p>
+            </article>
+          ))}
       </div>
       {notice ? (
         <p role="status" className="mb-4 text-sm text-g600">
@@ -113,7 +117,8 @@ export default function TransfersPage({ onOpenModal }: Props) {
                 {transfer.drug ??
                   transfer.inventoryItem?.drug ??
                   "Inventory transfer"}{" "}
-                · {transfer.qty ?? transfer.quantity ?? 0} vials
+                · {transfer.qty ?? transfer.quantity ?? "Quantity not recorded"}{" "}
+                vials
               </h2>
               <p className="mt-1 text-xs text-g500">
                 {transfer.donorFacility?.name ??

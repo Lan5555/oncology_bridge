@@ -15,7 +15,6 @@ export interface AccountTypeInfo {
   label: string;
   blurb: string;
   registry: LicenseRegistry;
-  registryName: string;
   licenseLabel: string;
   licensePlaceholder: string;
   /** Sidebar group this account type works in. */
@@ -28,9 +27,8 @@ export const ACCOUNT_TYPES: AccountTypeInfo[] = [
     label: "Doctor",
     blurb: "Prescribe, track orders and monitor clinical supply.",
     registry: "MDCN",
-    registryName: "Medical and Dental Council of Nigeria (MDCN)",
-    licenseLabel: "MDCN Licence / Folio Number",
-    licensePlaceholder: "e.g. MDCN/R/12345",
+    licenseLabel: "Professional licence / folio number",
+    licensePlaceholder: "Enter the number shown on your licence",
     workspace: "Clinical",
   },
   {
@@ -38,9 +36,8 @@ export const ACCOUNT_TYPES: AccountTypeInfo[] = [
     label: "Pharmacist",
     blurb: "Clinical pharmacy: prescriptions, cold chain and expiry.",
     registry: "PCN",
-    registryName: "Pharmacists Council of Nigeria (PCN)",
-    licenseLabel: "PCN Registration Number",
-    licensePlaceholder: "e.g. PCN/12345",
+    licenseLabel: "Professional registration number",
+    licensePlaceholder: "Enter the number shown on your licence",
     workspace: "Clinical",
   },
   {
@@ -48,15 +45,45 @@ export const ACCOUNT_TYPES: AccountTypeInfo[] = [
     label: "Pharmacy Store",
     blurb: "Inventory, GS1 scanning, redistribution and near-expiry stock.",
     registry: "PCN_PREMISES",
-    registryName: "Pharmacists Council of Nigeria (PCN) premises register",
-    licenseLabel: "PCN Premises Licence Number",
-    licensePlaceholder: "e.g. PCN/PREM/12345",
+    licenseLabel: "Premises licence number",
+    licensePlaceholder: "Enter the number shown on your licence",
     workspace: "Pharmacy Tools",
   },
 ];
 
 export const getAccountInfo = (type?: AccountType) =>
   ACCOUNT_TYPES.find((a) => a.id === type);
+
+/** Display server registry metadata without inferring a council from account type. */
+export function getRegistryLabel(...records: unknown[]): string {
+  for (const record of records) {
+    if (!record || typeof record !== "object") continue;
+    const data = record as Record<string, unknown>;
+    const registry = data.registry;
+    const metadata =
+      registry && typeof registry === "object"
+        ? (registry as Record<string, unknown>)
+        : {};
+    for (const value of [
+      data.registry_name,
+      data.registryName,
+      metadata.name,
+      metadata.label,
+    ]) {
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  }
+  for (const record of records) {
+    if (!record || typeof record !== "object") continue;
+    const registry = (record as Record<string, unknown>).registry;
+    const code =
+      registry && typeof registry === "object"
+        ? (registry as Record<string, unknown>).code
+        : registry;
+    if (typeof code === "string" && code.trim()) return code.trim();
+  }
+  return "Not provided";
+}
 
 const ALWAYS: PageId[] = ["pg-dashboard", "pg-settings"];
 
@@ -90,15 +117,25 @@ export function allowedPages(
   if (type && status !== "VERIFIED") return ALWAYS;
   const knownPages = new Set<PageId>([
     "pg-marketplace",
-    "pg-dashboard", "pg-inventory", "pg-medicines", "pg-scan",
-    "pg-transfers", "pg-prescriptions", "pg-coldchain", "pg-expiry",
-    "pg-network", "pg-facilities", "pg-users", "pg-audit", "pg-settings",
+    "pg-dashboard",
+    "pg-inventory",
+    "pg-medicines",
+    "pg-scan",
+    "pg-transfers",
+    "pg-prescriptions",
+    "pg-coldchain",
+    "pg-expiry",
+    "pg-network",
+    "pg-facilities",
+    "pg-users",
+    "pg-audit",
+    "pg-settings",
   ]);
   const rolePages = type ? VERIFIED_BY_TYPE[type] : [];
-  const backendPages = serverAllowedPages?.filter(
-    (page): page is PageId =>
+  const backendPages =
+    serverAllowedPages?.filter((page): page is PageId =>
       knownPages.has(page as PageId),
-  ) ?? [];
+    ) ?? [];
   // Preserve the standard workspace tools for each verified account type even
   // when an older backend response omits them from allowed_pages. Server page
   // grants can add facility tools outside the account type's default workspace.
@@ -113,10 +150,14 @@ export function allowedPages(
     "pg-facilities": "facility.read",
     "pg-audit": "audit.read",
   };
-  const permissionPages = (Object.entries(requiredPermission) as [PageId, string][])
+  const permissionPages = (
+    Object.entries(requiredPermission) as [PageId, string][]
+  )
     .filter(([, permission]) => permissions.includes(permission))
     .map(([page]) => page);
-  const grantedPages = [...new Set([...pages, ...inventoryPages, ...permissionPages])];
+  const grantedPages = [
+    ...new Set([...pages, ...inventoryPages, ...permissionPages]),
+  ];
   return grantedPages.filter((page) => {
     if (page === "pg-users") return canManageFacilityUsers;
     const required = requiredPermission[page];

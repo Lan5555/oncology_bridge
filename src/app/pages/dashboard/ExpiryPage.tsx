@@ -21,6 +21,13 @@ export default function ExpiryPage() {
   }, []);
   const requestTransfer = async (item: any) => {
     const recipient = item.nearestRecipient;
+    const quantity = item.qty ?? item.quantity;
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      setNotice(
+        "A recorded positive stock quantity is required before requesting a transfer.",
+      );
+      return;
+    }
     if (!recipient?.id || (!item.inventoryItemId && !item.id)) {
       setNotice(
         "A linked inventory item and eligible recipient are required for a transfer.",
@@ -31,7 +38,7 @@ export default function ExpiryPage() {
     const response = await TRANSFER_SERVICE.create({
       inventoryItemId: item.inventoryItemId ?? item.id,
       recipientFacilityId: recipient.id,
-      quantity: item.qty ?? item.quantity ?? 1,
+      quantity,
     });
     notifyResult(
       response,
@@ -97,7 +104,9 @@ export default function ExpiryPage() {
                 <td className="px-4 py-3">
                   {item.donorFacility?.name ?? item.donorFacility ?? "N/A"}
                 </td>
-                <td className="px-4 py-3">{item.qty ?? item.quantity ?? 0}</td>
+                <td className="px-4 py-3">
+                  {item.qty ?? item.quantity ?? "Not recorded"}
+                </td>
                 <td className="px-4 py-3">
                   {item.expiry
                     ? new Date(item.expiry).toLocaleDateString("en-NG")

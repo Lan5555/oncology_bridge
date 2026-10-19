@@ -2,7 +2,7 @@
 import Modals from "@/app/components/Modals";
 import Sidebar from "@/app/components/Sidebar";
 import TopNav from "@/app/components/TopNav";
-import { AuthView, ModalId, PageId, Theme } from "@/app/lib/types";
+import { ModalId, PageId } from "@/app/lib/types";
 import { useEffect, useState } from "react";
 import AuditPage from "./AuditPage";
 import ColdChainPage from "./ColdChainPage";
@@ -23,13 +23,15 @@ import { allowedPages as getAllowedPages } from "@/app/lib/accounts";
 import { useProvider } from "@/app/providers/provider";
 
 const DashboardView: React.FC = () => {
-  const { userData, sessionReady } = useProvider();
+  const { userData, sessionReady, theme, setTheme } = useProvider();
   const accountType = userData.user?.account_type;
   const verification = userData.user?.verification_status;
   const rawPermissions = [
     ...(userData.user?.permissions ?? []),
     ...(userData.user?.role?.permissions ?? []).map((permission) =>
-      typeof permission === "string" ? permission : permission.key ?? permission.name ?? "",
+      typeof permission === "string"
+        ? permission
+        : (permission.key ?? permission.name ?? ""),
     ),
   ];
   const canManageFacilityUsers =
@@ -44,9 +46,10 @@ const DashboardView: React.FC = () => {
     rawPermissions,
     canManageFacilityUsers,
   );
-  const allowedPages = baseAllowedPages && showFacilityTeam
-    ? [...new Set([...baseAllowedPages, "pg-users" as PageId])]
-    : baseAllowedPages;
+  const allowedPages =
+    baseAllowedPages && showFacilityTeam
+      ? [...new Set([...baseAllowedPages, "pg-users" as PageId])]
+      : baseAllowedPages;
   const defaultPage: PageId =
     accountType === "DOCTOR" || accountType === "PHARMACIST"
       ? "pg-prescriptions"
@@ -54,26 +57,8 @@ const DashboardView: React.FC = () => {
   const [activePage, setActivePage] = useState<PageId>(
     isVerified ? defaultPage : "pg-dashboard",
   );
-  const [theme, setTheme] = useState<Theme>("light");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openModalId, setOpenModalId] = useState<ModalId | null>(null);
-
-  useEffect(() => {
-    const storedTheme = window.localStorage.getItem("theme") as Theme | null;
-    if (storedTheme === "dark" || storedTheme === "light") {
-      setTheme(storedTheme);
-      return;
-    }
-
-    if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark");
-    }
-  }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem("theme", theme);
-  }, [theme]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

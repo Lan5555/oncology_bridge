@@ -97,7 +97,7 @@ const statusOrder: FacilityStatus[] = [
 ];
 
 const primaryCta = "#0B1E3D";
-const accentBlue = "#1B3A6B";
+const accentBlue = "var(--p)";
 
 const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
   onOpenModal,
@@ -239,13 +239,13 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#5B6B85]">
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-g500">
             Network / Facilities
           </p>
-          <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight text-[#0B1E3D]">
+          <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight text-g900">
             Facility Access
           </h1>
-          <p className="mt-1 text-sm text-[#5B6B85]">
+          <p className="mt-1 text-sm text-g500">
             Credential verification and device IP whitelisting
           </p>
         </div>
@@ -291,7 +291,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
           return (
             <div
               key={s.label}
-              className="relative overflow-hidden rounded-xl border border-[#E7ECF4] bg-white p-4 shadow-[0_1px_2px_rgba(15,30,61,0.04),0_8px_24px_-16px_rgba(15,30,61,0.12)]"
+              className="relative overflow-hidden rounded-xl border border-g200 bg-w p-4 shadow-[0_1px_2px_rgba(15,30,61,0.04),0_8px_24px_-16px_rgba(15,30,61,0.12)]"
             >
               <div
                 className="absolute inset-y-0 left-0 w-0.75"
@@ -299,10 +299,10 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
               />
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="font-mono text-xl font-medium text-[#0B1E3D]">
+                  <div className="font-mono text-xl font-medium text-g900">
                     {s.value}
                   </div>
-                  <div className="text-xs text-[#5B6B85]">{s.label}</div>
+                  <div className="text-xs text-g500">{s.label}</div>
                 </div>
                 <div
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
@@ -324,7 +324,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, code, or city..."
-            className="w-full rounded-lg border border-[#DCE3ED] bg-[#FBFCFE] py-2.5 pl-10 pr-4 text-sm text-[#0B1E3D] outline-none transition-all duration-150 placeholder:text-slate focus:border-[#1B3A6B] focus:bg-white focus:ring-4 focus:ring-[#1B3A6B]/8"
+            className="w-full rounded-lg border border-g200 bg-w py-2.5 pl-10 pr-4 text-sm text-g900 outline-none transition-all duration-150 placeholder:text-slate focus:border-[#1B3A6B] focus:bg-w focus:ring-4 focus:ring-[#1B3A6B]/8"
           />
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -340,7 +340,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                         backgroundColor: "rgba(11,30,61,0.06)",
                         color: accentBlue,
                       }
-                    : { color: "#5B6B85" }
+                    : { color: "var(--g500)" }
                 }
               >
                 {s === "ALL" ? "All" : statusMeta[s].label}
@@ -351,33 +351,33 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-[#E7ECF4] bg-white shadow-[0_1px_2px_rgba(15,30,61,0.04),0_8px_24px_-16px_rgba(15,30,61,0.12)]">
+      <div className="overflow-hidden rounded-xl border border-g200 bg-w shadow-[0_1px_2px_rgba(15,30,61,0.04),0_8px_24px_-16px_rgba(15,30,61,0.12)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-180 text-left text-sm">
             <thead>
-              <tr className="border-b border-[#E7ECF4] bg-[#F9FBFD]">
-                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-[#5B6B85]">
+              <tr className="border-b border-g200 bg-g50">
+                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-g500">
                   Facility
                 </th>
-                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-[#5B6B85]">
+                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-g500">
                   Type
                 </th>
-                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-[#5B6B85]">
+                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-g500">
                   Location
                 </th>
-                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-[#5B6B85]">
+                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-g500">
                   IP whitelist
                 </th>
-                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-[#5B6B85]">
+                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-g500">
                   Devices
                 </th>
-                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-[#5B6B85]">
+                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-g500">
                   Last active
                 </th>
-                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-[#5B6B85]">
+                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-g500">
                   Status
                 </th>
-                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-[#5B6B85]">
+                <th className="px-4 py-3 font-mono text-[11px] font-medium uppercase tracking-wide text-g500">
                   Actions
                 </th>
               </tr>
@@ -390,10 +390,10 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                 return (
                   <tr
                     key={f.id}
-                    className="border-b border-[#F1F4F9] transition-colors duration-150 last:border-0 hover:bg-[#F9FBFD]"
+                    className="border-b border-g100 transition-colors duration-150 last:border-0 hover:bg-g50"
                   >
                     <td className="px-4 py-3">
-                      <div className="font-medium text-[#0B1E3D]">{f.name}</div>
+                      <div className="font-medium text-g900">{f.name}</div>
                       <div className="font-mono text-[11px] text-slate">
                         {f.hospital_code}
                       </div>
@@ -403,34 +403,39 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                         className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
                         style={{
                           backgroundColor: `${type.color}1A`,
-                          color: type.color,
+                          color: "var(--p)",
                         }}
                       >
                         {type.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-[#3F4E68]">
+                    <td className="px-4 py-3 text-g600">
                       <span className="flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5 text-slate" />
                         {f.city}, {f.state}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-[#5B6B85]">
+                    <td className="px-4 py-3 font-mono text-[11px] text-g500">
                       {f.ip}
                     </td>
-                    <td className="px-4 py-3 text-[#3F4E68]">
+                    <td className="px-4 py-3 text-g600">
                       <span className="flex items-center gap-1.5">
                         <Smartphone className="h-3.5 w-3.5 text-slate" />
                         {f.devices}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-[#5B6B85]">{f.lastActive}</td>
+                    <td className="px-4 py-3 text-g500">{f.lastActive}</td>
                     <td className="px-4 py-3">
                       <span
                         className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium"
                         style={{
                           backgroundColor: `${status.color}1A`,
-                          color: status.color,
+                          color:
+                            status.label === "Active"
+                              ? "var(--status-good)"
+                              : status.label === "Pending"
+                                ? "var(--status-warn)"
+                                : "var(--status-error)",
                         }}
                       >
                         <StatusIcon className="h-3 w-3" />
@@ -441,7 +446,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                       <div className="relative flex items-center gap-1">
                         <button
                           onClick={() => openManage(f)}
-                          className="flex items-center gap-1.5 rounded-md border border-[#E7ECF4] px-2.5 py-1.5 text-xs font-medium text-[#0B1E3D] transition-colors duration-150 hover:border-[#1B3A6B] hover:bg-[#F8FAFC]"
+                          className="flex items-center gap-1.5 rounded-md border border-g200 px-2.5 py-1.5 text-xs font-medium text-g900 transition-colors duration-150 hover:border-[#1B3A6B] hover:bg-g50"
                         >
                           <Settings className="h-3 w-3" />
                           Manage
@@ -450,7 +455,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                           onClick={() =>
                             setOpenMenuId(openMenuId === f.id ? null : f.id)
                           }
-                          className="rounded-md p-1.5 text-slate transition-colors duration-150 hover:bg-[#F1F4F9] hover:text-[#0B1E3D]"
+                          className="rounded-md p-1.5 text-slate transition-colors duration-150 hover:bg-g100 hover:text-g900"
                         >
                           <MoreVertical className="h-3.5 w-3.5" />
                         </button>
@@ -463,7 +468,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                               className="fixed inset-0 z-40"
                               onClick={() => setOpenMenuId(null)}
                             />
-                            <div className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-lg border border-[#E7ECF4] bg-white py-1 shadow-[0_12px_32px_-8px_rgba(15,30,61,0.25)]">
+                            <div className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-lg border border-g200 bg-w py-1 shadow-[0_12px_32px_-8px_rgba(15,30,61,0.25)]">
                               <div className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-wide text-slate">
                                 Set status
                               </div>
@@ -479,7 +484,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                                         applyStatus(f.id, s, f.name);
                                         setOpenMenuId(null);
                                       }}
-                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-[#0B1E3D] hover:bg-[#F8FAFC]"
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-g900 hover:bg-g50"
                                     >
                                       <MetaIcon
                                         className="h-3.5 w-3.5"
@@ -489,10 +494,10 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                                     </button>
                                   );
                                 })}
-                              <div className="my-1 border-t border-[#F1F4F9]" />
+                              <div className="my-1 border-t border-g100" />
                               <button
                                 onClick={() => openManage(f)}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-[#5B6B85] hover:bg-[#F8FAFC]"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-g500 hover:bg-g50"
                               >
                                 <Settings className="h-3.5 w-3.5" />
                                 Open full manage view
@@ -512,7 +517,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                     colSpan={8}
                     className="px-4 py-10 text-center text-sm text-slate"
                   >
-                    <Filter className="mx-auto mb-2 h-5 w-5 text-[#C9D6E8]" />
+                    <Filter className="mx-auto mb-2 h-5 w-5 text-g300" />
                     No facilities match your search.
                   </td>
                 </tr>
@@ -529,14 +534,14 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
             className="absolute inset-0 bg-[#0B1E3D]/40 backdrop-blur-sm"
             onClick={closeManage}
           />
-          <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#E7ECF4] bg-white shadow-[0_24px_64px_-16px_rgba(15,30,61,0.35)]">
+          <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-g200 bg-w shadow-[0_24px_64px_-16px_rgba(15,30,61,0.35)]">
             {/* Modal header */}
-            <div className="flex items-start justify-between border-b border-[#F1F4F9] px-6 py-5">
+            <div className="flex items-start justify-between border-b border-g100 px-6 py-5">
               <div>
-                <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#5B6B85]">
+                <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-g500">
                   Manage facility
                 </p>
-                <h2 className="font-display mt-1 text-xl font-semibold text-[#0B1E3D]">
+                <h2 className="font-display mt-1 text-xl font-semibold text-g900">
                   {manageTarget.name}
                 </h2>
                 <p className="font-mono text-[11px] text-slate">
@@ -545,7 +550,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
               </div>
               <button
                 onClick={closeManage}
-                className="rounded-md p-1.5 text-slate transition-colors duration-150 hover:bg-[#F1F4F9] hover:text-[#0B1E3D]"
+                className="rounded-md p-1.5 text-slate transition-colors duration-150 hover:bg-g100 hover:text-g900"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -562,7 +567,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                     className="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
                     style={{
                       backgroundColor: `${typeMeta[manageTarget.facility_type].color}1A`,
-                      color: typeMeta[manageTarget.facility_type].color,
+                      color: "var(--p)",
                     }}
                   >
                     {typeMeta[manageTarget.facility_type].label}
@@ -572,7 +577,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-slate">
                     Location
                   </p>
-                  <p className="flex items-center gap-1.5 text-sm text-[#0B1E3D]">
+                  <p className="flex items-center gap-1.5 text-sm text-g900">
                     <MapPin className="h-3.5 w-3.5 text-slate" />
                     {manageTarget.city}, {manageTarget.state}
                   </p>
@@ -581,7 +586,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-slate">
                     IP whitelist
                   </p>
-                  <p className="font-mono text-xs text-[#0B1E3D]">
+                  <p className="font-mono text-xs text-g900">
                     {manageTarget.ip}
                   </p>
                 </div>
@@ -589,7 +594,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-slate">
                     Devices
                   </p>
-                  <p className="flex items-center gap-1.5 text-sm text-[#0B1E3D]">
+                  <p className="flex items-center gap-1.5 text-sm text-g900">
                     <Smartphone className="h-3.5 w-3.5 text-slate" />
                     {manageTarget.devices} whitelisted
                   </p>
@@ -598,7 +603,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-slate">
                     Phone
                   </p>
-                  <p className="flex items-center gap-1.5 text-sm text-[#0B1E3D]">
+                  <p className="flex items-center gap-1.5 text-sm text-g900">
                     <Phone className="h-3.5 w-3.5 text-slate" />
                     {manageTarget.phone}
                   </p>
@@ -607,7 +612,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-slate">
                     Email
                   </p>
-                  <p className="flex items-center gap-1.5 truncate text-sm text-[#0B1E3D]">
+                  <p className="flex items-center gap-1.5 truncate text-sm text-g900">
                     <Mail className="h-3.5 w-3.5 shrink-0 text-slate" />
                     {manageTarget.email}
                   </p>
@@ -616,7 +621,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                   <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-slate">
                     Last active
                   </p>
-                  <p className="flex items-center gap-1.5 text-sm text-[#0B1E3D]">
+                  <p className="flex items-center gap-1.5 text-sm text-g900">
                     <History className="h-3.5 w-3.5 text-slate" />
                     {manageTarget.lastActive}
                   </p>
@@ -624,8 +629,8 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
               </div>
 
               {/* Status update section, the core ask: change a facility's status here */}
-              <div className="rounded-xl border border-[#E7ECF4] bg-[#F9FBFD] p-4">
-                <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.2em] text-[#5B6B85]">
+              <div className="rounded-xl border border-g200 bg-g50 p-4">
+                <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.2em] text-g500">
                   Update status
                 </p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -643,12 +648,12 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                             ? {
                                 borderColor: meta.color,
                                 backgroundColor: `${meta.color}12`,
-                                color: meta.color,
+                                color: "var(--p)",
                               }
                             : {
-                                borderColor: "#E7ECF4",
-                                backgroundColor: "#FFFFFF",
-                                color: "#5B6B85",
+                                borderColor: "var(--g200)",
+                                backgroundColor: "var(--w)",
+                                color: "var(--g500)",
                               }
                         }
                       >
@@ -658,7 +663,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                     );
                   })}
                 </div>
-                <p className="mt-3 text-xs text-[#5B6B85]">
+                <p className="mt-3 text-xs text-g500">
                   {statusMeta[draftStatus].description}
                 </p>
 
@@ -672,7 +677,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                       onChange={(e) => setStatusNote(e.target.value)}
                       rows={2}
                       placeholder={`Why is ${manageTarget.name} being marked as ${statusMeta[draftStatus].label.toLowerCase()}?`}
-                      className="w-full resize-none rounded-lg border border-[#DCE3ED] bg-white px-3 py-2 text-sm text-[#0B1E3D] outline-none transition-all duration-150 placeholder:text-slate focus:border-[#1B3A6B] focus:ring-4 focus:ring-[#1B3A6B]/8"
+                      className="w-full resize-none rounded-lg border border-g200 bg-w px-3 py-2 text-sm text-g900 outline-none transition-all duration-150 placeholder:text-slate focus:border-[#1B3A6B] focus:ring-4 focus:ring-[#1B3A6B]/8"
                     />
                   </div>
                 )}
@@ -680,10 +685,10 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
             </div>
 
             {/* Modal footer */}
-            <div className="flex items-center justify-end gap-2 border-t border-[#F1F4F9] px-6 py-4">
+            <div className="flex items-center justify-end gap-2 border-t border-g100 px-6 py-4">
               <button
                 onClick={closeManage}
-                className="rounded-lg border border-[#E7ECF4] px-4 py-2 text-sm font-medium text-[#0B1E3D] transition-colors duration-150 hover:bg-[#F8FAFC]"
+                className="rounded-lg border border-g200 px-4 py-2 text-sm font-medium text-g900 transition-colors duration-150 hover:bg-g50"
               >
                 Cancel
               </button>

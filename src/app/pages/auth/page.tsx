@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import AuthPages from "@/app/components/AuthPages";
+import { useProvider } from "@/app/providers/provider";
 import type { AuthView } from "@/app/lib/types";
 import { AUTH_SERVICE } from "@/app/services/auth-service/auth-service";
 
@@ -14,18 +15,12 @@ export default function AuthPage({
 }) {
   const [view, setView] = useState<AuthView>(initialView);
   const router = useRouter();
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const { theme, setTheme } = useProvider();
   const [isMounted, setIsMounted] = useState(false);
 
   // Handle hydration - only run on client
   useEffect(() => {
     setIsMounted(true);
-    const stored = window.localStorage.getItem("theme");
-    if (stored === "dark" || stored === "light") {
-      setTheme(stored);
-    } else if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark");
-    }
     void AUTH_SERVICE.pingServer().then((res) => {
       if (!res.success)
         toast.error(
@@ -34,17 +29,6 @@ export default function AuthPage({
         );
     });
   }, []);
-
-  // Update theme when it changes
-  useEffect(() => {
-    if (!isMounted) return;
-
-    document.documentElement.setAttribute("data-theme", theme);
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    document.documentElement.classList.toggle("light", theme === "light");
-    document.documentElement.style.colorScheme = theme;
-    window.localStorage.setItem("theme", theme);
-  }, [theme, isMounted]);
 
   const handleDoLogin = () => {
     // After login navigate to the dashboard route

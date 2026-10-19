@@ -1,8 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, UserResponse } from "../models/user-model";
+import type React from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import type { Theme } from "../lib/types";
 import { FacilityResponse } from "../models/facility-model";
+import { User, UserResponse } from "../models/user-model";
 
 type AppContextType = {
   userData: UserResponse;
@@ -10,6 +12,8 @@ type AppContextType = {
   facilityResponse: FacilityResponse;
   setFacilityResponse: (res: FacilityResponse) => void;
   sessionReady: boolean;
+  theme: Theme;
+  setTheme: React.Dispatch<React.SetStateAction<Theme>>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -20,6 +24,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     FacilityResponse.fromJson({}),
   );
   const [sessionReady, setSessionReady] = useState(false);
+  const [theme, setTheme] = useState<Theme>("light");
+  const [themeReady, setThemeReady] = useState(false);
+
+  useEffect(() => {
+    const readTheme = () => {
+      let saved: string | null = null;
+      try {
+        saved = localStorage.getItem("theme");
+      } catch {
+        /* Use device preference if storage is unavailable. */
+      }
+      setTheme(
+        saved === "light" || saved === "dark"
+          ? saved
+          : window.matchMedia?.("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light",
+      );
+      setThemeReady(true);
+    };
+    readTheme();
+    const sync = (event: StorageEvent) => {
+      if (event.key === "theme" || event.key === null) readTheme();
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!themeReady) return;
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    root.classList.toggle("dark", theme === "dark");
+    root.classList.toggle("light", theme === "light");
+    root.style.colorScheme = theme;
+    try {
+      localStorage.setItem("theme", theme);
+    } catch {
+      /* Theme still applies when persistence is unavailable. */
+    }
+  }, [theme, themeReady]);
 
   useEffect(() => {
     try {
@@ -39,6 +84,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         facilityResponse,
         setFacilityResponse,
         sessionReady,
+        theme,
+        setTheme,
       }}
     >
       {children}

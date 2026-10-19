@@ -38,16 +38,15 @@ export default function PrescriptionsPage({
 }: PrescriptionsPageProps) {
   const [activeTab, setActiveTab] = useState<PrescriptionTab>("active");
   const [rows, setRows] = useState<OrderRecord[]>([]);
-  const [counts, setCounts] = useState({
-    active: 0,
-    awaiting: 0,
-    completed: 0,
-  });
+  const [counts, setCounts] = useState<
+    Partial<Record<PrescriptionTab, number>>
+  >({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const loadPrescriptions = async () => {
     setLoading(true);
     setLoadError("");
+    setCounts({});
     const response = await PRESCRIPTION_SERVICE.list(activeTab);
     if (!response.success) {
       setRows([]);
@@ -74,9 +73,9 @@ export default function PrescriptionsPage({
     );
     if (data?.counts)
       setCounts({
-        active: data.counts.active ?? 0,
-        awaiting: data.counts.awaiting ?? 0,
-        completed: data.counts.completed ?? 0,
+        active: data.counts.active ?? undefined,
+        awaiting: data.counts.awaiting ?? undefined,
+        completed: data.counts.completed ?? undefined,
       });
     setLoading(false);
   };
@@ -132,22 +131,26 @@ export default function PrescriptionsPage({
         className="grid gap-3 sm:grid-cols-3"
         aria-label="Prescription summary"
       >
-        {metrics.map(({ label, value, icon: Icon }) => (
-          <article
-            className="flex items-center gap-4 rounded-xl border border-g200 bg-w p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            key={label}
-          >
-            <span className="flex size-10 items-center justify-center rounded-xl bg-g50 text-p">
-              <Icon className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-2xl font-bold tabular-nums text-g900">
-                {value}
-              </p>
-              <p className="text-xs font-medium text-g500">{label}</p>
-            </div>
-          </article>
-        ))}
+        {metrics
+          .filter(
+            ({ value }) => typeof value === "number" && Number.isFinite(value),
+          )
+          .map(({ label, value, icon: Icon }) => (
+            <article
+              className="flex items-center gap-4 rounded-xl border border-g200 bg-w p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              key={label}
+            >
+              <span className="flex size-10 items-center justify-center rounded-xl bg-g50 text-p">
+                <Icon className="size-5" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-2xl font-bold tabular-nums text-g900">
+                  {value}
+                </p>
+                <p className="text-xs font-medium text-g500">{label}</p>
+              </div>
+            </article>
+          ))}
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-g200 bg-w shadow-sm">
@@ -260,9 +263,12 @@ export default function PrescriptionsPage({
 
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-g200 bg-w p-6 shadow-sm">
         <div>
-          <h2 className="text-base font-bold text-g900">Find medicines for your patients</h2>
+          <h2 className="text-base font-bold text-g900">
+            Find medicines for your patients
+          </h2>
           <p className="mt-1 text-sm text-g500">
-            Browse medicine images, compare prices, and purchase from network pharmacies.
+            Browse medicine images, compare prices, and purchase from network
+            pharmacies.
           </p>
         </div>
         <button

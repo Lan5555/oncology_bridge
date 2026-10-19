@@ -1,4 +1,5 @@
 "use client";
+import BrandLogo from "@/app/components/BrandLogo";
 
 import {
   Activity,
@@ -49,11 +50,13 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import management from "@/app/components/Management.module.css";
 import { ToastLayer } from "@/app/components/ToastLayer";
+import { useProvider } from "@/app/providers/provider";
 import { useManagementDialog } from "@/app/hooks/useManagementDialog";
 import {
   ACCOUNT_TYPES,
   type AccountType,
   getAccountInfo,
+  getRegistryLabel,
   type VerificationStatus,
 } from "@/app/lib/accounts";
 import type { ModalId, PageId } from "@/app/lib/types";
@@ -81,6 +84,15 @@ const TYPE_ICONS: Record<AccountType, typeof Stethoscope> = {
   PHARMACIST: Pill,
   PHARMACY_STORE: Store,
 };
+
+const REGISTRY_NAME_FIELDS = [
+  { key: "mdcn_registry_name", label: "MDCN display name" },
+  { key: "pcn_registry_name", label: "PCN display name" },
+  { key: "pcn_premises_registry_name", label: "PCN premises display name" },
+];
+const isRegistryNameField = (integration: string, field: string) =>
+  integration === "license_registry" &&
+  REGISTRY_NAME_FIELDS.some(({ key }) => key === field);
 
 const REGISTRY_TEXT: Record<RegistryResult, string> = {
   MATCH: "Found in registry",
@@ -360,7 +372,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
             row.status,
         ),
         adminActive: user.active ?? row.user_active ?? row.admin_active,
-        submitted: row.submittedAt ?? row.submitted_at ?? row.created_at ?? "N/A",
+        submitted:
+          row.submittedAt ?? row.submitted_at ?? row.created_at ?? "N/A",
         registryResult:
           row.registryResult ??
           row.registry_result ??
@@ -370,8 +383,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
           row.registry ??
           row.license_registry ??
           license.registry ??
+          user.registry ??
           user.license_registry ??
           "",
+        registry_name:
+          row.registry_name ??
+          license.registry_name ??
+          user.registry_name ??
+          null,
         registryCheckedAt:
           row.registryCheckedAt ??
           row.registry_checked_at ??
@@ -418,9 +437,31 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       return;
     }
     const data = response.data as any;
-    const fields = Array.isArray(data)
+    const suppliedFields = Array.isArray(data)
       ? data
       : (data?.fields ?? data?.configuration?.fields ?? []);
+    const fields =
+      key === "license_registry"
+        ? [
+            ...suppliedFields.filter(
+              (field: any) => !isRegistryNameField(key, field.key),
+            ),
+            ...REGISTRY_NAME_FIELDS.map((field) => ({
+              ...field,
+              type: "text",
+              required: false,
+              maxLength: 200,
+              description:
+                "Optional display name. Leave empty to show the registry code. This does not verify a licence.",
+              value:
+                suppliedFields.find((item: any) => item.key === field.key)
+                  ?.value ??
+                data?.values?.[field.key] ??
+                data?.configuration?.values?.[field.key] ??
+                "",
+            })),
+          ]
+        : suppliedFields;
     setIntegrationFields(fields);
     setIntegrationValues(
       Object.fromEntries(
@@ -440,11 +481,33 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     event.preventDefault();
     if (!integrationTarget || !adminPermissions.includes("integration.manage"))
       return;
+    for (const [key, value] of Object.entries(integrationValues)) {
+      if (
+        isRegistryNameField(integrationTarget.key, key) &&
+        (typeof value !== "string" ||
+          value.trim().length > 200 ||
+          /[\r\n\u2028\u2029]/.test(value))
+      ) {
+        notify(
+          "Registry display names must be single-line text of at most 200 characters.",
+        );
+        return;
+      }
+    }
     setIntegrationActionKey(integrationTarget.key);
     const values = Object.fromEntries(
-      Object.entries(integrationValues).filter(
-        ([, value]) => value !== "" && value !== undefined,
-      ),
+      Object.entries(integrationValues)
+        .filter(
+          ([key, value]) =>
+            value !== undefined &&
+            (value !== "" || isRegistryNameField(integrationTarget.key, key)),
+        )
+        .map(([key, value]) => [
+          key,
+          isRegistryNameField(integrationTarget.key, key)
+            ? String(value).trim()
+            : value,
+        ]),
     );
     const response = await ADMIN_SERVICE.saveIntegrationConfiguration(
       integrationTarget.key,
@@ -494,7 +557,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const { theme, setTheme } = useProvider();
   const [mounted, setMounted] = useState(false); // Track client-side mount
 
   // Lightweight feedback toast so every action button gives a visible
@@ -511,16 +574,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   // Detect theme and auth on client-side only
   useEffect(() => {
     setMounted(true);
-
-    const storedTheme = window.localStorage.getItem("theme") as
-      | "light"
-      | "dark"
-      | null;
-    if (storedTheme) {
-      setTheme(storedTheme);
-    } else if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
-      setTheme("dark");
-    }
 
     try {
       const session = JSON.parse(
@@ -580,10 +633,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       },
     );
   }, [isAuthed, adminPermissions, adminPermissionsKnown, adminRoleName]);
-
-  useEffect(() => {
-    if (mounted) document.documentElement.setAttribute("data-theme", theme);
-  }, [mounted, theme]);
 
   const isDark = theme === "dark";
 
@@ -1038,7 +1087,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       row.status_detail ??
       "Health reported by backend",
     status: row.status ?? (row.healthy === true ? "Healthy" : "Unavailable"),
-    lastSync: row.lastCheckedAt ?? row.last_checked_at ?? row.checked_at ?? "N/A",
+    lastSync:
+      row.lastCheckedAt ?? row.last_checked_at ?? row.checked_at ?? "N/A",
   }));
 
   const quickActions = [
@@ -1526,6 +1576,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                               : "text"
                       }
                       autoComplete="new-password"
+                      maxLength={field.maxLength}
                       value={
                         field.type === "boolean"
                           ? undefined
@@ -1725,8 +1776,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                   <div>
                     <dt className={mutedText}>Issuing registry</dt>
                     <dd className={`mt-0.5 ${headingText}`}>
-                      {getAccountInfo(reviewTarget.accountType)?.registry ??
-                        "Not provided"}
+                      {getRegistryLabel(reviewTarget)}
                     </dd>
                   </div>
                   <div>
@@ -2081,7 +2131,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       >
         <div className={management.brand}>
           <div className={management.brandMark}>
-            <ShieldCheck className="size-5" />
+            <BrandLogo markOnly className="size-9 rounded-lg bg-white" />
           </div>
           <div>
             <strong>Oncosourz</strong>
@@ -2145,8 +2195,6 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
               onClick={() => {
                 const next = isDark ? "light" : "dark";
                 setTheme(next);
-                document.documentElement.setAttribute("data-theme", next);
-                localStorage.setItem("theme", next);
               }}
             >
               {isDark ? (
@@ -2759,8 +2807,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                                     className={`mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs ${mutedText}`}
                                   >
                                     <span>
-                                      {info.registry.replace("_", " ")}:{" "}
-                                      {app.license}
+                                      {getRegistryLabel(app)}: {app.license}
                                     </span>
                                     <span
                                       style={{

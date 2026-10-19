@@ -2,7 +2,11 @@
 
 import { notifyResult } from "@/app/lib/notifications";
 
-import { getAccountInfo, VERIFICATION_COPY } from "../lib/accounts";
+import {
+  getAccountInfo,
+  getRegistryLabel,
+  VERIFICATION_COPY,
+} from "../lib/accounts";
 import { useProvider } from "../providers/provider";
 import { useEffect, useState } from "react";
 import { SETTINGS_SERVICE } from "../services/settings-service/settings-service";
@@ -75,7 +79,7 @@ export default function VerificationGate() {
           </span>
           <span className="text-g500">Registry</span>
           <span className="text-right font-semibold text-g800">
-            {info?.registry.replace("_", " ") ?? "N/A"}
+            {getRegistryLabel(user)}
           </span>
           <span className="text-g500">Licence number</span>
           <span className="text-right font-mono font-semibold text-g800">

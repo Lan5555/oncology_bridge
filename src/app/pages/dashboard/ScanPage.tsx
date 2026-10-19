@@ -455,7 +455,7 @@ export default function ScanPage() {
               <label className="text-xs font-semibold text-g600">
                 Action
                 <select
-                  className="mt-1 w-full rounded-lg border border-g200 bg-white px-3 py-2.5 text-sm font-normal"
+                  className="mt-1 w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal"
                   value={form.action}
                   onChange={(event) =>
                     setForm((current) => ({

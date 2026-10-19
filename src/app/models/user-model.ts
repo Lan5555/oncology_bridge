@@ -8,6 +8,9 @@ export class User {
   public role?: Role;
   public account_type?: AccountType;
   public license_number: string = "";
+  public license_registry?: string;
+  public registry?: string;
+  public registry_name?: string | null;
   public verification_status: VerificationStatus = "VERIFIED";
   public hospital?: Facility;
   public facility?: Facility;
@@ -46,27 +49,35 @@ export class User {
     const data = typeof json === "string" ? JSON.parse(json) : json;
     const rawVerificationStatus = String(
       data.license?.verification_status ??
-      data.license?.status ??
-      data.license_status ??
-      data.licenseStatus ??
-      data.license_verification_status ??
-      data.licenseVerificationStatus ??
-      data.verification_status ??
-      data.verificationStatus ??
-      (data.account_type ? "PENDING" : "VERIFIED"),
+        data.license?.status ??
+        data.license_status ??
+        data.licenseStatus ??
+        data.license_verification_status ??
+        data.licenseVerificationStatus ??
+        data.verification_status ??
+        data.verificationStatus ??
+        (data.account_type ? "PENDING" : "VERIFIED"),
     ).toUpperCase();
     const verificationStatus: VerificationStatus =
       rawVerificationStatus === "APPROVED"
         ? "VERIFIED"
-        : ["PENDING", "MANUAL_REVIEW", "VERIFIED", "REJECTED"].includes(rawVerificationStatus)
-          ? rawVerificationStatus as VerificationStatus
-          : data.account_type ? "PENDING" : "VERIFIED";
+        : ["PENDING", "MANUAL_REVIEW", "VERIFIED", "REJECTED"].includes(
+              rawVerificationStatus,
+            )
+          ? (rawVerificationStatus as VerificationStatus)
+          : data.account_type
+            ? "PENDING"
+            : "VERIFIED";
 
     return new User({
       id: data.id,
       role: data.role,
       account_type: data.account_type,
       license_number: data.license_number ?? "",
+      license_registry: data.license_registry,
+      registry:
+        data.registry ?? data.license_registry ?? data.license?.registry,
+      registry_name: data.registry_name ?? data.license?.registry_name ?? null,
       verification_status: verificationStatus,
       hospital: data.hospital ?? data.facility,
       facility: data.facility ?? data.hospital,
@@ -84,11 +95,16 @@ export class User {
             .map((permission: any) =>
               typeof permission === "string"
                 ? permission
-                : permission?.key ?? permission?.name,
+                : (permission?.key ?? permission?.name),
             )
-            .filter((permission: unknown): permission is string => typeof permission === "string")
+            .filter(
+              (permission: unknown): permission is string =>
+                typeof permission === "string",
+            )
         : [],
-      allowed_pages: Array.isArray(data.allowed_pages) ? data.allowed_pages : undefined,
+      allowed_pages: Array.isArray(data.allowed_pages)
+        ? data.allowed_pages
+        : undefined,
       can_manage_facility_users: Boolean(data.can_manage_facility_users),
       last_login: data.last_login ? new Date(data.last_login) : null,
       created_at: data.created_at ? new Date(data.created_at) : null,

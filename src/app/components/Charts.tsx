@@ -1,22 +1,23 @@
 "use client";
 
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
   ArcElement,
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  LinearScale,
+  LineElement,
+  PointElement,
   Tooltip,
 } from "chart.js/auto";
-import { Line, Doughnut, Bar } from "react-chartjs-2";
-import { useEffect, useState } from "react";
 import { Activity, ChartColumn, ChartPie, Package } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
 import EmptyState from "@/app/components/EmptyState";
+import { useProvider } from "@/app/providers/provider";
 import { DASHBOARD_SERVICE } from "@/app/services/dashboard-service/dashboard-service";
-import { SCAN_SERVICE } from "@/app/services/scan-service/scan-service";
 import { unwrapArray } from "@/app/services/response-utils";
+import { SCAN_SERVICE } from "@/app/services/scan-service/scan-service";
 
 ChartJS.register(
   CategoryScale,
@@ -28,14 +29,21 @@ ChartJS.register(
   Tooltip,
 );
 
-const P = "#0891B2";
 const AC = "#0D9488";
 const OK = "#059669";
 const WN = "#F59E0B";
 const ER = "#EF4444";
-const GL = "#F1F5F9";
-const GM = "#94A3B8";
-const G7 = "#334155";
+
+function useChartTheme() {
+  const { theme } = useProvider();
+  const dark = theme === "dark";
+  return {
+    P: dark ? "#60A5FA" : "#2563EB",
+    GL: dark ? "#26364B" : "#DCE5F1",
+    GM: dark ? "#CBD5E1" : "#475569",
+    G7: dark ? "#E2E8F0" : "#334155",
+  };
+}
 
 /** Renders the authenticated, persisted cold-chain history supplied by its monitor. */
 export function TemperatureHistoryChart({
@@ -47,6 +55,7 @@ export function TemperatureHistoryChart({
   loading?: boolean;
   error?: string;
 }) {
+  const { P, GL, GM } = useChartTheme();
   const history = historyData;
   if (error)
     return (
@@ -149,6 +158,7 @@ export function TemperatureHistoryChart({
 
 /** Line chart: Biologic Inventory, Network Wide (dashboard) */
 export function InventoryChart() {
+  const { P, GL, GM } = useChartTheme();
   const [points, setPoints] = useState<Array<{ label: string; vials: number }>>(
     [],
   );
@@ -157,10 +167,12 @@ export function InventoryChart() {
       const data = response.data as any;
       if (response.success)
         setPoints(
-          unwrapArray(data?.inventoryOverTime ?? data).map((point) => ({
-            label: point.label,
-            vials: Number(point.vials ?? point.qty ?? 0),
-          })),
+          unwrapArray(data?.inventoryOverTime ?? data)
+            .map((point) => ({
+              label: point.label,
+              vials: Number(point.vials ?? point.qty ?? Number.NaN),
+            }))
+            .filter((row) => Number.isFinite(row.vials)),
         );
     });
   }, []);
@@ -216,16 +228,19 @@ export function InventoryChart() {
 
 /** Doughnut chart: Drug Availability Split (dashboard) */
 export function DrugSplitChart() {
+  const { P } = useChartTheme();
   const [split, setSplit] = useState<Array<{ drug: string; pct: number }>>([]);
   useEffect(() => {
     void DASHBOARD_SERVICE.charts().then((response) => {
       const data = response.data as any;
       if (response.success)
         setSplit(
-          unwrapArray(data?.drugSplit).map((row) => ({
-            drug: row.drug,
-            pct: Number(row.pct ?? 0),
-          })),
+          unwrapArray(data?.drugSplit)
+            .map((row) => ({
+              drug: row.drug,
+              pct: Number(row.pct ?? Number.NaN),
+            }))
+            .filter((row) => Number.isFinite(row.pct)),
         );
     });
   }, []);
@@ -266,6 +281,7 @@ export function DrugSplitChart() {
 
 /** Horizontal bar chart: Network Redistribution Efficiency (dashboard) */
 export function RedistributionEfficiencyChart() {
+  const { P, GL, GM, G7 } = useChartTheme();
   const [efficiency, setEfficiency] = useState<
     Array<{ label: string; days: number }>
   >([]);
@@ -274,10 +290,12 @@ export function RedistributionEfficiencyChart() {
       const data = response.data as any;
       if (response.success)
         setEfficiency(
-          unwrapArray(data?.redistributionEfficiency).map((row) => ({
-            label: row.label,
-            days: Number(row.days ?? 0),
-          })),
+          unwrapArray(data?.redistributionEfficiency)
+            .map((row) => ({
+              label: row.label,
+              days: Number(row.days ?? Number.NaN),
+            }))
+            .filter((row) => Number.isFinite(row.days)),
         );
     });
   }, []);
@@ -336,16 +354,19 @@ export function RedistributionEfficiencyChart() {
 
 /** Horizontal bar chart: current therapeutic stock from the dashboard API. */
 export function TherapeuticStockChart() {
+  const { P, GL, GM, G7 } = useChartTheme();
   const [stock, setStock] = useState<Array<{ drug: string; qty: number }>>([]);
   useEffect(() => {
     void DASHBOARD_SERVICE.charts().then((response) => {
       const data = response.data as any;
       if (response.success)
         setStock(
-          unwrapArray(data?.therapeuticStock).map((row) => ({
-            drug: row.drug,
-            qty: Number(row.qty ?? 0),
-          })),
+          unwrapArray(data?.therapeuticStock)
+            .map((row) => ({
+              drug: row.drug,
+              qty: Number(row.qty ?? Number.NaN),
+            }))
+            .filter((row) => Number.isFinite(row.qty)),
         );
     });
   }, []);
@@ -391,6 +412,7 @@ export function TherapeuticStockChart() {
 
 /** Bar chart: Monthly GS1 Scans (scan page) */
 export function MonthlyScansChart() {
+  const { P, GM } = useChartTheme();
   const [months, setMonths] = useState<Array<{ month: string; count: number }>>(
     [],
   );
@@ -398,10 +420,12 @@ export function MonthlyScansChart() {
     void SCAN_SERVICE.monthly().then((response) => {
       if (response.success)
         setMonths(
-          unwrapArray(response.data).map((row) => ({
-            month: row.month,
-            count: Number(row.count ?? 0),
-          })),
+          unwrapArray(response.data)
+            .map((row) => ({
+              month: row.month,
+              count: Number(row.count ?? Number.NaN),
+            }))
+            .filter((row) => Number.isFinite(row.count)),
         );
     });
   }, []);

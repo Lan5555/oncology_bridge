@@ -131,13 +131,28 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           description: "Create and manage medicine identifiers.",
         },
       ];
-  const stockSections: { label: string; page: PageId; description: string }[] = [
-    { label: "Inventory", page: "pg-inventory", description: "Add batches manually and manage facility stock." },
-    { label: "Scan GS1 Barcode", page: "pg-scan", description: "Scan and decode product identifiers to record stock." },
-    { label: "Medicine Catalog", page: "pg-medicines", description: "Create and manage medicine identifiers." },
-  ];
+  const stockSections: { label: string; page: PageId; description: string }[] =
+    [
+      {
+        label: "Inventory",
+        page: "pg-inventory",
+        description: "Add batches manually and manage facility stock.",
+      },
+      {
+        label: "Scan GS1 Barcode",
+        page: "pg-scan",
+        description: "Scan and decode product identifiers to record stock.",
+      },
+      {
+        label: "Medicine Catalog",
+        page: "pg-medicines",
+        description: "Create and manage medicine identifiers.",
+      },
+    ];
   const grantedStockSections = stockSections.filter(
-    (item) => allowedPages?.includes(item.page) && !sections.some((section) => section.page === item.page),
+    (item) =>
+      allowedPages?.includes(item.page) &&
+      !sections.some((section) => section.page === item.page),
   );
   const visibleSections = [...grantedStockSections, ...sections].filter(
     (item) => !allowedPages || allowedPages.includes(item.page),
@@ -147,16 +162,35 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     !accountType || accountType === "DOCTOR" || accountType === "PHARMACIST";
   const [summary, setSummary] = useState<Record<string, any>>({});
   const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState("");
+  const [watchlistState, setWatchlistState] = useState("loading");
 
   useEffect(() => {
+    let active = true;
+    setSummary({});
+    setSummaryLoading(true);
+    setSummaryError("");
     void DASHBOARD_SERVICE.summary().then((response) => {
+      if (!active) return;
       if (response.success && response.data) setSummary(response.data);
+      else
+        setSummaryError(
+          response.message || "Your dashboard summary could not be loaded.",
+        );
+      setSummaryLoading(false);
     });
     if (isStore) {
+      setWatchlistState("loading");
       void INVENTORY_SERVICE.nearExpiry(7).then((response) => {
+        if (!active) return;
         if (response.success) setWatchlist(unwrapArray(response.data));
+        setWatchlistState(response.success ? "ready" : "error");
       });
     }
+    return () => {
+      active = false;
+    };
   }, [isStore]);
 
   const metrics = [
@@ -201,32 +235,47 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         </button>
       </header>
 
+      {summaryLoading || summaryError ? (
+        <p
+          role="status"
+          className="mb-6 rounded-xl border border-g200 bg-w p-4 text-sm text-g600"
+        >
+          {summaryLoading ? "Loading your dashboard summary..." : summaryError}
+        </p>
+      ) : null}
       <section
         className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
         aria-label="Network summary"
       >
-        {metrics.map(([label, value, Icon]) => (
-          <article
-            key={label}
-            className="flex items-center gap-3 rounded-xl border border-g200 bg-w p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-pl text-p">
-              <Icon className="size-5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-2xl font-bold tabular-nums text-g900">
-                {value == null
-                  ? "N/A"
-                  : typeof value === "number"
-                    ? value.toLocaleString()
-                    : value}
-              </p>
-              <h2 className="text-[11px] font-semibold uppercase tracking-wide text-g500">
-                {label}
-              </h2>
-            </div>
-          </article>
-        ))}
+        {metrics
+          .filter(
+            ([, value]) =>
+              value != null &&
+              value !== "" &&
+              (typeof value !== "number" || Number.isFinite(value)),
+          )
+          .map(([label, value, Icon]) => (
+            <article
+              key={label}
+              className="flex items-center gap-3 rounded-xl border border-g200 bg-w p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-pl text-p">
+                <Icon className="size-5" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-2xl font-bold tabular-nums text-g900">
+                  {value == null
+                    ? "N/A"
+                    : typeof value === "number"
+                      ? value.toLocaleString()
+                      : value}
+                </p>
+                <h2 className="text-[11px] font-semibold uppercase tracking-wide text-g500">
+                  {label}
+                </h2>
+              </div>
+            </article>
+          ))}
       </section>
 
       <section className="mb-6">
@@ -240,7 +289,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               Inventory over time
             </h3>
             <p className="mt-1 text-xs text-g500">
-              Recorded inventory totals returned by the dashboard API.
+              Recorded stock levels across your network.
             </p>
             <div className="mt-3 h-[230px]">
               <InventoryChart />
@@ -252,7 +301,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               Medicine availability split
             </h3>
             <p className="mt-1 text-xs text-g500">
-              Current medicine share from the dashboard API.
+              Medicine availability from recorded inventory.
             </p>
             <div className="mt-3 h-[230px]">
               <DrugSplitChart />
@@ -267,7 +316,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               Redistribution efficiency
             </h3>
             <p className="mt-1 text-xs text-g500">
-              Recorded transfer time by medicine or network grouping.
+              Recorded stock transfer times across the network.
             </p>
             <div className="mt-3 h-[240px]">
               <RedistributionEfficiencyChart />
@@ -282,7 +331,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               Therapeutic stock levels
             </h3>
             <p className="mt-1 text-xs text-g500">
-              Current quantities by medicine from the dashboard API.
+              Current recorded quantities by medicine.
             </p>
             <div className="mt-3 h-[240px]">
               <TherapeuticStockChart />
@@ -341,8 +390,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               <span className="mb-3 flex size-9 items-center justify-center rounded-xl bg-pl text-p transition group-hover:scale-105">
                 <Users className="size-4" aria-hidden="true" />
               </span>
-              <span className="text-sm font-bold text-g900">{canManageFacilityUsers ? "Manage facility team" : "Facility team"}</span>
-              <span className="mt-1 block text-sm text-g500">{canManageFacilityUsers ? "Invite team members and manage access for your facility." : "Open facility team access and management information."}</span>
+              <span className="text-sm font-bold text-g900">
+                {canManageFacilityUsers
+                  ? "Manage facility team"
+                  : "Facility team"}
+              </span>
+              <span className="mt-1 block text-sm text-g500">
+                {canManageFacilityUsers
+                  ? "Invite team members and manage access for your facility."
+                  : "Open facility team access and management information."}
+              </span>
             </button>
           ) : null}
         </div>
@@ -366,7 +423,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               View all
             </button>
           </div>
-          {watchlist.length ? (
+          {watchlistState !== "ready" ? (
+            <p role="status" className="py-4 text-sm text-g500">
+              {watchlistState === "loading"
+                ? "Loading near-expiry stock..."
+                : "Near-expiry stock could not be loaded. Please try again."}
+            </p>
+          ) : watchlist.length ? (
             <ul className="divide-y divide-g100">
               {watchlist.map((item, index) => (
                 <li
@@ -387,7 +450,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <EmptyState
               compact
               icon={PackageSearch}
-              title="Your stock is in the clear"
+              title="No near-expiry items"
               description="No near-expiry items were returned for your inventory."
             />
           )}

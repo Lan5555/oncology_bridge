@@ -56,8 +56,8 @@ export default function Roles() {
             Built for every member of the oncology supply chain.
           </h2>
           <p className={P_LIGHT}>
-            Three distinct roles with strict RBAC, each person sees exactly
-            what they need, nothing more.
+            Three distinct roles with strict RBAC, each person sees exactly what
+            they need, nothing more.
           </p>
         </div>
 

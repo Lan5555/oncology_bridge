@@ -219,7 +219,7 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
     <label className="mb-3 block text-xs font-semibold text-g600" key={key}>
       {label}
       <select
-        className="mt-1 w-full rounded-lg border border-g200 bg-white px-3 py-2.5 text-sm font-normal"
+        className="mt-1 w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal"
         value={values[key] ?? ""}
         onChange={set(key)}
         required

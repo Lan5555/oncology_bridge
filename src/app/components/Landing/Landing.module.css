@@ -1,0 +1,544 @@
+.hero {
+  background: var(--landing-bg);
+  color: var(--landing-text);
+  padding: 145px 28px 70px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    color-mix(in srgb, var(--landing-muted) 14%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 25px 25px;
+  mask-image: linear-gradient(to right, transparent, black);
+  pointer-events: none;
+}
+.heroInner {
+  max-width: 1180px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 1.14fr 1fr;
+  align-items: center;
+  gap: 45px;
+  position: relative;
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--landing-accent);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.hero h1 {
+  font-size: clamp(2.5rem, 4.4vw, 4.3rem);
+  font-weight: 750;
+  line-height: 1.09;
+  letter-spacing: -0.055em;
+  margin: 23px 0;
+}
+.hero h1 span {
+  color: var(--landing-accent);
+}
+.description {
+  max-width: 560px;
+  font-size: 16px;
+  line-height: 1.85;
+  color: var(--landing-muted);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 30px 0;
+}
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px 20px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+.primary {
+  background: var(--landing-cta);
+  color: var(--landing-on-cta);
+  box-shadow: 0 7px 20px var(--landing-cta) 20;
+}
+.secondary {
+  background: var(--landing-surface);
+  border: 1px solid var(--landing-border);
+  color: var(--landing-text);
+}
+.primary:hover,
+.secondary:hover {
+  transform: translateY(-2px);
+}
+.careNote {
+  border-top: 1px solid var(--landing-border);
+  padding-top: 22px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: var(--landing-muted);
+  font-size: 12px;
+  max-width: 520px;
+}
+.careNote svg {
+  color: var(--landing-accent);
+  flex-shrink: 0;
+}
+.medicalVisual {
+  position: relative;
+  padding: 20px 0 35px;
+}
+.visualLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--landing-accent);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-left: 40px;
+}
+.illustration {
+  width: 100%;
+  height: auto;
+}
+.visualNote {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--landing-surface);
+  border: 1px solid var(--landing-border);
+  padding: 18px;
+  border-radius: 14px;
+  box-shadow: 0 14px 40px #123c5110;
+  position: absolute;
+  bottom: 25px;
+  left: 15px;
+  right: 25px;
+  color: var(--landing-accent);
+}
+.visualNote strong {
+  display: block;
+  color: var(--landing-text);
+  font-size: 13px;
+}
+.visualNote span {
+  display: block;
+  color: var(--landing-muted);
+  font-size: 11px;
+  margin-top: 3px;
+}
+.traceLabel {
+  position: absolute;
+  right: -5px;
+  top: 110px;
+  background: var(--landing-surface);
+  border: 1px solid var(--landing-border);
+  padding: 12px;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  border-radius: 9px;
+  font-size: 11px;
+  color: var(--landing-accent);
+  box-shadow: 0 10px 30px #123c510b;
+}
+@media (min-width: 1600px) {
+  .hero {
+    padding-top: 175px;
+    padding-bottom: 95px;
+  }
+}
+@media (max-width: 900px) {
+  .heroInner {
+    gap: 20px;
+  }
+  .hero h1 {
+    font-size: 2.9rem;
+  }
+  .traceLabel {
+    top: 75px;
+    right: 0;
+  }
+}
+@media (max-width: 700px) {
+  .hero {
+    padding: 110px 22px 45px;
+  }
+  .heroInner {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .hero h1 {
+    font-size: clamp(2.45rem, 8vw, 3.5rem);
+  }
+  .description {
+    font-size: 15px;
+  }
+  .medicalVisual {
+    max-width: 440px;
+    width: 100%;
+    margin: auto;
+  }
+  .visualLabel {
+    margin-left: 20px;
+  }
+}
+@media (max-width: 380px) {
+  .actions {
+    flex-direction: column;
+  }
+  .hero {
+    padding-inline: 16px;
+  }
+  .visualNote {
+    left: 0;
+    right: 0;
+    padding: 13px;
+  }
+  .visualNote span {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .primary,
+  .secondary {
+    transition: none;
+  }
+}
+
+.contentSection,
+.guideSection,
+.joinSection {
+  padding: 88px 24px;
+  color: var(--landing-text);
+  background: var(--landing-surface);
+  scroll-margin-top: 90px;
+}
+.sectionInner {
+  max-width: 1100px;
+  margin: auto;
+}
+.sectionHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 32px;
+  margin-bottom: 36px;
+}
+.sectionHeading h2,
+.guideIntro h2,
+.faqGrid h2,
+.joinSection h2 {
+  font-size: clamp(1.9rem, 3.2vw, 2.8rem);
+  line-height: 1.18;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  margin: 15px 0 20px;
+}
+.sectionIntro {
+  max-width: 390px;
+  color: var(--landing-muted);
+  font-size: 14px;
+  line-height: 1.85;
+}
+.capabilityGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.capabilityCard {
+  padding: 25px;
+  border: 1px solid var(--landing-border);
+  border-radius: 16px;
+  background: var(--landing-bg);
+}
+.capabilityTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 23px;
+}
+.featureIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  padding: 11px;
+  background: var(--landing-soft);
+  color: var(--landing-accent);
+  flex-shrink: 0;
+}
+.featureTag {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--landing-accent);
+}
+.capabilityCard h3 {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+.capabilityCard p,
+.accessNote p,
+.guideIntro > p,
+.stockSteps p,
+.faqItem p {
+  color: var(--landing-muted);
+  font-size: 13px;
+  line-height: 1.85;
+}
+.accessNote {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  background: var(--landing-soft);
+  border-radius: 13px;
+  margin-top: 24px;
+}
+.accessNote > svg {
+  color: var(--landing-accent);
+  flex-shrink: 0;
+}
+.accessNote p {
+  flex: 1;
+}
+.accessNote strong {
+  display: block;
+  color: var(--landing-text);
+  margin-bottom: 4px;
+}
+.accessNote a,
+.textLink {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--landing-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+.accessNote a {
+  flex-shrink: 0;
+}
+.guideSection {
+  background: var(--landing-bg);
+}
+.guideGrid,
+.faqGrid {
+  max-width: 1100px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 80px;
+}
+.guideIntro > p {
+  max-width: 370px;
+}
+.checklist {
+  margin-top: 28px;
+  padding: 22px;
+  background: var(--landing-surface);
+  border: 1px solid var(--landing-border);
+  border-radius: 14px;
+}
+.checklist h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+.checklist p {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--landing-muted);
+  margin-top: 10px;
+}
+.checklist svg {
+  color: var(--landing-accent);
+  flex-shrink: 0;
+}
+.stockSteps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.stockSteps li {
+  display: flex;
+  align-items: start;
+  gap: 20px;
+  padding-bottom: 12px;
+}
+.stepNumber {
+  flex-shrink: 0;
+  border: 1px solid var(--landing-border);
+  background: var(--landing-surface);
+  color: var(--landing-accent);
+  border-radius: 50%;
+  width: 43px;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 750;
+}
+.stockSteps h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 8px 0 9px;
+}
+.stepArrow {
+  color: var(--landing-accent);
+  margin: 17px 0 7px;
+}
+.faqGrid {
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 65px;
+}
+.textLink {
+  margin-top: 23px;
+  line-height: 1.6;
+}
+.faqItem {
+  border-bottom: 1px solid var(--landing-border);
+}
+.faqItem:first-child {
+  border-top: 1px solid var(--landing-border);
+}
+.faqItem summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  list-style: none;
+  cursor: pointer;
+  padding: 22px 0;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.6;
+}
+.faqItem summary::-webkit-details-marker {
+  display: none;
+}
+.faqItem summary span {
+  color: var(--landing-accent);
+  font-size: 21px;
+  font-weight: 400;
+  transition: transform 0.2s;
+}
+.faqItem[open] summary span {
+  transform: rotate(45deg);
+}
+.faqItem p {
+  padding: 0 22px 23px 0;
+}
+.joinSection {
+  background: var(--landing-soft);
+  text-align: center;
+}
+.joinIcon {
+  display: block;
+  color: var(--landing-accent);
+  margin: 0 auto 22px;
+}
+.joinSection p:not(.eyebrow) {
+  font-size: 14px;
+  color: var(--landing-muted);
+  line-height: 1.8;
+  max-width: 490px;
+  margin: auto;
+}
+.joinSection .actions {
+  justify-content: center;
+  margin-bottom: 0;
+}
+.contentSection a:focus-visible,
+.guideSection a:focus-visible,
+.joinSection a:focus-visible,
+.faqItem summary:focus-visible {
+  outline: 2px solid var(--landing-accent);
+  outline-offset: 5px;
+  border-radius: 4px;
+}
+@media (max-width: 900px) {
+  .capabilityGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .guideGrid,
+  .faqGrid {
+    gap: 35px;
+  }
+  .accessNote {
+    flex-wrap: wrap;
+  }
+  .accessNote a {
+    margin-left: 41px;
+  }
+}
+@media (max-width: 650px) {
+  .contentSection,
+  .guideSection,
+  .joinSection {
+    padding: 58px 20px;
+  }
+  .sectionHeading {
+    display: block;
+  }
+  .sectionIntro {
+    max-width: none;
+  }
+  .capabilityGrid,
+  .guideGrid,
+  .faqGrid {
+    grid-template-columns: 1fr;
+  }
+  .capabilityCard {
+    padding: 23px;
+  }
+  .accessNote {
+    align-items: start;
+    gap: 12px;
+    padding: 20px;
+  }
+  .accessNote a {
+    margin-left: 35px;
+  }
+  .accessNote p {
+    flex-basis: calc(100% - 40px);
+  }
+  .guideIntro > p {
+    max-width: none;
+  }
+  .stockSteps {
+    margin-top: 8px;
+  }
+  .faqGrid {
+    gap: 28px;
+  }
+}

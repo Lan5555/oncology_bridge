@@ -28,6 +28,7 @@
 }
 
 @custom-variant dk (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* Dashboard surfaces share a soft blue tint instead of large white panels. */
 .dashboard-shell {
@@ -49,6 +50,18 @@
 }
 
 :root {
+  --landing-bg: #f1f6f7;
+  --landing-surface: #ffffff;
+  --landing-soft: #e8f2f1;
+  --landing-text: #102c45;
+  --landing-muted: #506678;
+  --landing-border: #d3e0e3;
+  --landing-accent: #216d73;
+  --landing-cta: #143958;
+  --landing-on-cta: #ffffff;
+  --landing-nav: #ffffffed;
+  --landing-illustration-start: #d8eceb;
+  --landing-illustration-end: #edf4fa;
   --p: #1e40af;
   --pd: #1e3a8a;
   --pdd: #172554;
@@ -72,6 +85,10 @@
   --warnl: #fffbeb;
   --err: #ef4444;
   --errl: #fef2f2;
+  --status-good: #047857;
+  --status-warn: #92400e;
+  --status-error: #b91c1c;
+  --on-primary: #ffffff;
   --r: 12px;
   --rsm: 8px;
   --rlg: 16px;
@@ -80,6 +97,18 @@
 }
 
 [data-theme="dark"] {
+  --landing-bg: #081522;
+  --landing-surface: #102234;
+  --landing-soft: #122e38;
+  --landing-text: #edf5fa;
+  --landing-muted: #adc1ce;
+  --landing-border: #294152;
+  --landing-accent: #87d3ce;
+  --landing-cta: #92c9e7;
+  --landing-on-cta: #0a2234;
+  --landing-nav: #0c1c2bed;
+  --landing-illustration-start: #193b44;
+  --landing-illustration-end: #12293e;
   --p: #60a5fa;
   --pd: #93c5fd;
   --pdd: #bfdbfe;
@@ -100,6 +129,15 @@
   --warnl: #451a03;
   --errl: #450a0a;
   --ac: #3b82f6;
+  --status-good: #6ee7b7;
+  --status-warn: #fcd34d;
+  --status-error: #fca5a5;
+  --on-primary: #020617;
+}
+
+.dashboard-shell [class~="bg-p"][class~="text-white"],
+[class~="admin-console"] [class~="bg-p"][class~="text-white"] {
+  color: var(--on-primary);
 }
 
 @theme {

@@ -56,6 +56,8 @@ export interface OrderRecord {
   orderClass: string;
 }
 export interface VerificationApplication {
+  registry?: string;
+  registry_name?: string | null;
   id: string;
   name: string;
   accountType: AccountType;

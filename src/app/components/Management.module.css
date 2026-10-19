@@ -1,5 +1,5 @@
 .console {
-  --management-accent: #177e89;
+  --management-accent: var(--p);
   --management-surface: #f0f5fc;
   --management-line: #cbd8e9;
   --management-muted: #708094;
@@ -17,7 +17,7 @@
   --g100: #1e293b;
   --g200: #334155;
   --pll: #020617;
-  --management-accent: #6fd3dc;
+  --management-accent: var(--p);
   --management-surface: #0f2038;
   --management-line: #24364c;
   --management-muted: #a2b3c8;
@@ -446,15 +446,15 @@
   gap: 9px;
   padding: 12px 18px;
   border-radius: 11px;
-  background: #167d89;
-  color: #fff;
+  background: var(--p);
+  color: var(--w);
   font-size: 12px;
   font-weight: 600;
   box-shadow: 0 4px 10px #167d8918;
   transition: background 0.2s;
 }
 .primaryButton:hover {
-  background: #126571;
+  background: var(--pd);
 }
 .primaryButton:disabled {
   opacity: 0.5;
@@ -554,14 +554,14 @@
   white-space: nowrap;
 }
 .badge[data-tone="good"] {
-  color: #12735a;
-  background: #e9f7f0;
-  border-color: #d3eadc;
+  color: var(--status-good);
+  background: var(--okl);
+  border-color: color-mix(in srgb, var(--status-good) 25%, transparent);
 }
 .badge[data-tone="pending"] {
-  color: #956018;
-  background: #fff8eb;
-  border-color: #f3e6c9;
+  color: var(--status-warn);
+  background: var(--warnl);
+  border-color: color-mix(in srgb, var(--status-warn) 25%, transparent);
 }
 .badge[data-tone="muted"] {
   color: var(--g500);
@@ -599,10 +599,10 @@
   width: 39px;
   height: 39px;
   flex-shrink: 0;
-  border: 1px solid #167d8915;
+  border: 1px solid color-mix(in srgb, var(--p) 15%, transparent);
   border-radius: 12px;
-  color: #167d89;
-  background: #167d8910;
+  color: var(--p);
+  background: color-mix(in srgb, var(--p) 8%, transparent);
   font-size: 12px;
   font-weight: 700;
 }
@@ -628,8 +628,8 @@
   font-weight: 600;
 }
 .teamTabs button[aria-pressed="true"] {
-  color: #167d89;
-  background: #167d8910;
+  color: var(--p);
+  background: color-mix(in srgb, var(--p) 8%, transparent);
 }
 .teamSearch {
   position: relative;

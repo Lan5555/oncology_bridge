@@ -19,8 +19,9 @@ export class Routes {
   static RESET_PASSWORD = "/auth/api/reset-password";
 
   static REGISTER_FACILITY = "/hospital/api/register-facility";
-  static PUBLIC_FACILITIES = (params: Record<string, string | number | undefined>) =>
-    `/hospital/api/public-facilities${query(params)}`;
+  static PUBLIC_FACILITIES = (
+    params: Record<string, string | number | undefined>,
+  ) => `/hospital/api/public-facilities${query(params)}`;
   static REGISTER_TO_FACILITY = "/hospital/api/register-user-to-facility";
   static FACILITIES = (params: Record<string, string | number | undefined>) =>
     `/hospital/api/find-all-facilities${query(params)}`;
@@ -149,6 +150,8 @@ export class Routes {
   ) => `/api/facility-membership-requests/${id(requestId)}/${decision}`;
   static FACILITY_MEMBERSHIP_LICENSE_CHECK = (requestId: string) =>
     `/api/facility-membership-requests/${id(requestId)}/license-check`;
+  static FACILITY_MEMBERSHIP_LICENSE_LOOKUP = (requestId: string) =>
+    `/api/facility-membership-requests/${id(requestId)}/license-lookup`;
   static USER_DELETE = (userId: string) =>
     `/users/api/delete-one-user/${id(userId)}`;
   static RESEARCH_INQUIRIES = "/api/research/inquiries";

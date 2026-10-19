@@ -32,7 +32,9 @@ class UserService extends CoreService {
     return await this.send(Routes.USERS_CREATE, payload, { admin });
   }
   async facilityMembershipRequests(status = "PENDING", admin = false) {
-    return await this.get(Routes.FACILITY_MEMBERSHIP_REQUESTS(status), { admin });
+    return await this.get(Routes.FACILITY_MEMBERSHIP_REQUESTS(status), {
+      admin,
+    });
   }
   async decideFacilityMembership(
     id: string,
@@ -46,9 +48,9 @@ class UserService extends CoreService {
       { admin },
     );
   }
-  async checkFacilityMembershipLicense(id: string, admin = false) {
+  async lookupFacilityMembershipLicense(id: string, admin = false) {
     return await this.send(
-      Routes.FACILITY_MEMBERSHIP_LICENSE_CHECK(id),
+      Routes.FACILITY_MEMBERSHIP_LICENSE_LOOKUP(id),
       {},
       { admin },
     );

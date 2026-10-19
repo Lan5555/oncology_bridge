@@ -1,4 +1,5 @@
 "use client";
+import BrandLogo from "./BrandLogo";
 
 import {
   ArrowLeft,
@@ -40,7 +41,6 @@ import { FacilityResponse } from "../models/facility-model";
 import { UserResponse } from "../models/user-model";
 import { useProvider } from "../providers/provider";
 import { AUTH_SERVICE } from "../services/auth-service/auth-service";
-import { DASHBOARD_SERVICE } from "../services/dashboard-service/dashboard-service";
 import { FACILITY_SERVICE } from "../services/facility-service/facility-service";
 import { unwrapArray } from "../services/response-utils";
 import { VERIFICATION_SERVICE } from "../services/verification-service/verification-service";
@@ -91,10 +91,6 @@ export default function AuthPages({
   const [facilitiesError, setFacilitiesError] = useState("");
   const [facilitySearch, setFacilitySearch] = useState("");
   const [selectedFacilityId, setSelectedFacilityId] = useState("");
-  const [publicStats, setPublicStats] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
 
   // Login
   const [email, setEmail] = useState<string>("");
@@ -125,23 +121,6 @@ export default function AuthPages({
   // Handle hydration
   useEffect(() => {
     setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    let current = true;
-    void DASHBOARD_SERVICE.publicStats().then((response) => {
-      if (
-        current &&
-        response.success &&
-        response.data &&
-        typeof response.data === "object"
-      ) {
-        setPublicStats(response.data as Record<string, unknown>);
-      }
-    });
-    return () => {
-      current = false;
-    };
   }, []);
 
   useEffect(() => {
@@ -388,31 +367,6 @@ export default function AuthPages({
   const goBack = () =>
     setRegisterStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3 | 4) : s));
 
-  const publicMetric = (...keys: string[]) => {
-    for (const key of keys) {
-      const value = publicStats?.[key];
-      if (typeof value === "number" && Number.isFinite(value)) return value;
-    }
-    return null;
-  };
-  const formatCount = (value: number | null) =>
-    value === null
-      ? "N/A"
-      : new Intl.NumberFormat("en-NG", {
-          notation: "compact",
-          maximumFractionDigits: 1,
-        }).format(value);
-  const recoveredValue = publicMetric("valueRecoveredNaira");
-  const formatRecoveredValue = () =>
-    recoveredValue === null
-      ? "N/A"
-      : new Intl.NumberFormat("en-NG", {
-          style: "currency",
-          currency: "NGN",
-          notation: "compact",
-          maximumFractionDigits: 1,
-        }).format(recoveredValue);
-
   if (!isMounted)
     return (
       <div className="flex min-h-svh items-center justify-center bg-g50">
@@ -426,7 +380,7 @@ export default function AuthPages({
       <aside className={auth.story} aria-label="About Oncosourz">
         <Link href="/" className={auth.brand}>
           <span className={auth.brandMark}>
-            <ShieldCheck className="size-5" />
+            <BrandLogo markOnly className="size-9 rounded-lg bg-white" />
           </span>
           <span>
             <strong>Oncosourz</strong>
@@ -478,19 +432,9 @@ export default function AuthPages({
         </div>
         <div className={auth.networkStats}>
           {[
-            {
-              label: "Active facilities",
-              value: formatCount(
-                publicMetric("nodes", "facilityCount", "activeFacilities"),
-              ),
-            },
-            {
-              label: "GS1 checks",
-              value: formatCount(
-                publicMetric("gs1AuthenticatedVials", "gs1Checks", "gs1Scans"),
-              ),
-            },
-            { label: "Value recovered", value: formatRecoveredValue() },
+            { label: "Professional review", value: "Licences" },
+            { label: "Batch traceability", value: "GS1" },
+            { label: "Secure checkout", value: "Paystack" },
           ].map((stat) => (
             <div key={stat.label}>
               <strong>{stat.value}</strong>
@@ -507,7 +451,7 @@ export default function AuthPages({
           </Link>
           <Link href="/" className={auth.brand + " " + auth.mobileBrand}>
             <span className={auth.brandMark}>
-              <ShieldCheck className="size-5" />
+              <BrandLogo markOnly className="size-9 rounded-lg bg-white" />
             </span>
             <span>
               <strong>Oncosourz</strong>
@@ -1482,8 +1426,8 @@ export default function AuthPages({
                         autoComplete="off"
                       />
                       <p className={`mt-1.5 text-xs ${mutedText}`}>
-                        Checked against the {accountInfo?.registryName}{" "}
-                        register.
+                        Your licence will be reviewed using the registry
+                        configured for your professional account.
                       </p>
                     </div>
 
@@ -1494,7 +1438,7 @@ export default function AuthPages({
                       >
                         {isStore
                           ? "Pharmacy store licence document"
-                          : `${accountType === "DOCTOR" ? "MDCN" : "PCN"} certificate`}
+                          : "Professional licence certificate"}
                       </label>
                       <input
                         accept="application/pdf,image/jpeg,image/png"
