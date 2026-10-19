@@ -10,6 +10,7 @@ import ExpiryPage from "./ExpiryPage";
 import FacilitiesPage from "./FacilitiesPage";
 import InventoryPage from "./InventoryPage";
 import MedicinesPage from "./MedicinesPage";
+import MarketplacePage from "./MarketplacePage";
 import NetworkPage from "./NetworkPage";
 import PrescriptionsPage from "./PrescriptionsPage";
 import ScanPage from "./ScanPage";
@@ -80,6 +81,7 @@ const DashboardView: React.FC = () => {
     const target = window.localStorage.getItem("adminTarget");
     if (target) {
       const valid = [
+        "pg-marketplace",
         "pg-dashboard",
         "pg-inventory",
         "pg-medicines",
@@ -120,6 +122,7 @@ const DashboardView: React.FC = () => {
   // Dashboard no longer shows auth UI; authentication is handled on /auth route.
 
   const pageComponents: Record<PageId, React.ReactNode> = {
+    "pg-marketplace": <MarketplacePage />,
     "pg-dashboard": (
       <DashboardPage
         onNav={handleNav}
@@ -158,7 +161,7 @@ const DashboardView: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="dashboard-shell">
       <TopNav
         activePage={activePage}
         onNav={handleNav}
@@ -192,7 +195,7 @@ const DashboardView: React.FC = () => {
         openModalId={openModalId}
         onCloseModal={() => setOpenModalId(null)}
       />
-    </>
+    </div>
   );
 };
 export default DashboardView;

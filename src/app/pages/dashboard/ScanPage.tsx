@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "sonner";
+
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { MonthlyScansChart } from "../../components/Charts";
 import Camera from "@/app/components/Camera/camera";
@@ -125,12 +127,24 @@ export default function ScanPage() {
     return result || null;
   };
   const saveQueue = (items: QueuedScan[]) => {
-    setQueuedScans(items);
-    window.localStorage.setItem(queueStorageKey, JSON.stringify(items));
+    try {
+      window.localStorage.setItem(queueStorageKey, JSON.stringify(items));
+      setQueuedScans(items);
+      return true;
+    } catch {
+      const message =
+        "The scan queue could not be saved on this device. Keep the details and try again.";
+      setNotice(message);
+      toast.error(message);
+      return false;
+    }
   };
   const syncQueuedScans = async () => {
     if (!queuedScans.length || syncing) return;
     if (!navigator.onLine) {
+      toast.warning(
+        "You are offline. Pending scans will stay saved on this device.",
+      );
       setNotice(
         "You are offline. Pending scans will stay saved on this device.",
       );
@@ -140,6 +154,9 @@ export default function ScanPage() {
     const response = await SCAN_SERVICE.batch(queuedScans);
     setSyncing(false);
     if (!response.success) {
+      toast.error(
+        response.message || "Queued scans could not be synchronized.",
+      );
       setNotice(response.message || "Queued scans could not be synchronized.");
       return;
     }
@@ -152,6 +169,9 @@ export default function ScanPage() {
           ? payload.data
           : null;
     if (!results) {
+      toast.warning(
+        "Pending scans were kept because synchronization could not be confirmed.",
+      );
       setNotice(
         "The server did not return item-level results. Pending scans were kept.",
       );
@@ -170,7 +190,12 @@ export default function ScanPage() {
         ["FAILED", "ERROR"].includes(result.status)
       );
     });
-    saveQueue(remaining);
+    if (!saveQueue(remaining)) return;
+    if (remaining.length)
+      toast.warning(
+        "Some scans remain queued. Review the synchronization details.",
+      );
+    else toast.success("Queued scans synchronized.");
     setNotice(
       remaining.length
         ? `${queuedScans.length - remaining.length} scan(s) synced; ${remaining.length} remain queued.`
@@ -198,6 +223,13 @@ export default function ScanPage() {
             : "Scan could not be submitted."),
     );
     if (response.success) {
+      if (
+        ["FLAGGED", "QUARANTINED"].includes(String(savedStatus).toUpperCase())
+      )
+        toast.warning(
+          response.message || "Scan recorded and flagged for review.",
+        );
+      else toast.success(response.message || "Scan saved to the ledger.");
       setForm({
         ...form,
         gtin: "",
@@ -216,7 +248,13 @@ export default function ScanPage() {
         response.message,
       )
     ) {
-      saveQueue([...queuedScans, payload]);
+      if (!saveQueue([...queuedScans, payload])) {
+        setBusy(false);
+        return;
+      }
+      toast.warning(
+        "Network unavailable. Scan saved on this device for later synchronization.",
+      );
       setNotice(
         "Network unavailable. Scan saved on this device for later synchronization.",
       );
@@ -229,6 +267,14 @@ export default function ScanPage() {
         notes: "",
       });
     }
+    if (
+      !response.success &&
+      navigator.onLine &&
+      !/failed to fetch|network request failed|load failed/i.test(
+        response.message,
+      )
+    )
+      toast.error(response.message || "Scan could not be submitted.");
     setBusy(false);
   };
   const decodeImage = async (image: Blob) => {
@@ -246,6 +292,10 @@ export default function ScanPage() {
       responseData?.identifiers ?? responseData?.decoded,
     );
     if (!response.success && !hasDecodedIdentifiers) {
+      toast.error(
+        response.message ||
+          "Camera decoding failed. Try again or enter the details manually.",
+      );
       setNotice(
         response.message ||
           "Camera decoding failed. Enter the GS1 values manually.",
@@ -263,6 +313,9 @@ export default function ScanPage() {
       serial: decoded.serial ?? decoded.serialNumber ?? "",
     };
     if (!identifiers.gtin) {
+      toast.warning(
+        "No barcode identifiers were found. Try a clearer photo or enter the details manually.",
+      );
       setNotice(
         "The image was received, but no GS1 identifiers were returned. Try again or enter them manually.",
       );
@@ -281,6 +334,11 @@ export default function ScanPage() {
         : response.message ||
             "Identifiers decoded. Review the values, then submit them to the ledger.",
     );
+    if (decodeResult?.validation?.valid === false)
+      toast.warning(
+        "Barcode decoded with validation issues. Review the highlighted details.",
+      );
+    else toast.info("Barcode captured. Review the details before submitting.");
     setCameraOpen(false);
     window.setTimeout(
       () =>
@@ -376,9 +434,8 @@ export default function ScanPage() {
               </button>
             </div>
             <p className="mt-3 text-[11px] leading-5 text-g500">
-              Camera capture calls <code>POST /api/scans/decode</code>. Review
-              the decoded values and submit them to <code>POST /api/scans</code>
-              .
+              Scan the medicine barcode, review the captured details, then save
+              the item. You can also enter the details manually.
             </p>
           </section>
           <form
@@ -533,7 +590,7 @@ export default function ScanPage() {
                   {scan.drug ?? scan.gtin}
                 </p>
                 <p className="mt-1 text-xs text-g500">
-                  {scan.result ?? scan.status ?? "—"} ·{" "}
+                  {scan.result ?? scan.status ?? "N/A"} ·{" "}
                   {scan.at
                     ? new Date(scan.at).toLocaleString("en-NG")
                     : scan.gtin}

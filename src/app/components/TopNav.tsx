@@ -15,6 +15,7 @@ import {
   Menu,
   Moon,
   Pill,
+  ShoppingBag,
   Sun,
 } from "lucide-react";
 import { AUTH_SERVICE } from "../services/auth-service/auth-service";
@@ -34,6 +35,7 @@ const QUICK_LINKS: {
   icon: typeof LayoutDashboard;
 }[] = [
   { id: "pg-dashboard", label: "Overview", icon: LayoutDashboard },
+  { id: "pg-marketplace", label: "Marketplace", icon: ShoppingBag },
   { id: "pg-inventory", label: "Inventory", icon: Boxes },
   { id: "pg-transfers", label: "Transfers", icon: ArrowLeftRight },
   { id: "pg-prescriptions", label: "Prescriptions", icon: ClipboardList },

@@ -14,7 +14,7 @@ import EmptyState from "@/app/components/EmptyState";
 import { useColdChainMonitor } from "@/app/hooks/useColdChainMonitor";
 
 const dateLabel = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("en-NG") : "—";
+  value ? new Date(value).toLocaleString("en-NG") : "N/A";
 
 export default function ColdChainPage() {
   const [hours, setHours] = useState(24);
@@ -281,8 +281,8 @@ export default function ColdChainPage() {
                 {(event.observedMinCelsius != null ||
                   event.observedMaxCelsius != null) && (
                   <p className="mt-1 text-xs text-g600">
-                    Observed: {event.observedMinCelsius ?? "—"}°C to{" "}
-                    {event.observedMaxCelsius ?? "—"}°C
+                    Observed: {event.observedMinCelsius ?? "N/A"}°C to{" "}
+                    {event.observedMaxCelsius ?? "N/A"}°C
                   </p>
                 )}
                 {event.actionTaken && (

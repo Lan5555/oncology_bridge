@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import AuthPages from "@/app/components/AuthPages";
-import PingServerLoader from "@/app/components/Loader/ping-server.";
 import type { AuthView } from "@/app/lib/types";
 import { AUTH_SERVICE } from "@/app/services/auth-service/auth-service";
 
@@ -17,7 +16,6 @@ export default function AuthPage({
   const router = useRouter();
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [isMounted, setIsMounted] = useState(false);
-  const [serverReady, setServerReady] = useState<boolean>(false);
 
   // Handle hydration - only run on client
   useEffect(() => {
@@ -29,11 +27,11 @@ export default function AuthPage({
       setTheme("dark");
     }
     void AUTH_SERVICE.pingServer().then((res) => {
-      if (res.success) {
-        setServerReady(true);
-      } else {
-        toast.error(res.message);
-      }
+      if (!res.success)
+        toast.error(
+          res.message ||
+            "The service is temporarily unavailable. Please try signing in again shortly.",
+        );
     });
   }, []);
 
@@ -63,9 +61,6 @@ export default function AuthPage({
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
       </div>
     );
-  }
-  if (!serverReady) {
-    return <PingServerLoader />;
   }
 
   return (

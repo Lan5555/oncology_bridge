@@ -2,7 +2,51 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
+/* Notifications sit above app overlays and use a manual popover for native dialogs. */
+.notification-layer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  background: transparent;
+  color: inherit;
+  pointer-events: none;
+  z-index: 2147483647;
+}
+
+.notification-layer > * {
+  pointer-events: auto;
+}
+
+.notification-layer::backdrop {
+  background: transparent;
+  pointer-events: none;
+}
+
 @custom-variant dk (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Dashboard surfaces share a soft blue tint instead of large white panels. */
+.dashboard-shell {
+  --w: #f0f5fc;
+  --g50: #e4ecf6;
+  --g100: #dce5f1;
+  --g200: #cbd8e9;
+  --pll: #e8f0fc;
+  min-height: 100svh;
+  background: var(--g50);
+}
+
+[data-theme="dark"] .dashboard-shell {
+  --w: #0f172a;
+  --g50: #020617;
+  --g100: #1e293b;
+  --g200: #334155;
+  --pll: #020617;
+}
 
 :root {
   --p: #1e40af;

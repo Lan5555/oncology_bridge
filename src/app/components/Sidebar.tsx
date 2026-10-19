@@ -11,6 +11,7 @@ import {
   Pill,
   ScanLine,
   Settings,
+  ShoppingBag,
   Thermometer,
   Users,
 } from "lucide-react";
@@ -38,6 +39,7 @@ interface Item {
 }
 
 const ITEMS: Item[] = [
+  { id: "pg-marketplace", label: "Marketplace", icon: ShoppingBag, section: "Overview", description: "Find medicines, compare and purchase." },
   {
     id: "pg-dashboard",
     label: "Dashboard",

@@ -15,6 +15,7 @@ export interface InvoiceData {
     unitPriceNaira: number;
   }>;
   paymentMethods: string[];
+  paystackUrl?: string;
   isDemo?: boolean;
 }
 export interface StockItem {

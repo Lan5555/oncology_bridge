@@ -1,5 +1,9 @@
 "use client";
 
+import { toast } from "sonner";
+
+import { notifyResult } from "@/app/lib/notifications";
+
 import { useEffect, useState } from "react";
 import { ClipboardList } from "lucide-react";
 import EmptyState from "@/app/components/EmptyState";
@@ -23,6 +27,11 @@ export default function AuditPage({
   }, [adminMode]);
   const verify = async () => {
     const response = await AUDIT_SERVICE.verify(adminMode);
+    notifyResult(
+      response,
+      "Audit verification completed.",
+      "Audit verification failed.",
+    );
     setMessage(
       response.success
         ? response.message || "Audit chain verified."
@@ -33,6 +42,7 @@ export default function AuditPage({
     const response = await AUDIT_SERVICE.exportCsv(adminMode);
     const value = (response.data as any)?.csv ?? response.data;
     if (!response.success || !value) {
+      toast.error(response.message || "Audit export failed.");
       setMessage(response.message || "Audit export failed.");
       return;
     }
@@ -45,6 +55,7 @@ export default function AuditPage({
     link.download = "audit.csv";
     link.click();
     URL.revokeObjectURL(link.href);
+    toast.success("Audit export downloaded.");
   };
   return (
     <div className="block animate-fade-up">
@@ -90,11 +101,11 @@ export default function AuditPage({
                 {entry.object_type ? ` · ${entry.object_type}` : ""}
               </h2>
               <time className="text-xs text-g500">
-                {entry.at ? new Date(entry.at).toLocaleString("en-NG") : "—"}
+                {entry.at ? new Date(entry.at).toLocaleString("en-NG") : "N/A"}
               </time>
             </div>
             <p className="mt-1 text-xs text-g500">
-              {entry.detail ?? entry.message ?? "—"}
+              {entry.detail ?? entry.message ?? "N/A"}
             </p>
             <p className="mt-1 text-[11px] text-g400">
               {entry.actor?.name ?? entry.actor ?? "System"}

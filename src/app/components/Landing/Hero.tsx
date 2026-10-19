@@ -57,7 +57,7 @@ export default function Hero() {
 
         <p className="mx-auto mb-10 max-w-[580px] animate-[slideUp_.6s_.9s_ease_forwards] text-[clamp(15px,2vw,18px)] leading-[1.75] text-white/60 opacity-0">
           Oncosourz connects licensed doctors, pharmacists and pharmacy stores
-          on one live, GS1-authenticated network — so life-saving oncology
+          on one live, GS1-authenticated network, so life-saving oncology
           biologics are found, verified, cold-chain monitored and redistributed
           before they expire.
         </p>

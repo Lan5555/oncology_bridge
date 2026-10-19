@@ -133,6 +133,8 @@ export default async function InvoiceCheckoutPage({
             <InvoicePayment
               paymentMethods={invoice.paymentMethods}
               reference={invoice.reference}
+              status={invoice.status}
+              paystackUrl={invoice.paystackUrl}
             />
           ) : null}
           <Link

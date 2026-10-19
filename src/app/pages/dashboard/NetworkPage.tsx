@@ -129,19 +129,19 @@ export default function NetworkPage() {
           [
             "Average distance",
             analytics.avgDistanceKm == null
-              ? "—"
+              ? "N/A"
               : `${analytics.avgDistanceKm} km`,
           ],
           [
             "Average transit",
             analytics.avgTransitHrs == null
-              ? "—"
+              ? "N/A"
               : `${analytics.avgTransitHrs} hrs`,
           ],
           [
             "Fuel saved",
             analytics.fuelSavedNaira == null
-              ? "—"
+              ? "N/A"
               : new Intl.NumberFormat("en-NG", {
                   style: "currency",
                   currency: "NGN",
@@ -400,7 +400,7 @@ export default function NetworkPage() {
                 </span>
               </div>
               <p className="mt-1 text-xs text-g500">
-                {facility.type ?? "Facility"} · {facility.city ?? "—"}
+                {facility.type ?? "Facility"} · {facility.city ?? "N/A"}
               </p>
             </article>
           ))}

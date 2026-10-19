@@ -1,5 +1,7 @@
 "use client";
 
+import { notifyResult } from "@/app/lib/notifications";
+
 import { useEffect, useState } from "react";
 import { PackageSearch } from "lucide-react";
 import EmptyState from "@/app/components/EmptyState";
@@ -31,6 +33,11 @@ export default function ExpiryPage() {
       recipientFacilityId: recipient.id,
       quantity: item.qty ?? item.quantity ?? 1,
     });
+    notifyResult(
+      response,
+      "Transfer request submitted.",
+      "Transfer request could not be submitted.",
+    );
     setNotice(
       response.message ||
         (response.success
@@ -82,23 +89,25 @@ export default function ExpiryPage() {
             {items.map((item) => (
               <tr className="border-t border-g100" key={item.id}>
                 <td className="px-4 py-3 font-semibold text-g800">
-                  {item.drug ?? "—"}
+                  {item.drug ?? "N/A"}
                 </td>
                 <td className="px-4 py-3 font-mono text-xs">
-                  {item.lot ?? item.batchNumber ?? "—"}
+                  {item.lot ?? item.batchNumber ?? "N/A"}
                 </td>
                 <td className="px-4 py-3">
-                  {item.donorFacility?.name ?? item.donorFacility ?? "—"}
+                  {item.donorFacility?.name ?? item.donorFacility ?? "N/A"}
                 </td>
                 <td className="px-4 py-3">{item.qty ?? item.quantity ?? 0}</td>
                 <td className="px-4 py-3">
                   {item.expiry
                     ? new Date(item.expiry).toLocaleDateString("en-NG")
-                    : "—"}
+                    : "N/A"}
                 </td>
-                <td className="px-4 py-3">{item.daysLeft ?? "—"}</td>
+                <td className="px-4 py-3">{item.daysLeft ?? "N/A"}</td>
                 <td className="px-4 py-3">
-                  {item.nearestRecipient?.name ?? item.nearestRecipient ?? "—"}
+                  {item.nearestRecipient?.name ??
+                    item.nearestRecipient ??
+                    "N/A"}
                   {item.distanceKm != null ? ` · ${item.distanceKm} km` : ""}
                 </td>
                 <td className="px-4 py-3">

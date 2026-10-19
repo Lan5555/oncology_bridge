@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { notifyResult } from "@/app/lib/notifications";
 import { type FormEvent, useEffect, useState } from "react";
 import type { ModalId, PageId } from "../../lib/types";
 import type { InventoryRecord } from "@/app/services/bridge-data/bridge-data-service";
@@ -58,16 +60,16 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
             : "bg-okl text-[#065f46]";
         return {
           id: item.id,
-          drug: item.drug ?? item.medicine?.generic_name ?? "—",
-          gtin: item.gtin ?? "—",
-          lot: item.lot ?? item.batchNumber ?? "—",
-          facility: item.facility?.name ?? item.facility ?? "—",
+          drug: item.drug ?? item.medicine?.generic_name ?? "N/A",
+          gtin: item.gtin ?? "N/A",
+          lot: item.lot ?? item.batchNumber ?? "N/A",
+          facility: item.facility?.name ?? item.facility ?? "N/A",
           qty: item.qty ?? item.quantity ?? 0,
           expiry: item.expiry
             ? new Date(item.expiry).toLocaleDateString("en-NG", {
                 dateStyle: "medium",
               })
-            : "—",
+            : "N/A",
           temp: item.tempC == null ? "Not recorded" : `${item.tempC}°C`,
           status,
           statusStyle: style,
@@ -110,6 +112,11 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
       quantity: parsedQuantity,
       facilityId: userData.user?.hospital?.id,
     });
+    notifyResult(
+      response,
+      "Batch added to inventory.",
+      "Batch could not be added.",
+    );
     setIntakeStatus(
       response.success
         ? response.message || "Batch added to inventory."
@@ -148,6 +155,9 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
               void INVENTORY_SERVICE.exportCsv().then((response) => {
                 const value = (response.data as any)?.csv ?? response.data;
                 if (!response.success || !value) {
+                  toast.error(
+                    response.message || "CSV export could not be generated.",
+                  );
                   setIntakeStatus(
                     response.message || "CSV export could not be generated.",
                   );
@@ -162,6 +172,7 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
                 link.download = "inventory.csv";
                 link.click();
                 URL.revokeObjectURL(link.href);
+                toast.success("Inventory export downloaded.");
               })
             }
             className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-w text-g700 border border-g200 hover:border-p hover:text-p"
@@ -408,6 +419,11 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
                             ? INVENTORY_SERVICE.dispose(row.id)
                             : INVENTORY_SERVICE.quarantine(row.id)
                         ).then(async (response) => {
+                          notifyResult(
+                            response,
+                            "Inventory status updated.",
+                            "The inventory action failed.",
+                          );
                           setIntakeStatus(
                             response.message ||
                               (response.success

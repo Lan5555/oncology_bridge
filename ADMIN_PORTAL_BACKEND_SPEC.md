@@ -139,6 +139,8 @@ Every network-wide mutation requires the appropriate Role C permission. Facility
 
 The authenticated user response should include server-derived `allowed_pages` (page IDs such as `pg-prescriptions` and `pg-inventory`) and `can_manage_facility_users`. Derive these from the user's RBAC permissions, account type, facility membership, and verification/activation state. Use explicit permissions for privileged pages: `network.read` for the network map, `facility.read` for network facility management, `audit.read` for audit views, and `facility.users.manage` for facility team management. A verified user with a facility membership may see the facility team entry point, but invitation, membership decision, profile edit and removal controls require `facility.users.manage`; the primary facility admin must receive that capability. Do not include network-wide pages by default for legacy accounts or infer them from account type. The dashboard/sidebar uses these values to show only permitted workspaces; an unverified or inactive user remains limited to dashboard/settings. This is a presentation aid only: every underlying API must still enforce the same permission and facility scope. Never infer facility-admin capability solely from the `PHARMACIST`, `ONCOLOGIST`, or `PHARMACY_STORE` account type.
 
+Facility admins responsible for adding stock, and explicitly authorized pharmacy staff, must receive `inventory.manage` and the `pg-inventory`, `pg-scan`, and `pg-medicines` page grants. These grants may extend the default workspace of a verified `PHARMACIST` or `DOCTOR`; the frontend must not discard them because of account type. Inventory offers manual batch intake and GS1 scanner offers scan/decode intake. Enforce authenticated facility scope and inventory mutation permissions on the corresponding APIs. Team-management permission alone does not grant stock access. Return updated claims after a permission change; see `read.md` for an example.
+
 Admin sessions should return permission keys with the authenticated user/role. The admin portal shows the Roles & permissions tab to both `ADMIN` and `SUPERADMIN` operator roles. Grant `role.manage` to these roles and enforce it on role and permission APIs. Other sections are filtered by their matching permission: `dashboard.read`, `verification.review`, `user.read`, `facility.read`, `audit.read`, `integration.read`, and `settlement.read`. Enforce permissions on every API; showing a tab is not authorization.
 
 ## Overview, audit, settlements, and integration health
@@ -185,3 +187,32 @@ Require `integration.read` for health, `integration.manage` for configuration sc
 - Admins can edit a user's name, email, and phone; email collisions and invalid fields are rejected. User deletion revokes access and records an audited soft delete, while protecting the current and last usable network administrator. Facility admins may manage only their own facility's members and cannot remove its last designated owner.
 - Integration health responses contain safe status metadata only.
 - Integration configuration reads expose schemas and non-secret values only; secret values are never returned, echoed, logged, or stored by the browser. Save, test, and sync endpoints enforce their distinct permissions and append redacted audit events.
+
+## Network-wide operational visibility in the admin console
+
+`ADMIN` and `SUPERADMIN` operators must be able to review all operational areas, including medicines and inventory, directly inside `/admin`. This differs from a `FACILITY_ADMIN`, whose records remain limited to their own facility. The frontend exposes read navigation for all network operators. The backend must authorize these reads using the operator's JWT and grant the corresponding read permissions; displaying a navigation item does not bypass API authorization. Existing mutations keep their own permission requirements.
+
+Every new operational view explicitly sends the **adminSession** bearer token, even when a facility user is also signed in. Do not silently scope an authenticated network operator to one facility. Return network-wide records, including the supplying/owning facility where applicable. Sensitive credentials and password/token fields must never be returned.
+
+| Admin section | GET endpoint | Read permission |
+| --- | --- | --- |
+| Drug catalogue | `/api/medicines` | `medicine.read` |
+| Inventory | `/api/inventory` | `inventory.read` |
+| Marketplace | `/admin/api/marketplace/listings` | `marketplace.read` |
+| Prescriptions and orders | `/api/prescriptions` | `prescription.read` |
+| Invoices and payments | `/api/invoices` | `invoice.read` |
+| Redistribution | `/api/transfers` | `transfer.read` |
+| GS1 scan records | `/api/scans` | `scan.read` |
+| Storage units | `/api/storage-units` | `coldchain.read` |
+| Cold chain events | `/api/cold-chain-events` | `coldchain.read` |
+| Near-expiry stock | `/api/expiry?withinDays=60` | `inventory.read` |
+| Network directory | `/api/network` | `network.read` |
+| Research inquiries | `/api/research/inquiries` | `research.read` |
+
+Implement the GET methods above where only creation endpoints currently exist (notably invoices, scans, and research inquiries). The admin marketplace endpoint is distinct from the buyer catalogue: it must include draft, pending-review, published, suspended, and withdrawn listings with `status`, seller/facility, images, price, and inventory reference. It must not apply the public catalogue's published-only filter. Existing buyer endpoints retain their restrictions.
+
+All list endpoints accept `page` (starts at 1), `limit=25`, and optional `q`. Apply search before pagination, use a stable ordering, and return the standard envelope with `data: { items: [...], total: <filtered count>, page: <page>, limit: 25 }`. The frontend also accepts existing named arrays such as `medicines`, `facilities`, `invoices`, `scans`, `events`, or `inquiries` during migration. Return `total` (or `pagination.total` / `meta.total`) to enable the Next button; without pagination metadata, the frontend displays returned records and disables forward paging rather than repeating an unpaginated response. Do not ignore page/search inputs on endpoints that claim to support pagination.
+
+Keep existing resource field names. Include IDs and resource attributes needed by the existing frontend, with facility and medicine details where relevant. The record-details dialog displays the returned record and links to uploaded drug images. Do not include identifiable patient data where a pseudonymous order/patient reference is sufficient. Use 403 for unauthorized reads, and an explicit error if a list endpoint is unavailable; do not return a false empty success.
+
+Validation: sign in to a facility and an admin in the same browser, then inspect every operational view. Requests must use the admin JWT and return records from multiple facilities. Test empty states, denied/unavailable APIs, search, pagination, marketplace publication states, and record details. Facility sessions must remain scoped to their facility on the same shared endpoints.

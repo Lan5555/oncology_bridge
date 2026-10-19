@@ -11,7 +11,7 @@ const STEPS = [
       </>
     ),
     title: "Stock Ingestion & POS Sync",
-    body: "A new shipment arrives. The pharmacist logs it into their POS system. A background webhook instantly pushes the update — batch numbers, quantities, expiry dates — into the network ledger.",
+    body: "A new shipment arrives. The pharmacist logs it into their POS system. A background webhook instantly pushes the update, batch numbers, quantities, expiry dates, into the network ledger.",
   },
   {
     num: "02",
@@ -44,7 +44,7 @@ const STEPS = [
       </>
     ),
     title: "Prior-Authorization Loop",
-    body: "The Adapter Layer routes the clinical JSON to the HMO via API (modern), portal auto-fill (legacy), or a WAOAB-sealed PDF with an anti-fraud QR code (paper-based) — then drops the claims code into the pharmacy dashboard.",
+    body: "The Adapter Layer routes the clinical JSON to the HMO via API (modern), portal auto-fill (legacy), or a WAOAB-sealed PDF with an anti-fraud QR code (paper-based), then drops the claims code into the pharmacy dashboard.",
   },
   {
     num: "05",
@@ -55,7 +55,7 @@ const STEPS = [
       </>
     ),
     title: "GS1 Validation Scan",
-    body: 'Payment clears. A cold-chain courier is dispatched. The pharmacist scans the GS1 DataMatrix — the backend instantly confirms the batch is authentic, unrecalled, and unexpired. Dashboard turns green: "WAOAB Clean-Stock Cleared."',
+    body: 'Payment clears. A cold-chain courier is dispatched. The pharmacist scans the GS1 DataMatrix, the backend instantly confirms the batch is authentic, unrecalled, and unexpired. Dashboard turns green: "WAOAB Clean-Stock Cleared."',
   },
   {
     num: "06",
@@ -66,7 +66,7 @@ const STEPS = [
       </>
     ),
     title: "Last-Mile Delivery",
-    body: "The courier delivers directly to the oncology treatment room in a temperature-monitored cold-chain bag. The nurse scans a delivery QR code — confirming arrival within the safety window. Dose administered. Case closed.",
+    body: "The courier delivers directly to the oncology treatment room in a temperature-monitored cold-chain bag. The nurse scans a delivery QR code, confirming arrival within the safety window. Dose administered. Case closed.",
   },
 ];
 
@@ -77,7 +77,7 @@ export default function Workflow() {
         <div className="max-w-[560px]">
           <div className={EYEBROW}>How It Works</div>
           <h2 className={H2_DARK}>
-            From pharmacy shelf to treatment chair — verified every step.
+            From pharmacy shelf to treatment chair, verified every step.
           </h2>
           <p className={P_DARK}>
             Six integrated stages ensure a vial&rsquo;s journey is tracked,

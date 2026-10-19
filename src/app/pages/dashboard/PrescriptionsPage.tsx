@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import type { ModalId, PageId } from "@/app/lib/types";
 import {
   Activity,
@@ -8,19 +8,13 @@ import {
   ClipboardList,
   Clock3,
   FilePlus2,
-  PackageSearch,
   RefreshCw,
-  Search,
   ShieldCheck,
 } from "lucide-react";
 import EmptyState from "@/app/components/EmptyState";
-import {
-  BRIDGE_DATA_SERVICE,
-  type OrderRecord,
-} from "@/app/services/bridge-data/bridge-data-service";
+import type { OrderRecord } from "@/app/services/bridge-data/bridge-data-service";
 import { PRESCRIPTION_SERVICE } from "@/app/services/prescription-service/prescription-service";
 import { unwrapArray } from "@/app/services/response-utils";
-import Link from "next/link";
 
 interface PrescriptionsPageProps {
   onNav: (id: PageId) => void;
@@ -40,6 +34,7 @@ const TAB_CONFIG: {
 
 export default function PrescriptionsPage({
   onOpenModal,
+  onNav,
 }: PrescriptionsPageProps) {
   const [activeTab, setActiveTab] = useState<PrescriptionTab>("active");
   const [rows, setRows] = useState<OrderRecord[]>([]);
@@ -50,21 +45,6 @@ export default function PrescriptionsPage({
   });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [stockQuery, setStockQuery] = useState("");
-  const [stockLocation, setStockLocation] = useState("");
-  const [stockStatus, setStockStatus] = useState("");
-  const [stockLoading, setStockLoading] = useState(false);
-  const [quantityByStockId, setQuantityByStockId] = useState<
-    Record<string, string>
-  >({});
-  const [generatedInvoiceRef, setGeneratedInvoiceRef] = useState<string | null>(
-    null,
-  );
-  const [invoiceError, setInvoiceError] = useState("");
-  const [stockResults, setStockResults] = useState<Awaited<
-    ReturnType<typeof BRIDGE_DATA_SERVICE.searchStock>
-  > | null>(null);
-
   const loadPrescriptions = async () => {
     setLoading(true);
     setLoadError("");
@@ -79,13 +59,13 @@ export default function PrescriptionsPage({
     setRows(
       unwrapArray(data).map((row: any) => ({
         id: String(row.id ?? row.display_id ?? row.code ?? ""),
-        code: row.code ?? row.icd10 ?? "—",
+        code: row.code ?? row.icd10 ?? "N/A",
         drug:
           row.drug ??
           row.medicine?.generic_name ??
           `${row.drugName ?? "Medicine"} ×${row.qty ?? row.quantity ?? 1}`,
-        insurer: row.insurer ?? "—",
-        pharmacy: row.pharmacy ?? row.pharmacyName ?? "—",
+        insurer: row.insurer ?? "N/A",
+        pharmacy: row.pharmacy ?? row.pharmacyName ?? "N/A",
         status: row.status ?? row.auth_status ?? "Pending",
         order: row.order ?? row.order_stage ?? "Waiting",
         statusClass: "bg-pl text-pdd",
@@ -110,39 +90,6 @@ export default function PrescriptionsPage({
     window.addEventListener("prescriptions:updated", refresh);
     return () => window.removeEventListener("prescriptions:updated", refresh);
   }, [activeTab]);
-
-  const searchStock = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setStockLoading(true);
-    setStockStatus("");
-    setGeneratedInvoiceRef(null);
-    const results = await BRIDGE_DATA_SERVICE.searchStock(
-      stockQuery,
-      stockLocation,
-    );
-    setStockResults(results);
-    setStockStatus(
-      `${results.length} live stock ${results.length === 1 ? "match" : "matches"}.`,
-    );
-    setStockLoading(false);
-  };
-
-  const generateInvoice = async (stockId: string, unitPriceNaira: number) => {
-    setInvoiceError("");
-    const invoice = await BRIDGE_DATA_SERVICE.createInvoice(
-      stockId,
-      Number(quantityByStockId[stockId] ?? 1),
-      unitPriceNaira,
-    );
-    if (!invoice) {
-      setGeneratedInvoiceRef(null);
-      setInvoiceError(
-        "Invoice could not be created. Check the quantity and connection, then try again.",
-      );
-      return;
-    }
-    setGeneratedInvoiceRef(invoice.reference);
-  };
 
   const metrics = [
     { label: "Active orders", value: counts.active, icon: Activity },
@@ -311,153 +258,20 @@ export default function PrescriptionsPage({
         )}
       </section>
 
-      <section className="rounded-2xl border border-g200 bg-w p-5 shadow-sm">
-        <div className="mb-4 flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-pl text-p">
-            <PackageSearch className="size-5" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="text-base font-bold text-g900">
-              Search network stock
-            </h2>
-            <p className="mt-0.5 text-xs text-g500">
-              Find live availability by medicine and location.
-            </p>
-          </div>
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-g200 bg-w p-6 shadow-sm">
+        <div>
+          <h2 className="text-base font-bold text-g900">Find medicines for your patients</h2>
+          <p className="mt-1 text-sm text-g500">
+            Browse medicine images, compare prices, and purchase from network pharmacies.
+          </p>
         </div>
-        <form
-          className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"
-          onSubmit={searchStock}
+        <button
+          type="button"
+          onClick={() => onNav("pg-marketplace")}
+          className="inline-flex items-center gap-2 rounded-xl bg-p px-5 py-3 text-sm font-semibold text-white dk:text-navy"
         >
-          <label
-            className="grid gap-1.5 text-xs font-semibold text-g600"
-            htmlFor="stock-search"
-          >
-            Medicine
-            <input
-              autoComplete="off"
-              className="rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal text-g800 outline-none transition focus:border-p focus:ring-2 focus:ring-p/15"
-              id="stock-search"
-              onChange={(event) => setStockQuery(event.target.value)}
-              placeholder="Generic name or brand"
-              value={stockQuery}
-            />
-          </label>
-          <label
-            className="grid gap-1.5 text-xs font-semibold text-g600"
-            htmlFor="stock-location"
-          >
-            Location
-            <input
-              className="rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal text-g800 outline-none transition focus:border-p focus:ring-2 focus:ring-p/15"
-              id="stock-location"
-              onChange={(event) => setStockLocation(event.target.value)}
-              placeholder="City or facility"
-              value={stockLocation}
-            />
-          </label>
-          <button
-            className="inline-flex items-center justify-center gap-2 self-end rounded-lg bg-p px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pd disabled:opacity-60"
-            disabled={stockLoading}
-            type="submit"
-          >
-            <Search className="size-4" aria-hidden="true" />
-            {stockLoading ? "Searching…" : "Search stock"}
-          </button>
-        </form>
-        <p aria-live="polite" className="mt-3 text-xs text-g500">
-          {stockStatus ||
-            "Search current network stock. Results are returned by the stock search API."}
-        </p>
-        {stockResults ? (
-          stockResults.length ? (
-            <div className="mt-4 divide-y divide-g100 rounded-xl border border-g100">
-              {stockResults.map((item) => (
-                <article
-                  className="flex flex-wrap items-center justify-between gap-4 p-4"
-                  key={item.id}
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-g800">
-                      {item.drug}{" "}
-                      <span className="font-normal text-g500">
-                        {item.brand ? `(${item.brand})` : ""}
-                      </span>
-                    </p>
-                    <p className="mt-1 text-xs text-g500">
-                      {item.location} · Batch {item.batchNumber} · Expires{" "}
-                      {item.expiresOn}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-end gap-3">
-                    <label
-                      className="grid gap-1 text-[11px] font-medium text-g500"
-                      htmlFor={`stock-quantity-${item.id}`}
-                    >
-                      Quantity
-                      <input
-                        className="w-24 rounded-lg border border-g200 px-2.5 py-2 text-sm text-g800"
-                        id={`stock-quantity-${item.id}`}
-                        max={item.availableQuantity}
-                        min="1"
-                        onChange={(event) =>
-                          setQuantityByStockId((current) => ({
-                            ...current,
-                            [item.id]: event.target.value,
-                          }))
-                        }
-                        type="number"
-                        value={quantityByStockId[item.id] ?? "1"}
-                      />
-                    </label>
-                    <p className="pb-2 text-xs text-g500">
-                      {item.availableQuantity} available
-                    </p>
-                    <button
-                      className="rounded-lg border border-g200 px-3 py-2 text-xs font-semibold text-g700 transition hover:border-p hover:text-p disabled:opacity-50"
-                      disabled={item.availableQuantity < 1}
-                      onClick={() =>
-                        void generateInvoice(
-                          item.id,
-                          Number(item.unitPriceNaira ?? 0),
-                        )
-                      }
-                      type="button"
-                    >
-                      Create invoice
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              compact
-              icon={Search}
-              title="No stock matches"
-              description="Try another medicine name or a nearby location."
-            />
-          )
-        ) : null}
-        {generatedInvoiceRef ? (
-          <p
-            className="mt-4 rounded-lg bg-okl p-3 text-sm text-g700"
-            role="status"
-          >
-            Invoice created:{" "}
-            <Link
-              className="font-semibold text-p underline"
-              href={`/pay/${encodeURIComponent(generatedInvoiceRef)}`}
-            >
-              {generatedInvoiceRef}
-            </Link>
-          </p>
-        ) : null}
-        {invoiceError ? (
-          <p className="mt-3 text-sm text-err" role="alert">
-            {invoiceError}
-          </p>
-        ) : null}
+          Explore marketplace <ArrowRight className="size-4" />
+        </button>
       </section>
     </div>
   );

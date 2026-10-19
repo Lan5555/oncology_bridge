@@ -11,12 +11,12 @@ const POINTS = [
   {
     num: "Problem 02",
     title: "The Verification Black Box",
-    body: "Fragmented supply chains mean doctors and pharmacists cannot verify the pedigree or cold-chain history of the medicines they receive — creating clinical risk with every dose.",
+    body: "Fragmented supply chains mean doctors and pharmacists cannot verify the pedigree or cold-chain history of the medicines they receive, creating clinical risk with every dose.",
   },
   {
     num: "Problem 03",
     title: "Invisible Surplus Stock",
-    body: "High-value biologics expire unused in one facility while patients elsewhere face stock-outs. Without visibility, redistribution is impossible. The problem isn't always supply — it's sight.",
+    body: "High-value biologics expire unused in one facility while patients elsewhere face stock-outs. Without visibility, redistribution is impossible. The problem isn't always supply, it's sight.",
   },
 ];
 
@@ -33,7 +33,7 @@ export default function Problem() {
             <p className={`${P_DARK} mb-10`}>
               Life-saving biologics expire in one hospital while patients in the
               next district go without. The supply chain isn&rsquo;t just
-              inefficient — it&rsquo;s invisible.
+              inefficient, it&rsquo;s invisible.
             </p>
 
             <div className="flex flex-col gap-7">

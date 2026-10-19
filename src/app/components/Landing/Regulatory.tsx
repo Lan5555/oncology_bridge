@@ -22,7 +22,7 @@ const REGS = [
       </>
     ),
     title: "NHIA Subsidies Expanding",
-    body: "New National Health Insurance Authority subsidies are rapidly increasing oncology patient volume — making stock-out prevention critical for facility operations and financial sustainability.",
+    body: "New National Health Insurance Authority subsidies are rapidly increasing oncology patient volume, making stock-out prevention critical for facility operations and financial sustainability.",
   },
   {
     tone: "amber",
@@ -33,7 +33,7 @@ const REGS = [
       </>
     ),
     title: "30%+ Health Inflation",
-    body: "With health inflation exceeding 30%, facilities can no longer absorb the financial loss from drug wastage. Redistribution is no longer just ethical — it's economically essential.",
+    body: "With health inflation exceeding 30%, facilities can no longer absorb the financial loss from drug wastage. Redistribution is no longer just ethical, it's economically essential.",
   },
   {
     tone: "blue",
@@ -44,7 +44,7 @@ const REGS = [
       </>
     ),
     title: "GS1 Global Standards",
-    body: "Our GS1 DataMatrix integration aligns with international pharmaceutical serialization standards — future-proofing the platform as Nigeria's drug traceability regulation matures.",
+    body: "Our GS1 DataMatrix integration aligns with international pharmaceutical serialization standards, future-proofing the platform as Nigeria's drug traceability regulation matures.",
   },
 ];
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "sonner";
+
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import type { ModalId } from "@/app/lib/types";
 import { REPORT_SERVICE } from "@/app/services/report-service/report-service";
@@ -156,6 +158,21 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
         URL.revokeObjectURL(link.href);
       }
     }
+    if (response) {
+      if (response.success)
+        toast.success(
+          response.message ||
+            (openModalId === "modal-prescription"
+              ? "Prescription created."
+              : openModalId === "modal-transfer"
+                ? "Transfer request submitted."
+                : openModalId === "modal-export"
+                  ? "Report prepared."
+                  : "Inventory action completed."),
+        );
+      else
+        toast.error(response.message || "The request could not be completed.");
+    }
     if (response)
       setMessage(
         response.message ||
@@ -282,6 +299,11 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
                     onClick={() =>
                       void NOTIFICATION_SERVICE.markRead(notification.id).then(
                         (response) => {
+                          if (!response.success)
+                            toast.error(
+                              response.message ||
+                                "Notification could not be marked as read.",
+                            );
                           if (response.success)
                             setNotifications((list) =>
                               list.map((item) =>

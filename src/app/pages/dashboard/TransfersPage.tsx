@@ -1,5 +1,7 @@
 "use client";
 
+import { notifyResult } from "@/app/lib/notifications";
+
 import { useEffect, useState } from "react";
 import type { ModalId, PageId } from "../../lib/types";
 import { TRANSFER_SERVICE } from "@/app/services/transfer-service/transfer-service";
@@ -36,6 +38,11 @@ export default function TransfersPage({ onOpenModal }: Props) {
       action === "approve"
         ? await TRANSFER_SERVICE.approve(id)
         : await TRANSFER_SERVICE.reject(id);
+    notifyResult(
+      response,
+      action === "approve" ? "Transfer approved." : "Transfer rejected.",
+      "Transfer decision could not be saved.",
+    );
     setNotice(
       response.message ||
         (response.success
@@ -121,7 +128,7 @@ export default function TransfersPage({ onOpenModal }: Props) {
                   : ""}
               </p>
               <p className="mt-1 text-[11px] text-g400">
-                Lot {transfer.lot ?? "—"} · {transfer.status ?? "—"}
+                Lot {transfer.lot ?? "N/A"} · {transfer.status ?? "N/A"}
               </p>
             </div>
             {tab === "pending" ? (

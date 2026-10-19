@@ -61,14 +61,16 @@ export const getAccountInfo = (type?: AccountType) =>
 const ALWAYS: PageId[] = ["pg-dashboard", "pg-settings"];
 
 const VERIFIED_BY_TYPE: Record<AccountType, PageId[]> = {
-  DOCTOR: ["pg-prescriptions", "pg-coldchain", "pg-expiry"],
+  DOCTOR: ["pg-marketplace", "pg-prescriptions", "pg-coldchain", "pg-expiry"],
   PHARMACIST: [
+    "pg-marketplace",
     "pg-prescriptions",
     "pg-coldchain",
     "pg-expiry",
     "pg-medicines",
   ],
   PHARMACY_STORE: [
+    "pg-marketplace",
     "pg-scan",
     "pg-inventory",
     "pg-medicines",
@@ -87,6 +89,7 @@ export function allowedPages(
 ): PageId[] | null {
   if (type && status !== "VERIFIED") return ALWAYS;
   const knownPages = new Set<PageId>([
+    "pg-marketplace",
     "pg-dashboard", "pg-inventory", "pg-medicines", "pg-scan",
     "pg-transfers", "pg-prescriptions", "pg-coldchain", "pg-expiry",
     "pg-network", "pg-facilities", "pg-users", "pg-audit", "pg-settings",
@@ -94,14 +97,17 @@ export function allowedPages(
   const rolePages = type ? VERIFIED_BY_TYPE[type] : [];
   const backendPages = serverAllowedPages?.filter(
     (page): page is PageId =>
-      knownPages.has(page as PageId) &&
-      (!type || VERIFIED_BY_TYPE[type].includes(page as PageId)),
+      knownPages.has(page as PageId),
   ) ?? [];
   // Preserve the standard workspace tools for each verified account type even
   // when an older backend response omits them from allowed_pages. Server page
-  // grants can add only tools within that account type's workspace; separately
-  // permission-gated facility and network tools are handled below.
+  // grants can add facility tools outside the account type's default workspace.
+  // A pharmacist facility admin, for example, may also manage inventory.
+  // Privileged network pages still require their separate permissions below.
   const pages = [...new Set([...ALWAYS, ...rolePages, ...backendPages])];
+  const inventoryPages: PageId[] = permissions.includes("inventory.manage")
+    ? ["pg-inventory", "pg-scan", "pg-medicines"]
+    : [];
   const requiredPermission: Partial<Record<PageId, string>> = {
     "pg-network": "network.read",
     "pg-facilities": "facility.read",
@@ -110,7 +116,7 @@ export function allowedPages(
   const permissionPages = (Object.entries(requiredPermission) as [PageId, string][])
     .filter(([, permission]) => permissions.includes(permission))
     .map(([page]) => page);
-  const grantedPages = [...new Set([...pages, ...permissionPages])];
+  const grantedPages = [...new Set([...pages, ...inventoryPages, ...permissionPages])];
   return grantedPages.filter((page) => {
     if (page === "pg-users") return canManageFacilityUsers;
     const required = requiredPermission[page];

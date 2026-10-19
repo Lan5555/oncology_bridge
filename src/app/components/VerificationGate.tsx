@@ -1,5 +1,7 @@
 "use client";
 
+import { notifyResult } from "@/app/lib/notifications";
+
 import { getAccountInfo, VERIFICATION_COPY } from "../lib/accounts";
 import { useProvider } from "../providers/provider";
 import { useEffect, useState } from "react";
@@ -31,6 +33,11 @@ export default function VerificationGate() {
   }, [setUser]);
   const resubmit = async () => {
     const response = await SETTINGS_SERVICE.resubmitVerification();
+    notifyResult(
+      response,
+      "Verification resubmitted for review.",
+      "Could not resubmit verification.",
+    );
     setNotice(
       response.success
         ? response.message || "Verification resubmitted for review."
@@ -64,15 +71,15 @@ export default function VerificationGate() {
         <div className="mt-6 grid grid-cols-2 gap-y-2 rounded-lg border border-g100 bg-g50 p-4 text-left text-[12.5px]">
           <span className="text-g500">Account type</span>
           <span className="text-right font-semibold text-g800">
-            {info?.label ?? "\u2014"}
+            {info?.label ?? "N/A"}
           </span>
           <span className="text-g500">Registry</span>
           <span className="text-right font-semibold text-g800">
-            {info?.registry.replace("_", " ") ?? "\u2014"}
+            {info?.registry.replace("_", " ") ?? "N/A"}
           </span>
           <span className="text-g500">Licence number</span>
           <span className="text-right font-mono font-semibold text-g800">
-            {user?.license_number || "\u2014"}
+            {user?.license_number || "N/A"}
           </span>
         </div>
 

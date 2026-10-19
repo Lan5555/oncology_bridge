@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "sonner";
+
 import { ModalId, PageId } from "../../lib/types";
 import React, { useEffect, useMemo, useState } from "react";
 import { FACILITY_SERVICE } from "@/app/services/facility-service/facility-service";
@@ -77,7 +79,7 @@ const statusMeta: Record<
     label: "Suspended",
     color: "#B91C1C",
     icon: AlertTriangle,
-    description: "Access temporarily blocked — devices cannot sync.",
+    description: "Access temporarily blocked, devices cannot sync.",
   },
   REJECTED: {
     label: "Rejected",
@@ -107,7 +109,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
   const [statusFilter, setStatusFilter] = useState<FacilityStatus | "ALL">(
     "ALL",
   );
-  const [toast, setToast] = useState<string | null>(null);
+
   const [manageTarget, setManageTarget] = useState<FacilityRow | null>(null);
   const [draftStatus, setDraftStatus] = useState<FacilityStatus | null>(null);
   const [statusNote, setStatusNote] = useState("");
@@ -119,7 +121,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
       adminMode,
     ).then((response) => {
       if (!response.success) {
-        notify(response.message || "Facilities could not be loaded.");
+        notify(response.message || "Facilities could not be loaded.", true);
         return;
       }
       const data = response.data as any;
@@ -137,7 +139,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
           devices: facility.devices?.length ?? 0,
           lastActive: facility.last_active
             ? new Date(facility.last_active).toLocaleString("en-NG")
-            : "—",
+            : "N/A",
           status: facility.status ?? "PENDING",
           phone: facility.phone ?? "",
           email: facility.email ?? "",
@@ -146,12 +148,9 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
     });
   }, [adminMode]);
 
-  const notify = (message: string) => {
-    setToast(message);
-    window.setTimeout(
-      () => setToast((current) => (current === message ? null : current)),
-      2400,
-    );
+  const notify = (message: string, error = false) => {
+    if (error) toast.error(message);
+    else toast.success(message);
   };
 
   const filtered = useMemo(() => {
@@ -186,7 +185,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
       adminMode,
     );
     if (!response.success) {
-      notify(response.message || "Facility status update failed.");
+      notify(response.message || "Facility status update failed.", true);
       return;
     }
     setFacilities((prev) =>
@@ -217,7 +216,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
       adminMode,
     );
     if (!response.success) {
-      notify(response.message || "Facility changes could not be saved.");
+      notify(response.message || "Facility changes could not be saved.", true);
       return;
     }
     if (changed) {
@@ -237,19 +236,6 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
 
   return (
     <div className="font-ui relative space-y-6">
-      {toast && (
-        <div
-          className="fixed bottom-6 left-1/2 z-60 flex -translate-x-1/2 items-center gap-2 rounded-md border px-4 py-2.5 font-mono text-xs text-white shadow-lg"
-          style={{ backgroundColor: primaryCta, borderColor: primaryCta }}
-        >
-          <CheckCircle2
-            className="h-3.5 w-3.5 shrink-0"
-            style={{ color: "#7FB0FF" }}
-          />
-          {toast}
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -337,7 +323,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, code, or city\u2026"
+            placeholder="Search by name, code, or city..."
             className="w-full rounded-lg border border-[#DCE3ED] bg-[#FBFCFE] py-2.5 pl-10 pr-4 text-sm text-[#0B1E3D] outline-none transition-all duration-150 placeholder:text-slate focus:border-[#1B3A6B] focus:bg-white focus:ring-4 focus:ring-[#1B3A6B]/8"
           />
         </div>
@@ -469,7 +455,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                           <MoreVertical className="h-3.5 w-3.5" />
                         </button>
 
-                        {/* Quick status menu — a fast path for status changes that doesn't
+                        {/* Quick status menu, a fast path for status changes that doesn't
                             require opening the full Manage modal */}
                         {openMenuId === f.id && (
                           <>
@@ -637,7 +623,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                 </div>
               </div>
 
-              {/* Status update section — the core ask: change a facility's status here */}
+              {/* Status update section, the core ask: change a facility's status here */}
               <div className="rounded-xl border border-[#E7ECF4] bg-[#F9FBFD] p-4">
                 <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.2em] text-[#5B6B85]">
                   Update status

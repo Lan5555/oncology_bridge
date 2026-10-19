@@ -147,7 +147,7 @@ export function TemperatureHistoryChart({
   );
 }
 
-/** Line chart: Biologic Inventory — Network Wide (dashboard) */
+/** Line chart: Biologic Inventory, Network Wide (dashboard) */
 export function InventoryChart() {
   const [points, setPoints] = useState<Array<{ label: string; vials: number }>>(
     [],

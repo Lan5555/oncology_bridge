@@ -18,7 +18,7 @@ const FEATURES = [
       </>
     ),
     title: "GS1 DataMatrix Scanning",
-    body: "Instant camera-based verification of GTIN, batch number, expiry date, and serial number — decoding NAFDAC-compliant barcodes in milliseconds.",
+    body: "Instant camera-based verification of GTIN, batch number, expiry date, and serial number, decoding NAFDAC-compliant barcodes in milliseconds.",
     tag: "Counterfeit Detection",
   },
   {
@@ -31,7 +31,7 @@ const FEATURES = [
       </>
     ),
     title: "Real-Time Redistribution",
-    body: "When stock falls below 60 days to expiry, the platform automatically identifies and alerts recipient hubs within a 50-mile radius — preventing waste while closing gaps.",
+    body: "When stock falls below 60 days to expiry, the platform automatically identifies and alerts recipient hubs within a 50-mile radius, preventing waste while closing gaps.",
     tag: "Auto-Broadcast Alerts",
   },
   {
@@ -51,7 +51,7 @@ const FEATURES = [
       </>
     ),
     title: "Offline-First Architecture",
-    body: "Scans queue locally in IndexedDB when connectivity drops, then auto-sync when restored — built for Nigeria's variable 3G/4G networks without data loss.",
+    body: "Scans queue locally in IndexedDB when connectivity drops, then auto-sync when restored, built for Nigeria's variable 3G/4G networks without data loss.",
     tag: "Works on 3G/4G",
   },
   {
@@ -63,7 +63,7 @@ const FEATURES = [
       </>
     ),
     title: "Structured Prescriptions",
-    body: "Doctors select ICD-10 codes, TNM staging, and insurers — the platform auto-packages these into a Unified Clinical Object routed to the closest verified pharmacy.",
+    body: "Doctors select ICD-10 codes, TNM staging, and insurers, the platform auto-packages these into a Unified Clinical Object routed to the closest verified pharmacy.",
     tag: "HMO-Matched Dispensing",
   },
   {
@@ -90,7 +90,7 @@ export default function Solution() {
           </h2>
           <p className={P_LIGHT}>
             Oncosourz turns fragmented hospital inventory into a real-time,
-            GS1-verified network — connecting surplus to shortage before a
+            GS1-verified network, connecting surplus to shortage before a
             patient misses a dose.
           </p>
         </div>

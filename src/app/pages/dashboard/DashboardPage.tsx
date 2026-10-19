@@ -131,7 +131,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           description: "Create and manage medicine identifiers.",
         },
       ];
-  const visibleSections = sections.filter(
+  const stockSections: { label: string; page: PageId; description: string }[] = [
+    { label: "Inventory", page: "pg-inventory", description: "Add batches manually and manage facility stock." },
+    { label: "Scan GS1 Barcode", page: "pg-scan", description: "Scan and decode product identifiers to record stock." },
+    { label: "Medicine Catalog", page: "pg-medicines", description: "Create and manage medicine identifiers." },
+  ];
+  const grantedStockSections = stockSections.filter(
+    (item) => allowedPages?.includes(item.page) && !sections.some((section) => section.page === item.page),
+  );
+  const visibleSections = [...grantedStockSections, ...sections].filter(
     (item) => !allowedPages || allowedPages.includes(item.page),
   );
   const isStore = accountType === "PHARMACY_STORE";
@@ -208,7 +216,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <div>
               <p className="text-2xl font-bold tabular-nums text-g900">
                 {value == null
-                  ? "—"
+                  ? "N/A"
                   : typeof value === "number"
                     ? value.toLocaleString()
                     : value}
@@ -366,11 +374,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   className="flex flex-wrap justify-between gap-2 py-3 text-sm"
                 >
                   <span className="font-semibold text-g800">
-                    {item.drug ?? "Medicine"} · Lot {item.lot ?? "—"}
+                    {item.drug ?? "Medicine"} · Lot {item.lot ?? "N/A"}
                   </span>
                   <span className="text-g500">
-                    {item.daysLeft ?? "—"} days ·{" "}
-                    {item.qty ?? item.quantity ?? "—"} units
+                    {item.daysLeft ?? "N/A"} days ·{" "}
+                    {item.qty ?? item.quantity ?? "N/A"} units
                   </span>
                 </li>
               ))}

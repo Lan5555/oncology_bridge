@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  ArrowLeft,
   BadgeCheck,
+  Boxes,
   Building2,
   Check,
   CheckCircle2,
@@ -13,18 +15,20 @@ import {
   Info,
   Mail,
   MapPin,
+  Moon,
   Phone,
   Pill,
+  Search,
   ShieldCheck,
   Stethoscope,
   Store,
+  Sun,
   User,
   UserCogIcon,
-  Search,
   UserPlus,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ACCOUNT_TYPES,
@@ -38,8 +42,9 @@ import { useProvider } from "../providers/provider";
 import { AUTH_SERVICE } from "../services/auth-service/auth-service";
 import { DASHBOARD_SERVICE } from "../services/dashboard-service/dashboard-service";
 import { FACILITY_SERVICE } from "../services/facility-service/facility-service";
-import { VERIFICATION_SERVICE } from "../services/verification-service/verification-service";
 import { unwrapArray } from "../services/response-utils";
+import { VERIFICATION_SERVICE } from "../services/verification-service/verification-service";
+import auth from "./AuthPages.module.css";
 
 interface AuthPagesProps {
   view: AuthView;
@@ -69,6 +74,7 @@ export default function AuthPages({
   onShowAuth,
   onToggleTheme,
 }: AuthPagesProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const isLogin = view === "login";
   const isDark = theme === "dark";
   const [isMounted, setIsMounted] = useState(false);
@@ -77,19 +83,24 @@ export default function AuthPages({
   const [submitting, setSubmitting] = useState(false);
   const [registrationNotice, setRegistrationNotice] = useState("");
   const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
-  const [registrationMode, setRegistrationMode] = useState<"CREATE_FACILITY" | "JOIN_FACILITY">("CREATE_FACILITY");
+  const [registrationMode, setRegistrationMode] = useState<
+    "CREATE_FACILITY" | "JOIN_FACILITY"
+  >("CREATE_FACILITY");
   const [publicFacilities, setPublicFacilities] = useState<any[]>([]);
   const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [facilitiesError, setFacilitiesError] = useState("");
   const [facilitySearch, setFacilitySearch] = useState("");
   const [selectedFacilityId, setSelectedFacilityId] = useState("");
-  const [publicStats, setPublicStats] = useState<Record<string, unknown> | null>(null);
+  const [publicStats, setPublicStats] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
 
   // Login
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
 
-  // Registration — Step 1: Facility Information
+  // Registration, Step 1: Facility Information
   const [registerStep, setRegisterStep] = useState<1 | 2 | 3 | 4>(1);
   const [accountType, setAccountType] = useState<AccountType | null>(null);
   const [licenseNumber, setLicenseNumber] = useState<string>("");
@@ -102,7 +113,7 @@ export default function AuthPages({
   const [facilityCity, setFacilityCity] = useState<string>("");
   const [facilityState, setFacilityState] = useState<string>("");
 
-  // Registration — Step 2: Primary Administrator
+  // Registration, Step 2: Primary Administrator
   const [adminFirstName, setAdminFirstName] = useState<string>("");
   const [adminLastName, setAdminLastName] = useState<string>("");
   const [workEmail, setWorkEmail] = useState<string>("");
@@ -119,7 +130,12 @@ export default function AuthPages({
   useEffect(() => {
     let current = true;
     void DASHBOARD_SERVICE.publicStats().then((response) => {
-      if (current && response.success && response.data && typeof response.data === "object") {
+      if (
+        current &&
+        response.success &&
+        response.data &&
+        typeof response.data === "object"
+      ) {
         setPublicStats(response.data as Record<string, unknown>);
       }
     });
@@ -138,7 +154,9 @@ export default function AuthPages({
         .then((response) => {
           if (!current) return;
           if (!response.success) {
-            setFacilitiesError(response.message || "Facilities could not be loaded.");
+            setFacilitiesError(
+              response.message || "Facilities could not be loaded.",
+            );
             setPublicFacilities([]);
             return;
           }
@@ -155,22 +173,12 @@ export default function AuthPages({
   }, [view, registrationMode, facilitySearch]);
 
   // --- Theme tokens: white surfaces + dark navy/blue accent ---
-  const shellClasses = isDark
-    ? "min-h-screen w-full bg-[#0A1628] text-[#EAF0FA]"
-    : "min-h-screen w-full bg-[#EEF3FA] text-[#0B1E3D]";
-
-  const cardClasses = isDark
-    ? "border-[#1E3358] bg-[#0F2038]"
-    : "border-[#E2E8F0] bg-white";
-
-  const sidePanelClasses =
-    "bg-gradient-to-br from-[#0B1E3D] via-[#122A4F] to-[#0A1628] text-[#EAF0FA]";
 
   const mutedText = isDark ? "text-[#8CA0BE]" : "text-[#5B6B85]";
   const headingText = isDark ? "text-[#EAF0FA]" : "text-[#0B1E3D]";
   const labelText = isDark ? "text-[#B7C4DA]" : "text-[#334862]";
   const borderColor = isDark ? "border-[#1E3358]" : "border-[#E2E8F0]";
-  const accent = isDark ? "#4C8DFF" : "#1B3A6B";
+  const accent = "var(--p)";
 
   const inputClasses = isDark
     ? "w-full rounded-lg border border-[#23385C] bg-[#0B1E33] px-4 py-3 text-sm text-[#EAF0FA] placeholder:text-[#5D7396] outline-none transition-colors duration-150 focus:border-[#4C8DFF]"
@@ -178,10 +186,6 @@ export default function AuthPages({
 
   const secondaryButtonClasses = isDark
     ? "border-[#1E3358] bg-[#0B1E33] text-[#EAF0FA] hover:border-[#4C8DFF]"
-    : "border-[#E2E8F0] bg-white text-[#0B1E3D] hover:border-[#1B3A6B]";
-
-  const toggleButtonClasses = isDark
-    ? "border-[#1E3358] bg-[#0F2038] text-[#EAF0FA] hover:border-[#4C8DFF]"
     : "border-[#E2E8F0] bg-white text-[#0B1E3D] hover:border-[#1B3A6B]";
 
   function getOrCreateDeviceID() {
@@ -261,54 +265,57 @@ export default function AuthPages({
     const selectedFacility = publicFacilities.find(
       (facility) => String(facility.id) === selectedFacilityId,
     );
-    const payload = registrationMode === "JOIN_FACILITY"
-      ? {
-          account_type: accountType,
-          facility_id: selectedFacilityId,
-          license: licensePayload,
-          user: {
-            first_name: adminFirstName,
-            last_name: adminLastName,
-            phone: adminPhone,
-            email: workEmail,
-            password: confirmPassword,
-            device_id: getOrCreateDeviceID(),
-          },
-        }
-      : {
-          account_type: accountType,
-          license: licensePayload,
-          facility: {
-            name: facilityName,
-            facility_type: facilityType,
-            email: isStore ? facilityEmail : workEmail,
-            phone: facilityPhone,
-            address: isStore
-              ? facilityAddress
-              : `${facilityCity}, ${facilityState}`,
-            city: facilityCity,
-            state: facilityState,
-          },
-          admin: {
-            first_name: adminFirstName,
-            last_name: adminLastName,
-            phone: adminPhone,
-            email: workEmail,
-            password: confirmPassword,
-            device_id: getOrCreateDeviceID(),
-          },
-        };
-    const res = registrationMode === "JOIN_FACILITY"
-      ? await FACILITY_SERVICE.registerUserToFacility(payload)
-      : await FACILITY_SERVICE.registerFacility(payload);
+    const payload =
+      registrationMode === "JOIN_FACILITY"
+        ? {
+            account_type: accountType,
+            facility_id: selectedFacilityId,
+            license: licensePayload,
+            user: {
+              first_name: adminFirstName,
+              last_name: adminLastName,
+              phone: adminPhone,
+              email: workEmail,
+              password: confirmPassword,
+              device_id: getOrCreateDeviceID(),
+            },
+          }
+        : {
+            account_type: accountType,
+            license: licensePayload,
+            facility: {
+              name: facilityName,
+              facility_type: facilityType,
+              email: isStore ? facilityEmail : workEmail,
+              phone: facilityPhone,
+              address: isStore
+                ? facilityAddress
+                : `${facilityCity}, ${facilityState}`,
+              city: facilityCity,
+              state: facilityState,
+            },
+            admin: {
+              first_name: adminFirstName,
+              last_name: adminLastName,
+              phone: adminPhone,
+              email: workEmail,
+              password: confirmPassword,
+              device_id: getOrCreateDeviceID(),
+            },
+          };
+    const res =
+      registrationMode === "JOIN_FACILITY"
+        ? await FACILITY_SERVICE.registerUserToFacility(payload)
+        : await FACILITY_SERVICE.registerFacility(payload);
     if (res.success && res.data) {
       setSubmitting(false);
-      const facility = registrationMode === "JOIN_FACILITY"
-        ? FacilityResponse.fromJson({
-            facility: selectedFacility,
-            admin: (res.data as any).user ?? (res.data as any).admin,
-          })
-        : FacilityResponse.fromJson(res.data);
+      const facility =
+        registrationMode === "JOIN_FACILITY"
+          ? FacilityResponse.fromJson({
+              facility: selectedFacility,
+              admin: (res.data as any).user ?? (res.data as any).admin,
+            })
+          : FacilityResponse.fromJson(res.data);
       setFacilityResponse(facility);
       setRegistrationNotice(
         res.message ||
@@ -337,16 +344,17 @@ export default function AuthPages({
     (facility) => String(facility.id) === selectedFacilityId,
   );
   const step1Valid = accountType !== null;
-  const step2Valid = registrationMode === "JOIN_FACILITY"
-    ? Boolean(selectedFacilityId && selectedFacility)
-    : Boolean(
-        facilityName.trim() &&
-          facilityType &&
-          facilityPhone.trim() &&
-          facilityCity.trim() &&
-          facilityState.trim() &&
-          (!isStore || (facilityEmail.trim() && facilityAddress.trim())),
-      );
+  const step2Valid =
+    registrationMode === "JOIN_FACILITY"
+      ? Boolean(selectedFacilityId && selectedFacility)
+      : Boolean(
+          facilityName.trim() &&
+            facilityType &&
+            facilityPhone.trim() &&
+            facilityCity.trim() &&
+            facilityState.trim() &&
+            (!isStore || (facilityEmail.trim() && facilityAddress.trim())),
+        );
   const passwordsMatch =
     registerPassword.length > 0 && registerPassword === confirmPassword;
   const step3Valid = Boolean(
@@ -366,29 +374,19 @@ export default function AuthPages({
     setFacilityType(type === "PHARMACY_STORE" ? "PHARMACY" : "");
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Each registration step and completion screen must reset keyboard focus and scroll position.
+  useEffect(() => {
+    if (isLogin || !isMounted) return;
+    const heading = cardRef.current?.querySelector<HTMLElement>("h2");
+    heading?.setAttribute("tabindex", "-1");
+    heading?.focus({ preventScroll: true });
+    cardRef.current?.scrollIntoView({ block: "start" });
+  }, [registerStep, registrationSubmitted, isLogin, isMounted]);
+
   const goNext = () =>
     setRegisterStep((s) => (s < 4 ? ((s + 1) as 1 | 2 | 3 | 4) : s));
   const goBack = () =>
     setRegisterStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3 | 4) : s));
-
-  // Fixed particle positions - deterministic on server and client
-  const particles = [
-    { size: 3, left: "15%", top: "20%", delay: "0s", duration: "15s" },
-    { size: 4, left: "75%", top: "15%", delay: "1s", duration: "12s" },
-    { size: 2, left: "25%", top: "60%", delay: "2s", duration: "18s" },
-    { size: 5, left: "85%", top: "70%", delay: "0.5s", duration: "14s" },
-    { size: 3, left: "45%", top: "80%", delay: "1.5s", duration: "16s" },
-    { size: 4, left: "10%", top: "45%", delay: "3s", duration: "13s" },
-  ];
-
-  const networkBadges = [
-    "GS1 medicine scanning",
-    "Batch and expiry checks",
-    "Cold-chain records",
-    "Role-based access",
-    "Auditable activity",
-    "Offline scan queue",
-  ];
 
   const publicMetric = (...keys: string[]) => {
     for (const key of keys) {
@@ -398,287 +396,177 @@ export default function AuthPages({
     return null;
   };
   const formatCount = (value: number | null) =>
-    value === null ? "—" : new Intl.NumberFormat("en-NG", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+    value === null
+      ? "N/A"
+      : new Intl.NumberFormat("en-NG", {
+          notation: "compact",
+          maximumFractionDigits: 1,
+        }).format(value);
   const recoveredValue = publicMetric("valueRecoveredNaira");
-  const formatRecoveredValue = () => recoveredValue === null
-    ? "—"
-    : new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", notation: "compact", maximumFractionDigits: 1 }).format(recoveredValue);
+  const formatRecoveredValue = () =>
+    recoveredValue === null
+      ? "N/A"
+      : new Intl.NumberFormat("en-NG", {
+          style: "currency",
+          currency: "NGN",
+          notation: "compact",
+          maximumFractionDigits: 1,
+        }).format(recoveredValue);
 
-  // Prevent hydration mismatch by not rendering dynamic content until mounted
-  if (!isMounted) {
+  if (!isMounted)
     return (
-      <div className={`${shellClasses} lg:flex`}>
-        <aside
-          className={`relative hidden shrink-0 flex-col overflow-hidden px-10 py-12 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-120 xl:w-135 ${sidePanelClasses}`}
-        >
-          <div className="relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
-                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="white">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path
-                    d="M2 17l10 5 10-5M2 12l10 5 10-5"
-                    stroke="white"
-                    strokeWidth={1.5}
-                    fill="none"
-                  />
-                </svg>
-              </div>
-              <div>
-                <span className="text-sm font-medium tracking-wide text-[#AFC6EE]">
-                  Oncosourz
-                </span>
-                <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#AFC6EE] border border-white/10">
-                  v2.0
-                </span>
-              </div>
-            </div>
-            <div className="mt-10">
-              <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
-                Loading...
-              </h1>
-            </div>
-          </div>
-        </aside>
-        <main className="relative flex flex-1 items-center justify-center px-4 py-12">
-          <div
-            className={`relative z-10 w-full max-w-md rounded-2xl border p-8 ${cardClasses}`}
-          >
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#1B3A6B] border-t-transparent" />
-            </div>
-          </div>
-        </main>
+      <div className="flex min-h-svh items-center justify-center bg-g50">
+        <span className="sr-only">Loading account access</span>
+        <Clock className="size-6 animate-pulse text-p" />
       </div>
     );
-  }
 
   return (
-    <div className={`${shellClasses} lg:flex`}>
-      {/* Left Panel */}
-      <aside
-        className={`relative hidden shrink-0 flex-col overflow-hidden px-10 py-12 lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-120 xl:w-135 ${sidePanelClasses}`}
-      >
-        {/* Ambient background */}
-        <div className="absolute inset-0 opacity-20">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%)",
-            }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 80% 20%, rgba(76,141,255,0.35) 0%, transparent 40%)",
-            }}
-          />
+    <div className={auth.page} data-theme={theme}>
+      <aside className={auth.story} aria-label="About Oncosourz">
+        <Link href="/" className={auth.brand}>
+          <span className={auth.brandMark}>
+            <ShieldCheck className="size-5" />
+          </span>
+          <span>
+            <strong>Oncosourz</strong>
+            <small>Connected oncology care</small>
+          </span>
+        </Link>
+        <div className={auth.storyContent}>
+          <div className={auth.eyebrow}>The Lagos-Ibadan oncology network</div>
+          <h1>
+            Better connected.
+            <br />
+            <span>Better care.</span>
+          </h1>
+          <p>
+            A shared workspace for the people and facilities making oncology
+            medicines more accessible.
+          </p>
+          <div className={auth.benefits}>
+            <div className={auth.benefit}>
+              <Building2 />
+              <div>
+                <strong>A network built around your team</strong>
+                <p>
+                  Connect your facility with doctors, pharmacists, and pharmacy
+                  partners.
+                </p>
+              </div>
+            </div>
+            <div className={auth.benefit}>
+              <Boxes />
+              <div>
+                <strong>More visibility. Fewer gaps.</strong>
+                <p>
+                  Find medicines, manage stock, and coordinate redistribution.
+                </p>
+              </div>
+            </div>
+            <div className={auth.benefit}>
+              <ShieldCheck />
+              <div>
+                <strong>Professional access, verified</strong>
+                <p>
+                  Licence review and facility permissions support trusted
+                  collaboration.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div
-          className="pointer-events-none absolute inset-0 opacity-10"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.3) 1px, transparent 0)",
-            backgroundSize: "24px 24px",
-          }}
-        />
-        <div className="absolute inset-0 pointer-events-none">
-          {particles.map((particle, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full bg-white/5 animate-float"
-              style={{
-                width: particle.size + "px",
-                height: particle.size + "px",
-                left: particle.left,
-                top: particle.top,
-                animationDelay: particle.delay,
-                animationDuration: particle.duration,
-              }}
-            />
+        <div className={auth.networkStats}>
+          {[
+            {
+              label: "Active facilities",
+              value: formatCount(
+                publicMetric("nodes", "facilityCount", "activeFacilities"),
+              ),
+            },
+            {
+              label: "GS1 checks",
+              value: formatCount(
+                publicMetric("gs1AuthenticatedVials", "gs1Checks", "gs1Scans"),
+              ),
+            },
+            { label: "Value recovered", value: formatRecoveredValue() },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <strong>{stat.value}</strong>
+              <span>{stat.label}</span>
+            </div>
           ))}
         </div>
-
-        {/* Content */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 transition-all hover:scale-105">
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="white">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path
-                  d="M2 17l10 5 10-5M2 12l10 5 10-5"
-                  stroke="white"
-                  strokeWidth={1.5}
-                  fill="none"
-                />
-              </svg>
-            </div>
-            <div>
-              <span className="text-sm font-medium tracking-wide text-[#AFC6EE]">
-                Oncosourz
-              </span>
-              <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#AFC6EE] border border-white/10">
-                v2.0
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-10">
-            <h1 className="text-4xl font-bold leading-tight tracking-tight text-white">
-              Lagos–Ibadan
-              <br />
-              <span className="text-[#8FB4F0]">Oncology Network</span>
-            </h1>
-            <div className="mt-4 h-1 w-20 rounded-full bg-[#4C8DFF]/60" />
-            <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-[#C3D3EC]">
-              A secure collaboration platform for oncology facilities across
-              the Lagos–Ibadan corridor, supporting medicine visibility,
-              verification, and safer stock redistribution.
-            </p>
-          </div>
-
-          <div className="mt-8 flex gap-6">
-            {[
-              { label: "Active facilities", value: formatCount(publicMetric("nodes", "facilityCount", "activeFacilities")) },
-              { label: "GS1 checks", value: formatCount(publicMetric("gs1AuthenticatedVials", "gs1Checks", "gs1Scans")) },
-              { label: "Value recovered", value: formatRecoveredValue() },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <div className="text-2xl font-bold text-white">
-                  {stat.value}
-                </div>
-                <div className="text-xs text-[#8FA6CB]">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex-1" />
-
-        <div className="relative z-10">
-          <svg viewBox="0 0 440 170" className="w-full max-w-95">
-            <defs>
-              <linearGradient
-                id="routeGradient"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
-              >
-                <stop offset="0%" stopColor="rgba(255,255,255,0.1)" />
-                <stop offset="50%" stopColor="rgba(255,255,255,0.4)" />
-                <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
-              </linearGradient>
-            </defs>
-            <path
-              id="corridor-route"
-              d="M70,135 C150,45 300,45 370,80"
-              fill="none"
-              stroke="url(#routeGradient)"
-              strokeWidth={2}
-              strokeDasharray="4 8"
-              strokeLinecap="round"
-            />
-            <circle cx="70" cy="135" r="8" fill="white" />
-            <circle cx="370" cy="80" r="8" fill="white" />
-            <circle r="6" fill="#4C8DFF">
-              <animateMotion dur="4s" repeatCount="indefinite">
-                <mpath href="#corridor-route" />
-              </animateMotion>
-            </circle>
-            <text x="45" y="160" fill="white" fontSize="13" fontWeight="600">
-              Lagos
-            </text>
-            <text x="350" y="62" fill="white" fontSize="13" fontWeight="600">
-              Ibadan
-            </text>
-          </svg>
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            {networkBadges.map((tag) => (
-              <span
-                key={tag}
-                className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-[#DCE7F8] transition-colors hover:bg-white/10"
-              >
-                <Check className="h-3 w-3 text-[#7FB0FF]" />
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
       </aside>
-
-      {/* Right Panel */}
-      <main className="relative flex flex-1 items-center justify-center px-4 py-12 lg:h-screen lg:overflow-y-auto">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.12]"
-          style={{
-            backgroundImage: isDark
-              ? "radial-gradient(circle at 1px 1px, rgba(76,141,255,0.25) 1px, transparent 0)"
-              : "radial-gradient(circle at 1px 1px, rgba(27,58,107,0.15) 1px, transparent 0)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-
-        <button
-          onClick={onToggleTheme}
-          className={`absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full border shadow-sm transition-colors duration-200 ${toggleButtonClasses}`}
-        >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-          </svg>
-        </button>
-
-        <div
-          className={`relative z-10 w-full ${isLogin ? "max-w-md" : "max-w-xl"} rounded-2xl border p-8 transition-all duration-300 ${cardClasses}`}
-        >
-          {/* Mobile brand */}
-          <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0B1E3D]">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="white">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-              </svg>
-            </div>
-            <span className={`text-sm font-semibold ${headingText}`}>
-              Oncosourz
+      <main className={auth.main}>
+        <header className={auth.topbar}>
+          <Link href="/" className={auth.backLink}>
+            <ArrowLeft className="size-3.5" />
+            Back to home
+          </Link>
+          <Link href="/" className={auth.brand + " " + auth.mobileBrand}>
+            <span className={auth.brandMark}>
+              <ShieldCheck className="size-5" />
             </span>
-          </div>
-
+            <span>
+              <strong>Oncosourz</strong>
+              <small>Connected oncology care</small>
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className={auth.themeButton}
+            aria-label={
+              isDark ? "Switch to light theme" : "Switch to dark theme"
+            }
+          >
+            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+        </header>
+        <div
+          ref={cardRef}
+          className={auth.card}
+          data-view={isLogin ? "login" : "register"}
+        >
           {isLogin ? (
             <>
               {/* Header */}
-              <div className="space-y-1">
+              <div className={auth.intro}>
+                <span className={auth.kicker}>Your care network awaits</span>
                 <h2
                   className={`text-2xl font-bold tracking-tight ${headingText}`}
                 >
                   Welcome back
                 </h2>
                 <p className={`text-sm ${mutedText}`}>
-                  Sign in to access your facility dashboard
+                  Sign in to your facility workspace and pick up where you left
+                  off.
                 </p>
               </div>
 
               {registrationNotice && (
-                <div
-                  role="status"
+                <output
                   className={`mt-4 rounded-lg border px-4 py-3 text-sm ${isDark ? "border-amber-500/30 bg-amber-500/10 text-amber-200" : "border-amber-200 bg-amber-50 text-amber-900"}`}
                 >
                   {registrationNotice}
-                </div>
+                </output>
               )}
 
               <form className="mt-6 space-y-4" onSubmit={handleLogin}>
                 <div>
                   <label
+                    htmlFor="auth-input-1"
                     className={`mb-1.5 block text-sm font-medium ${labelText}`}
                   >
                     Email Address
                   </label>
                   <input
+                    id="auth-input-1"
                     type="email"
                     required
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@facility.org"
@@ -688,14 +576,17 @@ export default function AuthPages({
 
                 <div>
                   <label
+                    htmlFor="auth-input-2"
                     className={`mb-1.5 block text-sm font-medium ${labelText}`}
                   >
                     Password
                   </label>
                   <div className="relative">
                     <input
+                      id="auth-input-2"
                       type={showPassword ? "text" : "password"}
                       required
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
@@ -739,12 +630,13 @@ export default function AuthPages({
                   disabled={submitting}
                   className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-70"
                   style={{
-                    backgroundColor: isDark ? "#FFFFFF" : "#0B1E3D",
-                    color: isDark ? "#0B1E3D" : "#FFFFFF",
+                    backgroundColor: "var(--p)",
+                    color: isDark ? "#020617" : "#FFFFFF",
                   }}
                 >
                   {submitting && (
                     <svg
+                      aria-hidden="true"
                       className="h-4 w-4 animate-spin"
                       viewBox="0 0 24 24"
                       fill="none"
@@ -767,60 +659,15 @@ export default function AuthPages({
                   {submitting ? "Signing in..." : "Sign In"}
                 </button>
 
-                <div className="relative py-1">
-                  <div
-                    className={`absolute inset-x-0 top-1/2 h-px ${isDark ? "bg-[#1E3358]" : "bg-[#E2E8F0]"}`}
-                  />
-                  <span
-                    className={`relative px-3 text-xs uppercase tracking-wider ${isDark ? "bg-[#0F2038] text-[#8CA0BE]" : "bg-white text-slate"}`}
-                  >
-                    Or continue with
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    className={`flex items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors duration-150 ${secondaryButtonClasses}`}
-                  >
-                    <svg className="h-4 w-4" viewBox="0 0 24 24">
-                      <path
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                        fill="#4285F4"
-                      />
-                      <path
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                        fill="#34A853"
-                      />
-                      <path
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                        fill="#FBBC05"
-                      />
-                      <path
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                        fill="#EA4335"
-                      />
-                    </svg>
-                    Google
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors duration-150 ${secondaryButtonClasses}`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M11.4 24h1.2c.9 0 1.8-.1 2.7-.3l-.4-1.9c-.8.2-1.6.3-2.4.3h-1.4c-4.2 0-7.6-3.4-7.6-7.6V8.4c0-4.2 3.4-7.6 7.6-7.6h1.4c4.2 0 7.6 3.4 7.6 7.6v4.6c0 1.4-.4 2.7-1.1 3.8l1.5 1.4c1-1.5 1.6-3.3 1.6-5.2V8.4C24 3.8 20.2 0 15.6 0h-1.4C9.8 0 6 3.8 6 8.4v6.2c0 4.6 3.8 8.4 8.4 8.4h1.4z" />
-                    </svg>
-                    Microsoft
-                  </button>
-                </div>
+                <p className={auth.secureNote}>
+                  <ShieldCheck className="mt-0.5 size-3.5 shrink-0" />
+                  Access is limited to approved professional accounts.
+                </p>
               </form>
 
               <div className="mt-6 text-center">
                 <button
+                  type="button"
                   onClick={() => {
                     onShowAuth("register");
                     setRegisterStep(1);
@@ -840,13 +687,18 @@ export default function AuthPages({
               </div>
             </>
           ) : registrationSubmitted ? (
-            <section aria-labelledby="registration-status-title" className="py-3">
+            <section
+              aria-labelledby="registration-status-title"
+              className="py-3"
+            >
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#1B3A6B]/10 text-[#1B3A6B] dark:bg-[#4C8DFF]/15 dark:text-[#8BB5FF]">
                 <Clock className="h-8 w-8" aria-hidden="true" />
               </div>
               <div className="mt-6 text-center">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#1B3A6B] dark:text-[#8BB5FF]">
-                  {registrationMode === "JOIN_FACILITY" ? "Join request received" : "Application received"}
+                  {registrationMode === "JOIN_FACILITY"
+                    ? "Join request received"
+                    : "Application received"}
                 </p>
                 <h2
                   id="registration-status-title"
@@ -854,10 +706,13 @@ export default function AuthPages({
                 >
                   Verification is in progress
                 </h2>
-                <p className={`mx-auto mt-3 max-w-md text-sm leading-6 ${mutedText}`}>
+                <p
+                  className={`mx-auto mt-3 max-w-md text-sm leading-6 ${mutedText}`}
+                >
                   {registrationMode === "JOIN_FACILITY"
                     ? "Your request is with the selected facility and our licence review team. We’ll let you know when both decisions are complete."
-                    : "Your facility and licence details are with our review team. We’ll let you know when a decision is made."} Your account will be ready to sign in after approval.
+                    : "Your facility and licence details are with our review team. We’ll let you know when a decision is made."}{" "}
+                  Your account will be ready to sign in after approval.
                 </p>
               </div>
 
@@ -867,8 +722,14 @@ export default function AuthPages({
                     <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <div>
-                    <p className={`text-sm font-semibold ${headingText}`}>{registrationMode === "JOIN_FACILITY" ? "Join request submitted" : "Registration submitted"}</p>
-                    <p className={`mt-0.5 text-xs ${mutedText}`}>Your details have been received securely.</p>
+                    <p className={`text-sm font-semibold ${headingText}`}>
+                      {registrationMode === "JOIN_FACILITY"
+                        ? "Join request submitted"
+                        : "Registration submitted"}
+                    </p>
+                    <p className={`mt-0.5 text-xs ${mutedText}`}>
+                      Your details have been received securely.
+                    </p>
                   </div>
                 </li>
                 <li className="flex items-start gap-3">
@@ -876,24 +737,43 @@ export default function AuthPages({
                     <Clock className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <div>
-                    <p className={`text-sm font-semibold ${headingText}`}>{registrationMode === "JOIN_FACILITY" ? "Facility membership and licence review" : "Facility and licence review"}</p>
-                    <p className={`mt-0.5 text-xs ${mutedText}`}>{registrationMode === "JOIN_FACILITY" ? "The facility administrator reviews your access request; our team verifies your licence." : "We’re checking the submitted information before enabling access."}</p>
+                    <p className={`text-sm font-semibold ${headingText}`}>
+                      {registrationMode === "JOIN_FACILITY"
+                        ? "Facility membership and licence review"
+                        : "Facility and licence review"}
+                    </p>
+                    <p className={`mt-0.5 text-xs ${mutedText}`}>
+                      {registrationMode === "JOIN_FACILITY"
+                        ? "The facility administrator reviews your access request; our team verifies your licence."
+                        : "We’re checking the submitted information before enabling access."}
+                    </p>
                   </div>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${isDark ? "border-[#29456F] text-[#8CA0BE]" : "border-[#D5DFEC] text-slate"}`}>
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${isDark ? "border-[#29456F] text-[#8CA0BE]" : "border-[#D5DFEC] text-slate"}`}
+                  >
                     3
                   </span>
                   <div>
-                    <p className={`text-sm font-semibold ${headingText}`}>Sign in after approval</p>
-                    <p className={`mt-0.5 text-xs ${mutedText}`}>Your account remains inactive while review is pending.</p>
+                    <p className={`text-sm font-semibold ${headingText}`}>
+                      Sign in after approval
+                    </p>
+                    <p className={`mt-0.5 text-xs ${mutedText}`}>
+                      Your account remains inactive while review is pending.
+                    </p>
                   </div>
                 </li>
               </ol>
 
-              <div className={`mt-7 rounded-xl border p-4 text-sm leading-6 ${isDark ? "border-[#29456F] bg-[#0A1628]/70 text-[#C7D4E8]" : "border-[#DCE6F2] bg-[#F6F9FD] text-[#40516B]"}`}>
+              <div
+                className={`mt-7 rounded-xl border p-4 text-sm leading-6 ${isDark ? "border-[#29456F] bg-[#0A1628]/70 text-[#C7D4E8]" : "border-[#DCE6F2] bg-[#F6F9FD] text-[#40516B]"}`}
+              >
                 <div className="flex items-start gap-2.5">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#4C8DFF]" aria-hidden="true" />
+                  <Info
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#4C8DFF]"
+                    aria-hidden="true"
+                  />
                   <p>{registrationNotice}</p>
                 </div>
               </div>
@@ -902,7 +782,10 @@ export default function AuthPages({
                 type="button"
                 onClick={() => onShowAuth("login")}
                 className="mt-6 w-full rounded-lg py-3 text-sm font-semibold text-white transition-colors hover:opacity-90"
-                style={{ backgroundColor: accent }}
+                style={{
+                  backgroundColor: accent,
+                  color: isDark ? "#020617" : "#FFFFFF",
+                }}
               >
                 Return to sign in
               </button>
@@ -913,7 +796,7 @@ export default function AuthPages({
           ) : (
             <>
               {/* Header */}
-              <div className="space-y-1 mt-30">
+              <div className={auth.intro}>
                 <p
                   className={`font-mono text-[11px] uppercase tracking-[0.2em] ${mutedText}`}
                 >
@@ -922,7 +805,7 @@ export default function AuthPages({
                 <h2
                   className={`text-2xl font-bold tracking-tight ${headingText}`}
                 >
-                  Join the network
+                  Create your account
                 </h2>
                 <p className={`text-sm ${mutedText}`}>
                   Sign up as a doctor, pharmacist or pharmacy store. Your
@@ -930,74 +813,57 @@ export default function AuthPages({
                 </p>
               </div>
 
-              {/* Step indicator */}
-              <div className="mt-6 flex items-center">
-                {STEPS.map((step, i) => {
-                  const isComplete = registerStep > step.id;
-                  const isActive = registerStep === step.id;
-                  return (
-                    <div
-                      key={step.id}
-                      className={`flex items-center ${i < STEPS.length - 1 ? "flex-1" : ""}`}
-                    >
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold transition-colors duration-200"
-                          style={{
-                            borderColor:
-                              isComplete || isActive
-                                ? accent
-                                : isDark
-                                  ? "#1E3358"
-                                  : "#E2E8F0",
-                            backgroundColor: isComplete
-                              ? accent
-                              : "transparent",
-                            color: isComplete
-                              ? "#FFFFFF"
-                              : isActive
-                                ? accent
-                                : isDark
-                                  ? "#8CA0BE"
-                                  : "#94A3B8",
-                          }}
-                        >
-                          {isComplete ? <Check className="h-4 w-4" /> : step.id}
-                        </div>
-                        <span
-                          className={`hidden text-center text-[11px] font-medium sm:block ${isActive || isComplete ? headingText : mutedText}`}
-                          style={{ maxWidth: "90px" }}
-                        >
-                          {step.label}
-                        </span>
-                      </div>
-                      {i < STEPS.length - 1 && (
-                        <div
-                          className="mx-2 h-0.5 flex-1 transition-colors duration-200"
-                          style={{
-                            backgroundColor: isComplete
-                              ? accent
-                              : isDark
-                                ? "#1E3358"
-                                : "#E2E8F0",
-                          }}
-                        />
+              <ol className={auth.steps} aria-label="Registration progress">
+                {STEPS.map((step) => (
+                  <li
+                    key={step.id}
+                    className={auth.step}
+                    aria-current={registerStep === step.id ? "step" : undefined}
+                    data-complete={registerStep > step.id}
+                  >
+                    <span className={auth.stepNumber}>
+                      {registerStep > step.id ? (
+                        <Check className="size-3.5" />
+                      ) : (
+                        step.id
                       )}
-                    </div>
-                  );
-                })}
-              </div>
+                    </span>
+                    <span>{step.label}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="sr-only" aria-live="polite">
+                Step {registerStep} of 4: {STEPS[registerStep - 1].label}
+              </p>
 
               <form className="mt-8 space-y-5" onSubmit={handleRegisterSubmit}>
                 {registerStep === 1 && (
                   <div className="space-y-4">
-                    <section className={`rounded-xl border p-4 ${borderColor}`} aria-labelledby="registration-path-title">
-                      <h3 id="registration-path-title" className={`text-sm font-semibold ${headingText}`}>How would you like to register?</h3>
+                    <section
+                      className={`rounded-xl border p-4 ${borderColor}`}
+                      aria-labelledby="registration-path-title"
+                    >
+                      <h3
+                        id="registration-path-title"
+                        className={`text-sm font-semibold ${headingText}`}
+                      >
+                        How would you like to register?
+                      </h3>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        {([
-                          ["CREATE_FACILITY", "Create a facility", "Register a new hospital, clinic, cancer center or pharmacy."],
-                          ["JOIN_FACILITY", "Join an existing facility", "Find your workplace and request access."],
-                        ] as const).map(([mode, title, description]) => {
+                        {(
+                          [
+                            [
+                              "CREATE_FACILITY",
+                              "Create a facility",
+                              "Register a new hospital, clinic, cancer center or pharmacy.",
+                            ],
+                            [
+                              "JOIN_FACILITY",
+                              "Join an existing facility",
+                              "Find your workplace and request access.",
+                            ],
+                          ] as const
+                        ).map(([mode, title, description]) => {
                           const selected = registrationMode === mode;
                           return (
                             <button
@@ -1006,13 +872,33 @@ export default function AuthPages({
                               aria-pressed={selected}
                               onClick={() => setRegistrationMode(mode)}
                               className={`rounded-xl border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 ${selected ? "shadow-md" : borderColor}`}
-                              style={selected ? { borderColor: accent, backgroundColor: isDark ? "rgba(76,141,255,0.1)" : "rgba(27,58,107,0.05)" } : undefined}
+                              style={
+                                selected
+                                  ? {
+                                      borderColor: accent,
+                                      backgroundColor: isDark
+                                        ? "rgba(76,141,255,0.1)"
+                                        : "rgba(27,58,107,0.05)",
+                                    }
+                                  : undefined
+                              }
                             >
-                              <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: selected ? accent : undefined }}>
-                                {mode === "CREATE_FACILITY" ? <Building2 className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                              <span
+                                className="flex items-center gap-2 text-sm font-semibold"
+                                style={{ color: selected ? accent : undefined }}
+                              >
+                                {mode === "CREATE_FACILITY" ? (
+                                  <Building2 className="h-4 w-4" />
+                                ) : (
+                                  <UserPlus className="h-4 w-4" />
+                                )}
                                 {title}
                               </span>
-                              <span className={`mt-1 block text-xs leading-5 ${mutedText}`}>{description}</span>
+                              <span
+                                className={`mt-1 block text-xs leading-5 ${mutedText}`}
+                              >
+                                {description}
+                              </span>
                             </button>
                           );
                         })}
@@ -1087,183 +973,297 @@ export default function AuthPages({
                         className={`text-sm font-semibold uppercase tracking-wide ${headingText}`}
                       >
                         {registrationMode === "CREATE_FACILITY"
-                          ? isStore ? "Create pharmacy facility" : "Create facility"
+                          ? isStore
+                            ? "Create pharmacy facility"
+                            : "Create facility"
                           : "Choose your facility"}
                       </h3>
                     </div>
 
                     {registrationMode === "CREATE_FACILITY" ? (
                       <>
-                    <div>
-                      <label
-                        className={`mb-1.5 block text-sm font-medium ${labelText}`}
-                      >
-                        {isStore
-                          ? "Pharmacy Name"
-                          : "Hospital / Clinic / Pharmacy Name"}
-                      </label>
-                      <input
-                        type="text"
-                        value={facilityName}
-                        onChange={(e) => setFacilityName(e.target.value)}
-                        placeholder="e.g. LUTH Pharmacy"
-                        className={inputClasses}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label
-                          className={`mb-1.5 block text-sm font-medium ${labelText}`}
-                        >
-                          Facility Type
-                        </label>
-                        <select
-                          value={facilityType}
-                          onChange={(e) => setFacilityType(e.target.value)}
-                          className={inputClasses}
-                        >
-                          <option value="">Select type</option>
-                          <option value="HOSPITAL">Hospital</option>
-                          <option value="CANCER_CENTER">Cancer Center</option>
-                          <option value="CLINIC">Oncology Clinic</option>
-                          <option value="PHARMACY">Pharmacy</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label
-                          className={`mb-1.5 block text-sm font-medium ${labelText}`}
-                        >
-                          Phone Number
-                        </label>
-                        <div className="relative">
-                          <Phone
-                            className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`}
-                          />
+                        <div>
+                          <label
+                            htmlFor="auth-input-3"
+                            className={`mb-1.5 block text-sm font-medium ${labelText}`}
+                          >
+                            {isStore
+                              ? "Pharmacy Name"
+                              : "Hospital / Clinic / Pharmacy Name"}
+                          </label>
                           <input
-                            type="tel"
-                            value={facilityPhone}
-                            onChange={(e) => setFacilityPhone(e.target.value)}
-                            placeholder="+234"
-                            className={`${inputClasses} pl-10`}
+                            id="auth-input-3"
+                            type="text"
+                            value={facilityName}
+                            onChange={(e) => setFacilityName(e.target.value)}
+                            placeholder="e.g. LUTH Pharmacy"
+                            className={inputClasses}
                           />
                         </div>
-                      </div>
-                    </div>
 
-                    {isStore && (
-                      <>
-                        <div>
-                          <label
-                            className={`mb-1.5 block text-sm font-medium ${labelText}`}
-                          >
-                            Official Facility Email
-                          </label>
-                          <div className="relative">
-                            <Mail
-                              className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`}
-                            />
-                            <input
-                              type="email"
-                              value={facilityEmail}
-                              onChange={(e) => setFacilityEmail(e.target.value)}
-                              placeholder="records@facility.org"
-                              className={`${inputClasses} pl-10`}
-                            />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label
+                              htmlFor="auth-input-4"
+                              className={`mb-1.5 block text-sm font-medium ${labelText}`}
+                            >
+                              Facility Type
+                            </label>
+                            <select
+                              id="auth-input-4"
+                              value={facilityType}
+                              onChange={(e) => setFacilityType(e.target.value)}
+                              className={inputClasses}
+                            >
+                              <option value="">Select type</option>
+                              <option value="HOSPITAL">Hospital</option>
+                              <option value="CANCER_CENTER">
+                                Cancer Center
+                              </option>
+                              <option value="CLINIC">Oncology Clinic</option>
+                              <option value="PHARMACY">Pharmacy</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label
+                              htmlFor="auth-input-5"
+                              className={`mb-1.5 block text-sm font-medium ${labelText}`}
+                            >
+                              Phone Number
+                            </label>
+                            <div className="relative">
+                              <Phone
+                                className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`}
+                              />
+                              <input
+                                autoComplete="tel"
+                                id="auth-input-5"
+                                type="tel"
+                                value={facilityPhone}
+                                onChange={(e) =>
+                                  setFacilityPhone(e.target.value)
+                                }
+                                placeholder="+234"
+                                className={`${inputClasses} pl-10`}
+                              />
+                            </div>
                           </div>
                         </div>
 
-                        <div>
-                          <label
-                            className={`mb-1.5 block text-sm font-medium ${labelText}`}
-                          >
-                            Address
-                          </label>
-                          <div className="relative">
-                            <MapPin
-                              className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`}
-                            />
+                        {isStore && (
+                          <>
+                            <div>
+                              <label
+                                htmlFor="auth-input-6"
+                                className={`mb-1.5 block text-sm font-medium ${labelText}`}
+                              >
+                                Official Facility Email
+                              </label>
+                              <div className="relative">
+                                <Mail
+                                  className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`}
+                                />
+                                <input
+                                  autoComplete="email"
+                                  id="auth-input-6"
+                                  type="email"
+                                  value={facilityEmail}
+                                  onChange={(e) =>
+                                    setFacilityEmail(e.target.value)
+                                  }
+                                  placeholder="records@facility.org"
+                                  className={`${inputClasses} pl-10`}
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label
+                                htmlFor="auth-input-7"
+                                className={`mb-1.5 block text-sm font-medium ${labelText}`}
+                              >
+                                Address
+                              </label>
+                              <div className="relative">
+                                <MapPin
+                                  className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`}
+                                />
+                                <input
+                                  autoComplete="street-address"
+                                  id="auth-input-7"
+                                  type="text"
+                                  value={facilityAddress}
+                                  onChange={(e) =>
+                                    setFacilityAddress(e.target.value)
+                                  }
+                                  placeholder="Street address"
+                                  className={`${inputClasses} pl-10`}
+                                />
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label
+                              htmlFor="auth-input-8"
+                              className={`mb-1.5 block text-sm font-medium ${labelText}`}
+                            >
+                              City
+                            </label>
                             <input
+                              autoComplete="address-level2"
+                              id="auth-input-8"
                               type="text"
-                              value={facilityAddress}
-                              onChange={(e) =>
-                                setFacilityAddress(e.target.value)
-                              }
-                              placeholder="Street address"
-                              className={`${inputClasses} pl-10`}
+                              value={facilityCity}
+                              onChange={(e) => setFacilityCity(e.target.value)}
+                              placeholder="e.g. Lagos"
+                              className={inputClasses}
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor="auth-input-9"
+                              className={`mb-1.5 block text-sm font-medium ${labelText}`}
+                            >
+                              State
+                            </label>
+                            <input
+                              autoComplete="address-level1"
+                              id="auth-input-9"
+                              type="text"
+                              value={facilityState}
+                              onChange={(e) => setFacilityState(e.target.value)}
+                              placeholder="e.g. Lagos State"
+                              className={inputClasses}
                             />
                           </div>
                         </div>
-                      </>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label
-                          className={`mb-1.5 block text-sm font-medium ${labelText}`}
-                        >
-                          City
-                        </label>
-                        <input
-                          type="text"
-                          value={facilityCity}
-                          onChange={(e) => setFacilityCity(e.target.value)}
-                          placeholder="e.g. Lagos"
-                          className={inputClasses}
-                        />
-                      </div>
-                      <div>
-                        <label
-                          className={`mb-1.5 block text-sm font-medium ${labelText}`}
-                        >
-                          State
-                        </label>
-                        <input
-                          type="text"
-                          value={facilityState}
-                          onChange={(e) => setFacilityState(e.target.value)}
-                          placeholder="e.g. Lagos State"
-                          className={inputClasses}
-                        />
-                      </div>
-                    </div>
                       </>
                     ) : (
                       <div className="space-y-3 animate-fade-up">
-                        <label className={`block text-sm font-medium ${labelText}`}>
+                        <label
+                          className={`block text-sm font-medium ${labelText}`}
+                        >
                           Find your facility
                           <span className="relative mt-1.5 block">
-                            <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`} />
-                            <input value={facilitySearch} onChange={(event) => { setFacilitySearch(event.target.value); setSelectedFacilityId(""); }} placeholder="Search by facility name, city or code" className={`${inputClasses} pl-10`} />
+                            <Search
+                              className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`}
+                            />
+                            <input
+                              value={facilitySearch}
+                              onChange={(event) => {
+                                setFacilitySearch(event.target.value);
+                                setSelectedFacilityId("");
+                              }}
+                              placeholder="Search by facility name, city or code"
+                              className={`${inputClasses} pl-10`}
+                            />
                           </span>
                         </label>
-                        {facilitiesLoading && <p className={`rounded-lg border p-4 text-sm ${borderColor} ${mutedText}`}>Loading active facilities…</p>}
-                        {facilitiesError && <div role="alert" className={`rounded-lg border p-4 text-sm ${isDark ? "border-red-400/30 text-red-200" : "border-red-200 bg-red-50 text-red-800"}`}>{facilitiesError}</div>}
-                        {!facilitiesLoading && !facilitiesError && publicFacilities.length === 0 && <p className={`rounded-lg border border-dashed p-5 text-center text-sm ${borderColor} ${mutedText}`}>No active facilities found. Try another search, or choose Create a facility.</p>}
+                        {facilitiesLoading && (
+                          <p
+                            className={`rounded-lg border p-4 text-sm ${borderColor} ${mutedText}`}
+                          >
+                            Loading active facilities…
+                          </p>
+                        )}
+                        {facilitiesError && (
+                          <div
+                            role="alert"
+                            className={`rounded-lg border p-4 text-sm ${isDark ? "border-red-400/30 text-red-200" : "border-red-200 bg-red-50 text-red-800"}`}
+                          >
+                            {facilitiesError}
+                          </div>
+                        )}
+                        {!facilitiesLoading &&
+                          !facilitiesError &&
+                          publicFacilities.length === 0 && (
+                            <p
+                              className={`rounded-lg border border-dashed p-5 text-center text-sm ${borderColor} ${mutedText}`}
+                            >
+                              No active facilities found. Try another search, or
+                              choose Create a facility.
+                            </p>
+                          )}
                         <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
                           {publicFacilities.map((facility) => {
-                            const selected = selectedFacilityId === String(facility.id);
+                            const selected =
+                              selectedFacilityId === String(facility.id);
                             return (
                               <button
                                 key={facility.id}
                                 type="button"
                                 aria-pressed={selected}
-                                onClick={() => setSelectedFacilityId(String(facility.id))}
+                                onClick={() =>
+                                  setSelectedFacilityId(String(facility.id))
+                                }
                                 className={`flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-all duration-200 hover:-translate-y-px ${selected ? "shadow-sm" : borderColor}`}
-                                style={selected ? { borderColor: accent, backgroundColor: isDark ? "rgba(76,141,255,0.08)" : "rgba(27,58,107,0.04)" } : undefined}
+                                style={
+                                  selected
+                                    ? {
+                                        borderColor: accent,
+                                        backgroundColor: isDark
+                                          ? "rgba(76,141,255,0.08)"
+                                          : "rgba(27,58,107,0.04)",
+                                      }
+                                    : undefined
+                                }
                               >
-                                <Building2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color: accent }} />
+                                <Building2
+                                  className="mt-0.5 h-4 w-4 shrink-0"
+                                  style={{ color: accent }}
+                                />
                                 <span className="min-w-0 flex-1">
-                                  <span className={`block text-sm font-semibold ${headingText}`}>{facility.name}</span>
-                                  <span className={`mt-0.5 block text-xs ${mutedText}`}>{String(facility.facility_type ?? facility.facilityType ?? "Facility").replaceAll("_", " ")} · {[facility.city, facility.state].filter(Boolean).join(", ") || "Location not listed"}</span>
-                                  {facility.hospital_code && <span className={`mt-1 block font-mono text-[10px] ${mutedText}`}>Code {facility.hospital_code}</span>}
+                                  <span
+                                    className={`block text-sm font-semibold ${headingText}`}
+                                  >
+                                    {facility.name}
+                                  </span>
+                                  <span
+                                    className={`mt-0.5 block text-xs ${mutedText}`}
+                                  >
+                                    {String(
+                                      facility.facility_type ??
+                                        facility.facilityType ??
+                                        "Facility",
+                                    ).replaceAll("_", " ")}{" "}
+                                    ·{" "}
+                                    {[facility.city, facility.state]
+                                      .filter(Boolean)
+                                      .join(", ") || "Location not listed"}
+                                  </span>
+                                  {facility.hospital_code && (
+                                    <span
+                                      className={`mt-1 block font-mono text-[10px] ${mutedText}`}
+                                    >
+                                      Code {facility.hospital_code}
+                                    </span>
+                                  )}
                                 </span>
-                                <span className={`mt-0.5 h-4 w-4 rounded-full border ${selected ? "border-4" : ""}`} style={{ borderColor: selected ? accent : isDark ? "#496184" : "#CBD5E1" }} />
+                                <span
+                                  className={`mt-0.5 h-4 w-4 rounded-full border ${selected ? "border-4" : ""}`}
+                                  style={{
+                                    borderColor: selected
+                                      ? accent
+                                      : isDark
+                                        ? "#496184"
+                                        : "#CBD5E1",
+                                  }}
+                                />
                               </button>
                             );
                           })}
                         </div>
-                        <p className={`rounded-lg border p-3 text-xs leading-5 ${borderColor} ${mutedText}`}>Your request will go to the selected facility for approval. The facility administrator and network verification workflow must approve access before tools are enabled.</p>
+                        <p
+                          className={`rounded-lg border p-3 text-xs leading-5 ${borderColor} ${mutedText}`}
+                        >
+                          Your request will go to the selected facility for
+                          approval. The facility administrator and network
+                          verification workflow must approve access before tools
+                          are enabled.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1285,11 +1285,14 @@ export default function AuthPages({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label
+                          htmlFor="auth-input-10"
                           className={`mb-1.5 block text-sm font-medium ${labelText}`}
                         >
                           First Name
                         </label>
                         <input
+                          autoComplete="given-name"
+                          id="auth-input-10"
                           type="text"
                           value={adminFirstName}
                           onChange={(e) => setAdminFirstName(e.target.value)}
@@ -1299,11 +1302,14 @@ export default function AuthPages({
                       </div>
                       <div>
                         <label
+                          htmlFor="auth-input-11"
                           className={`mb-1.5 block text-sm font-medium ${labelText}`}
                         >
                           Last Name
                         </label>
                         <input
+                          autoComplete="family-name"
+                          id="auth-input-11"
                           type="text"
                           value={adminLastName}
                           onChange={(e) => setAdminLastName(e.target.value)}
@@ -1316,11 +1322,14 @@ export default function AuthPages({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label
+                          htmlFor="auth-input-12"
                           className={`mb-1.5 block text-sm font-medium ${labelText}`}
                         >
                           Work Email
                         </label>
                         <input
+                          autoComplete="email"
+                          id="auth-input-12"
                           type="email"
                           value={workEmail}
                           onChange={(e) => setWorkEmail(e.target.value)}
@@ -1330,11 +1339,14 @@ export default function AuthPages({
                       </div>
                       <div>
                         <label
+                          htmlFor="auth-input-13"
                           className={`mb-1.5 block text-sm font-medium ${labelText}`}
                         >
                           Phone Number
                         </label>
                         <input
+                          autoComplete="tel"
+                          id="auth-input-13"
                           type="tel"
                           value={adminPhone}
                           onChange={(e) => setAdminPhone(e.target.value)}
@@ -1347,13 +1359,16 @@ export default function AuthPages({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label
+                          htmlFor="auth-input-14"
                           className={`mb-1.5 block text-sm font-medium ${labelText}`}
                         >
                           Password
                         </label>
                         <div className="relative">
                           <input
+                            id="auth-input-14"
                             type={showPassword ? "text" : "password"}
+                            autoComplete="new-password"
                             value={registerPassword}
                             onChange={(e) =>
                               setRegisterPassword(e.target.value)
@@ -1379,13 +1394,16 @@ export default function AuthPages({
                       </div>
                       <div>
                         <label
+                          htmlFor="auth-input-15"
                           className={`mb-1.5 block text-sm font-medium ${labelText}`}
                         >
                           Confirm
                         </label>
                         <div className="relative">
                           <input
+                            id="auth-input-15"
                             type={showConfirm ? "text" : "password"}
+                            autoComplete="new-password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="••••••••"
@@ -1449,11 +1467,13 @@ export default function AuthPages({
 
                     <div>
                       <label
+                        htmlFor="auth-input-16"
                         className={`mb-1.5 block text-sm font-medium ${labelText}`}
                       >
                         {accountInfo?.licenseLabel}
                       </label>
                       <input
+                        id="auth-input-16"
                         type="text"
                         value={licenseNumber}
                         onChange={(e) => setLicenseNumber(e.target.value)}
@@ -1522,14 +1542,20 @@ export default function AuthPages({
                             style={{ backgroundColor: accent }}
                           />
                           Your licence is checked against the public registry,
-                          then reviewed by {registrationMode === "JOIN_FACILITY" ? "the facility administrator and " : ""}Oncosourz.
+                          then reviewed by{" "}
+                          {registrationMode === "JOIN_FACILITY"
+                            ? "the facility administrator and "
+                            : ""}
+                          Oncosourz.
                         </li>
                         <li className="flex items-start gap-2">
                           <span
                             className="mt-1.5 h-1 w-1 shrink-0 rounded-full"
                             style={{ backgroundColor: accent }}
                           />
-                          Your account stays limited to overview and settings until both facility access and licence review are approved.
+                          Your account stays limited to overview and settings
+                          until both facility access and licence review are
+                          approved.
                         </li>
                         <li className="flex items-start gap-2">
                           <span
@@ -1553,21 +1579,31 @@ export default function AuthPages({
                         <span
                           className={`text-right font-medium ${headingText}`}
                         >
-                          {accountInfo?.label ?? "—"}
+                          {accountInfo?.label ?? "N/A"}
                         </span>
                         <span className={mutedText}>
-                          {registrationMode === "JOIN_FACILITY" ? "Selected facility" : isStore ? "Pharmacy" : "Workplace"}
+                          {registrationMode === "JOIN_FACILITY"
+                            ? "Selected facility"
+                            : isStore
+                              ? "Pharmacy"
+                              : "Workplace"}
                         </span>
                         <span
                           className={`text-right font-medium ${headingText}`}
                         >
-                          {registrationMode === "JOIN_FACILITY" ? selectedFacility?.name ?? "—" : facilityName || "—"}
+                          {registrationMode === "JOIN_FACILITY"
+                            ? (selectedFacility?.name ?? "N/A")
+                            : facilityName || "N/A"}
                         </span>
                         <span className={mutedText}>Type</span>
                         <span
                           className={`text-right font-medium ${headingText}`}
                         >
-                          {registrationMode === "JOIN_FACILITY" ? String(selectedFacility?.facility_type ?? "—").replaceAll("_", " ") : facilityType || "—"}
+                          {registrationMode === "JOIN_FACILITY"
+                            ? String(
+                                selectedFacility?.facility_type ?? "N/A",
+                              ).replaceAll("_", " ")
+                            : facilityType || "N/A"}
                         </span>
                         <span className={mutedText}>Administrator</span>
                         <span
@@ -1575,13 +1611,13 @@ export default function AuthPages({
                         >
                           {adminFirstName || adminLastName
                             ? `${adminFirstName} ${adminLastName}`.trim()
-                            : "—"}
+                            : "N/A"}
                         </span>
                         <span className={mutedText}>Work Email</span>
                         <span
                           className={`text-right font-medium ${headingText}`}
                         >
-                          {workEmail || "—"}
+                          {workEmail || "N/A"}
                         </span>
                       </div>
                     </div>
@@ -1627,8 +1663,8 @@ export default function AuthPages({
                       disabled={!stepValid}
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-50"
                       style={{
-                        backgroundColor: isDark ? "#FFFFFF" : "#0B1E3D",
-                        color: isDark ? "#0B1E3D" : "#FFFFFF",
+                        backgroundColor: "var(--p)",
+                        color: isDark ? "#020617" : "#FFFFFF",
                       }}
                     >
                       Continue
@@ -1640,12 +1676,13 @@ export default function AuthPages({
                       disabled={submitting || !licenseValid}
                       className="flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-70"
                       style={{
-                        backgroundColor: isDark ? "#FFFFFF" : "#0B1E3D",
-                        color: isDark ? "#0B1E3D" : "#FFFFFF",
+                        backgroundColor: "var(--p)",
+                        color: isDark ? "#020617" : "#FFFFFF",
                       }}
                     >
                       {submitting && (
                         <svg
+                          aria-hidden="true"
                           className="h-4 w-4 animate-spin"
                           viewBox="0 0 24 24"
                           fill="none"
@@ -1685,6 +1722,7 @@ export default function AuthPages({
 
               <div className="mt-6 text-center">
                 <button
+                  type="button"
                   onClick={() => onShowAuth("login")}
                   className={`text-sm transition-colors ${mutedText}`}
                 >
@@ -1700,20 +1738,15 @@ export default function AuthPages({
             </>
           )}
         </div>
+        <footer className={auth.footer}>
+          <span>Oncosourz. Connected care, every step.</span>
+          <Link href="/legal">Privacy & terms</Link>
+          <Link href="/admin">
+            <UserCogIcon className="size-3" />
+            Administrator access
+          </Link>
+        </footer>
       </main>
-
-      {/* Admin Console Button */}
-      <Link
-        href="/pages/admin"
-        aria-label="Open Admin Console"
-        className={`group fixed bottom-6 right-6 z-30 flex h-12 w-12 items-center justify-center rounded-full border shadow-sm transition-colors duration-200 ${
-          isDark
-            ? "border-[#1E3358] bg-[#0F2038] text-[#8CA0BE] hover:border-[#4C8DFF]"
-            : "border-[#E2E8F0] bg-white text-[#5B6B85] hover:border-[#1B3A6B]"
-        }`}
-      >
-        <UserCogIcon className="h-5 w-5" />
-      </Link>
     </div>
   );
 }
