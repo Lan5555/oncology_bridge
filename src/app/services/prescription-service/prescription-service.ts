@@ -1,6 +1,12 @@
 import { CoreService } from "@/app/hooks/service/core-service";
 import { Routes } from "../api-routes";
+
 class PrescriptionService extends CoreService {
+  async checkoutOptions(page = 1) {
+    return await this.get(
+      `${Routes.PRESCRIPTIONS("active")}&page=${page}&limit=25`,
+    );
+  }
   async list(tab: string) {
     return await this.get(Routes.PRESCRIPTIONS(tab));
   }

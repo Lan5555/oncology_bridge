@@ -104,9 +104,7 @@ export default function ExpiryPage() {
                 <td className="px-4 py-3">
                   {item.donorFacility?.name ?? item.donorFacility ?? "N/A"}
                 </td>
-                <td className="px-4 py-3">
-                  {item.qty ?? item.quantity ?? "Not recorded"}
-                </td>
+                <td className="px-4 py-3">{item.qty ?? item.quantity ?? 0}</td>
                 <td className="px-4 py-3">
                   {item.expiry
                     ? new Date(item.expiry).toLocaleDateString("en-NG")

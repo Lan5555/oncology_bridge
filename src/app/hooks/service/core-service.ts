@@ -1,11 +1,15 @@
-import { NetResponse } from "./net-response";
 import { Routes } from "@/app/services/api-routes";
+import { NetResponse } from "./net-response";
+
+export const ADMIN_SESSION_INVALIDATED = "admin-session-invalidated";
+export const DASHBOARD_DATA_CHANGED = "dashboard-data-changed";
 
 type RequestOptions = {
   method?: string;
   body?: unknown;
   auth?: boolean;
   admin?: boolean;
+  facilityOnly?: boolean;
   headers?: Record<string, string>;
 };
 
@@ -17,7 +21,10 @@ export class CoreService {
     this.BASE_URL = url.replace(/\/$/, "");
   }
 
-  private getSession(admin = false): Record<string, any> | null {
+  private getSession(
+    admin = false,
+    facilityOnly = false,
+  ): Record<string, any> | null {
     if (typeof window === "undefined") return null;
     try {
       const preferredKey = admin ? "adminSession" : "userSession";
@@ -26,7 +33,7 @@ export class CoreService {
       // Admin pages reuse shared user and facility views. Those views should
       // continue to send the authenticated admin bearer token when opened in
       // the admin console.
-      if (!admin) {
+      if (!admin && !facilityOnly) {
         const adminSession = localStorage.getItem("adminSession");
         return adminSession ? JSON.parse(adminSession) : null;
       }
@@ -71,7 +78,7 @@ export class CoreService {
         status: 0,
       });
     }
-    const session = this.getSession(options.admin);
+    const session = this.getSession(options.admin, options.facilityOnly);
     const token = session?.token;
     const headers: Record<string, string> = {
       Accept: "application/json",
@@ -117,10 +124,41 @@ export class CoreService {
       }
       const isEnvelope =
         parsed && typeof parsed === "object" && "success" in parsed;
+      // Expire only the admin session that made this request. A delayed
+      // response from an old token must not log out a newly signed-in admin.
+      const authenticationFailed =
+        response.status === 401 ||
+        (response.status === 403 &&
+          (/^(?:INVALID_TOKEN|TOKEN_EXPIRED|TOKEN_INVALID|UNAUTHENTICATED)$/i.test(
+            String(parsed?.code ?? parsed?.error?.code ?? ""),
+          ) ||
+            /\b(?:invalid|expired)\s+(?:access\s+)?token\b|\btoken\s+(?:is\s+)?(?:invalid|expired)\b/i.test(
+              String(parsed?.message ?? ""),
+            )));
+      if (
+        options.auth !== false &&
+        token &&
+        authenticationFailed &&
+        typeof window !== "undefined" &&
+        this.getSession(true)?.token === token &&
+        (options.admin || !localStorage.getItem("userSession"))
+      ) {
+        localStorage.removeItem("adminSession");
+        window.dispatchEvent(new Event(ADMIN_SESSION_INVALIDATED));
+      }
+      const success = isEnvelope
+        ? Boolean(parsed.success) && response.ok
+        : response.ok;
+      if (
+        success &&
+        options.auth !== false &&
+        ["POST", "PUT", "PATCH", "DELETE"].includes(options.method ?? "GET") &&
+        typeof window !== "undefined"
+      ) {
+        window.dispatchEvent(new Event(DASHBOARD_DATA_CHANGED));
+      }
       return new NetResponse({
-        success: isEnvelope
-          ? Boolean(parsed.success) && response.ok
-          : response.ok,
+        success,
         message: isEnvelope
           ? (parsed.message ?? "")
           : response.ok
@@ -174,7 +212,11 @@ export class CoreService {
     payload: unknown,
     options: Omit<RequestOptions, "method" | "body"> = {},
   ) {
-    return await this.request(endpoint, { ...options, method: "PUT", body: payload });
+    return await this.request(endpoint, {
+      ...options,
+      method: "PUT",
+      body: payload,
+    });
   }
   public async delete(
     endpoint: string,

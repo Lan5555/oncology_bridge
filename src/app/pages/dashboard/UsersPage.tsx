@@ -603,7 +603,7 @@ export default function UsersPage({
                 {loading ||
                 (loadError && metric.label !== "Join requests") ||
                 (requestsError && metric.label === "Join requests")
-                  ? "N/A"
+                  ? 0
                   : metric.value}
               </strong>
               <small>{metric.detail}</small>
@@ -620,7 +620,7 @@ export default function UsersPage({
             <h2 id="team-requests-title">
               Join requests{" "}
               <span className="ml-2 text-xs font-normal text-g400">
-                {loading || requestsError ? "N/A" : membershipRequests.length}
+                {loading || requestsError ? 0 : membershipRequests.length}
               </span>
             </h2>
             <p>

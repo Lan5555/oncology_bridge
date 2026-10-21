@@ -1,21 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type React from "react";
-import type { ModalId, PageId } from "@/app/lib/types";
-import { getAccountInfo } from "@/app/lib/accounts";
-import { useProvider } from "@/app/providers/provider";
-import { DASHBOARD_SERVICE } from "@/app/services/dashboard-service/dashboard-service";
-import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
-import { unwrapArray } from "@/app/services/response-utils";
-import {
-  DrugSplitChart,
-  InventoryChart,
-  RedistributionEfficiencyChart,
-  TherapeuticStockChart,
-} from "@/app/components/Charts";
-import ColdChainOverview from "./ColdChainOverview";
-import EmptyState from "@/app/components/EmptyState";
 import {
   Activity,
   ArrowRight,
@@ -26,11 +10,31 @@ import {
   Network,
   PackageSearch,
   Pill,
+  RefreshCw,
   ScanLine,
   ShieldCheck,
   Thermometer,
   Users,
 } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
+import {
+  DrugSplitChart,
+  InventoryChart,
+  RedistributionEfficiencyChart,
+  TherapeuticStockChart,
+} from "@/app/components/Charts";
+import EmptyState from "@/app/components/EmptyState";
+import { useDashboardRefresh } from "@/app/hooks/useDashboardRefresh";
+import { getAccountInfo } from "@/app/lib/accounts";
+import { unitLabel } from "@/app/lib/dashboard-chart-data";
+import { dashboardFeedback } from "@/app/lib/dashboard-feedback";
+import type { ModalId, PageId } from "@/app/lib/types";
+import { useProvider } from "@/app/providers/provider";
+import { DASHBOARD_SERVICE } from "@/app/services/dashboard-service/dashboard-service";
+import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
+import { unwrapArray } from "@/app/services/response-utils";
+import ColdChainOverview from "./ColdChainOverview";
 
 interface DashboardPageProps {
   onNav: (id: PageId) => void;
@@ -165,18 +169,22 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState("");
   const [watchlistState, setWatchlistState] = useState("loading");
+  const { refreshVersion, refresh } = useDashboardRefresh();
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Refresh reloads summaries after saves and at regular intervals.
   useEffect(() => {
     let active = true;
-    setSummary({});
     setSummaryLoading(true);
     setSummaryError("");
     void DASHBOARD_SERVICE.summary().then((response) => {
       if (!active) return;
-      if (response.success && response.data) setSummary(response.data);
-      else
+      if (response.success && response.data) {
+        setSummary(response.data);
+        setLastRefreshed(new Date());
+      } else
         setSummaryError(
-          response.message || "Your dashboard summary could not be loaded.",
+          dashboardFeedback(response.message, response.status).description,
         );
       setSummaryLoading(false);
     });
@@ -191,23 +199,31 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     return () => {
       active = false;
     };
-  }, [isStore]);
+  }, [isStore, refreshVersion]);
 
   const metrics = [
-    ["Network Nodes", summary.nodes, Network],
+    [
+      summary.scope?.type === "network"
+        ? "Active network facilities"
+        : "Facilities in scope",
+      summary.nodes,
+      Network,
+    ],
     ["GS1 Authenticated Vials", summary.gs1AuthenticatedVials, ScanLine],
     [
-      "Stock-Out Risk",
+      "Medicines out of stock (%)",
       summary.stockOutRiskPct == null
         ? undefined
         : `${summary.stockOutRiskPct}%`,
       Activity,
     ],
     [
-      "Chain Integrity",
-      summary.chainIntegrityPct == null
-        ? undefined
-        : `${summary.chainIntegrityPct}%`,
+      "Storage units currently healthy (%)",
+      summary.monitoredStorageUnits === 0
+        ? "Not monitored"
+        : summary.chainIntegrityPct == null
+          ? undefined
+          : `${summary.chainIntegrityPct}%`,
       ShieldCheck,
     ],
   ] as const;
@@ -223,29 +239,63 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             {role} dashboard
           </h1>
           <p className="mt-1 text-sm text-g500">
-            Your workspace, live network indicators, and role-specific tools.
+            {summary.scope?.type === "network"
+              ? "Current network indicators and operational tools."
+              : "Current facility indicators and tools for your role."}
           </p>
         </div>
-        <button
-          onClick={() => onOpenModal("modal-export")}
-          className="inline-flex items-center gap-2 rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-semibold text-g700 shadow-sm transition hover:border-p hover:text-p"
-        >
-          <Download className="size-4" aria-hidden="true" />
-          Export report
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={summaryLoading}
+            onClick={refresh}
+            className="inline-flex items-center gap-2 rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-semibold text-g700 disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`size-4 ${summaryLoading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenModal("modal-export")}
+            className="inline-flex items-center gap-2 rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-semibold text-g700 shadow-sm transition hover:border-p hover:text-p"
+          >
+            <Download className="size-4" aria-hidden="true" />
+            Export report
+          </button>
+        </div>
       </header>
+      {lastRefreshed && (
+        <p className="mb-4 text-xs text-g500">
+          Last refreshed{" "}
+          {lastRefreshed.toLocaleTimeString("en-NG", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+          . Updates every 30 seconds while this page is visible.
+        </p>
+      )}
+      {typeof summary.asOf === "string" &&
+        Number.isFinite(Date.parse(summary.asOf)) && (
+          <p className="mb-4 text-xs text-g500">
+            Summary snapshot:{" "}
+            <time dateTime={summary.asOf}>
+              {new Date(summary.asOf).toLocaleString("en-NG")}
+            </time>
+            . Charts show their own snapshot times.
+          </p>
+        )}
 
       {summaryLoading || summaryError ? (
-        <p
-          role="status"
-          className="mb-6 rounded-xl border border-g200 bg-w p-4 text-sm text-g600"
-        >
+        <output className="mb-6 block rounded-xl border border-g200 bg-w p-4 text-sm text-g600">
           {summaryLoading ? "Loading your dashboard summary..." : summaryError}
-        </p>
+        </output>
       ) : null}
       <section
         className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label="Network summary"
+        aria-label="Dashboard summary"
       >
         {metrics
           .filter(
@@ -265,7 +315,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               <div>
                 <p className="text-2xl font-bold tabular-nums text-g900">
                   {value == null
-                    ? "N/A"
+                    ? 0
                     : typeof value === "number"
                       ? value.toLocaleString()
                       : value}
@@ -277,22 +327,55 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             </article>
           ))}
       </section>
+      {summary.quantitiesByUnit && (
+        <section
+          aria-label="Available stock by selling unit"
+          className="mb-6 rounded-xl border border-g200 bg-w p-4"
+        >
+          <h2 className="text-sm font-semibold text-g800">
+            Available stock by selling unit
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {["vial", "box", "pack", "bottle", "unknown"].map((unit) => {
+              const quantity = summary.quantitiesByUnit[unit];
+              return typeof quantity === "number" &&
+                Number.isFinite(quantity) ? (
+                <div key={unit} className="rounded-lg bg-g50 px-4 py-2">
+                  <strong className="text-lg text-g900">
+                    {quantity.toLocaleString()}
+                  </strong>
+                  <span className="ml-2 text-xs text-g500">
+                    {unitLabel(unit)}
+                  </span>
+                </div>
+              ) : null;
+            })}
+          </div>
+          <p className="mt-3 text-[11px] text-g500">
+            Units are shown separately. Unreviewed stock has no confirmed
+            selling unit.
+          </p>
+        </section>
+      )}
 
       <section className="mb-6">
         <h2 className="mb-3 text-base font-bold text-g900">
-          Network performance
+          {summary.scope?.type === "network"
+            ? "Network overview"
+            : "Facility overview"}
         </h2>
         <div className="grid gap-4 xl:grid-cols-2">
           <article className="rounded-xl border border-g200 bg-w p-5">
             <h3 className="flex items-center gap-2 text-sm font-bold text-g900">
               <Boxes className="size-4 text-p" aria-hidden="true" />
-              Inventory over time
+              Current available stock by intake month
             </h3>
             <p className="mt-1 text-xs text-g500">
-              Recorded stock levels across your network.
+              Remaining eligible stock grouped by the month it was added. These
+              are not historical month-end balances.
             </p>
             <div className="mt-3 h-[230px]">
-              <InventoryChart />
+              <InventoryChart refreshKey={refreshVersion} />
             </div>
           </article>
           <article className="rounded-xl border border-g200 bg-w p-5">
@@ -301,10 +384,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               Medicine availability split
             </h3>
             <p className="mt-1 text-xs text-g500">
-              Medicine availability from recorded inventory.
+              Medicine shares within the selected selling unit. Different units
+              are never combined.
             </p>
             <div className="mt-3 h-[230px]">
-              <DrugSplitChart />
+              <DrugSplitChart refreshKey={refreshVersion} />
             </div>
           </article>
           <article className="rounded-xl border border-g200 bg-w p-5 xl:col-span-2">
@@ -313,13 +397,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 className="mr-2 inline size-4 text-p"
                 aria-hidden="true"
               />
-              Redistribution efficiency
+              Completed redistributions
             </h3>
             <p className="mt-1 text-xs text-g500">
-              Recorded stock transfer times across the network.
+              Delivered transfers with quantities in their source selling units.
+              Delivery durations are unavailable.
             </p>
             <div className="mt-3 h-[240px]">
-              <RedistributionEfficiencyChart />
+              <RedistributionEfficiencyChart refreshKey={refreshVersion} />
             </div>
           </article>
           <article className="rounded-xl border border-g200 bg-w p-5 xl:col-span-2">
@@ -331,10 +416,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               Therapeutic stock levels
             </h3>
             <p className="mt-1 text-xs text-g500">
-              Current recorded quantities by medicine.
+              Current available quantities by medicine and selling unit.
             </p>
             <div className="mt-3 h-[240px]">
-              <TherapeuticStockChart />
+              <TherapeuticStockChart refreshKey={refreshVersion} />
             </div>
           </article>
         </div>
@@ -345,6 +430,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visibleSections.map((item) => (
             <button
+              type="button"
               key={item.page}
               onClick={() => onNav(item.page)}
               className="group rounded-xl border border-g200 bg-w p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-p hover:shadow-md"
@@ -417,6 +503,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               </p>
             </div>
             <button
+              type="button"
               onClick={() => onNav("pg-expiry")}
               className="text-sm font-semibold text-p"
             >
@@ -424,11 +511,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             </button>
           </div>
           {watchlistState !== "ready" ? (
-            <p role="status" className="py-4 text-sm text-g500">
+            <output className="block py-4 text-sm text-g500">
               {watchlistState === "loading"
                 ? "Loading near-expiry stock..."
                 : "Near-expiry stock could not be loaded. Please try again."}
-            </p>
+            </output>
           ) : watchlist.length ? (
             <ul className="divide-y divide-g100">
               {watchlist.map((item, index) => (
@@ -441,7 +528,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   </span>
                   <span className="text-g500">
                     {item.daysLeft ?? "N/A"} days ·{" "}
-                    {item.qty ?? item.quantity ?? "N/A"} units
+                    {item.qty ?? item.quantity ?? 0} units
                   </span>
                 </li>
               ))}

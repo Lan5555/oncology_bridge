@@ -117,8 +117,7 @@ export default function TransfersPage({ onOpenModal }: Props) {
                 {transfer.drug ??
                   transfer.inventoryItem?.drug ??
                   "Inventory transfer"}{" "}
-                · {transfer.qty ?? transfer.quantity ?? "Quantity not recorded"}{" "}
-                vials
+                · {transfer.qty ?? transfer.quantity ?? 0} vials
               </h2>
               <p className="mt-1 text-xs text-g500">
                 {transfer.donorFacility?.name ??

@@ -1,19 +1,12 @@
 "use client";
 
-import { toast } from "sonner";
-
-import { notifyResult } from "@/app/lib/notifications";
-
 import {
   ArrowRight,
   Building2,
-  Check,
-  ImagePlus,
   Loader2,
   MapPin,
   Package,
   Pill,
-  Plus,
   Search,
   ShieldCheck,
   ShoppingBag,
@@ -21,7 +14,10 @@ import {
   Snowflake,
 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { useProvider } from "@/app/providers/provider";
+import { toast } from "sonner";
+import CheckoutPrescriptionSelect from "@/app/components/CheckoutPrescriptionSelect";
+import { isPrescriptionUuid } from "@/app/lib/checkout-prescriptions";
+import { linkedMedicineUnavailable } from "@/app/lib/medicine-availability";
 import {
   type DrugListing,
   MARKETPLACE_SERVICE,
@@ -53,6 +49,7 @@ const dateLabel = (value: string) =>
         year: "numeric",
       });
 const purchasable = (item: DrugListing) =>
+  !linkedMedicineUnavailable(item) &&
   Number.isFinite(item.unitPriceNaira) &&
   item.unitPriceNaira > 0 &&
   Number.isInteger(item.availableQuantity) &&
@@ -93,15 +90,10 @@ function ProductImage({
 }
 
 export default function MarketplacePage() {
-  const { userData } = useProvider();
-  const canSell =
-    userData.user?.account_type === "PHARMACY_STORE" &&
-    userData.user?.verification_status === "VERIFIED";
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("All medicines");
   const [sort, setSort] = useState("newest");
-  const [inStock, setInStock] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [items, setItems] = useState<DrugListing[]>([]);
@@ -118,14 +110,8 @@ export default function MarketplacePage() {
   const checkoutKey = useRef("");
   const checkoutLock = useRef(false);
   const detailDialog = useRef<HTMLDialogElement>(null);
-  const uploadDialog = useRef<HTMLDialogElement>(null);
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  const [notice, setNotice] = useState("");
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: The refresh counter explicitly reloads the same filters after retry or publishing.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: The refresh counter explicitly reloads the same filters after retry.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -135,7 +121,7 @@ export default function MarketplacePage() {
       ...search,
       category: category === "All medicines" ? "" : category,
       sort,
-      inStock: String(inStock),
+      inStock: "true",
       page: String(page),
       limit: "12",
     });
@@ -146,7 +132,7 @@ export default function MarketplacePage() {
         Array.isArray(response.data?.items) &&
         Number.isInteger(response.data?.total)
       ) {
-        setItems(response.data.items);
+        setItems(response.data.items.filter(purchasable));
         setTotal(response.data.total);
       } else {
         setTotal(0);
@@ -160,17 +146,7 @@ export default function MarketplacePage() {
     return () => {
       cancelled = true;
     };
-  }, [search, category, sort, inStock, page, refresh]);
-
-  useEffect(() => {
-    const urls = files.map((file) => URL.createObjectURL(file));
-    setPreviews(urls);
-    return () => {
-      urls.forEach((url) => {
-        URL.revokeObjectURL(url);
-      });
-    };
-  }, [files]);
+  }, [search, category, sort, page, refresh]);
 
   const openProduct = (item: DrugListing) => {
     setSelected(item);
@@ -193,6 +169,10 @@ export default function MarketplacePage() {
       count > selected.availableQuantity
     ) {
       setCheckoutError("Choose a valid quantity within the available stock.");
+      return;
+    }
+    if (selected.prescriptionRequired && !isPrescriptionUuid(prescription)) {
+      setCheckoutError("Select an approved prescription before continuing.");
       return;
     }
     checkoutLock.current = true;
@@ -235,47 +215,6 @@ export default function MarketplacePage() {
     }
   };
 
-  const publish = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (saving || !canSell) return;
-    if (!files.length) {
-      toast.error("Add at least one product photograph.");
-      setUploadError("Add at least one product photograph.");
-      return;
-    }
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    data.delete("photos");
-    files.forEach((file) => {
-      data.append("images", file);
-    });
-    data.set(
-      "prescriptionRequired",
-      String(data.get("prescriptionRequired") === "on"),
-    );
-    setSaving(true);
-    setUploadError("");
-    const response = await MARKETPLACE_SERVICE.createListing(data);
-    notifyResult(
-      response,
-      "Medicine listing submitted.",
-      "Medicine listing could not be submitted.",
-    );
-    setSaving(false);
-    if (!response.success) {
-      setUploadError(
-        response.message ||
-          "The listing could not be published. Your details have been kept.",
-      );
-      return;
-    }
-    form.reset();
-    setFiles([]);
-    uploadDialog.current?.close();
-    setNotice("Your medicine listing was submitted successfully.");
-    setRefresh((value) => value + 1);
-  };
-
   return (
     <div className="animate-fade-up space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -287,18 +226,6 @@ export default function MarketplacePage() {
             Medicine marketplace
           </h1>
         </div>
-        {canSell && (
-          <button
-            type="button"
-            className={primary}
-            onClick={() => {
-              setUploadError("");
-              uploadDialog.current?.showModal();
-            }}
-          >
-            <Plus className="size-4" /> List a medicine
-          </button>
-        )}
       </header>
 
       <section className="relative isolate overflow-hidden rounded-3xl bg-[#102c45] px-6 py-8 text-white sm:px-9 sm:py-10">
@@ -336,11 +263,6 @@ export default function MarketplacePage() {
         </div>
       </section>
 
-      {notice && (
-        <output className="block rounded-xl border border-emerald-200 bg-okl p-4 text-sm text-g800">
-          {notice}
-        </output>
-      )}
       <section
         aria-label="Find medicines"
         className="space-y-4 rounded-2xl border border-g200 bg-w p-4 sm:p-5"
@@ -417,17 +339,10 @@ export default function MarketplacePage() {
             </p>
           </div>
           <div className={marketplace.controls}>
-            <label className={marketplace.stockFilter}>
-              <input
-                type="checkbox"
-                checked={inStock}
-                onChange={(event) => {
-                  setInStock(event.target.checked);
-                  setPage(1);
-                }}
-              />
-              <span>In stock only</span>
-            </label>
+            <span className="inline-flex items-center gap-2 text-xs font-semibold text-p">
+              <span className="size-1.5 rounded-full bg-p" /> Available to
+              purchase
+            </span>
             <label className={marketplace.sortFilter}>
               <SlidersHorizontal aria-hidden="true" />
               <span className="sr-only">Sort medicines</span>
@@ -482,10 +397,7 @@ export default function MarketplacePage() {
           <div className="rounded-2xl border border-dashed border-g200 bg-w px-6 py-16 text-center">
             <Search className="mx-auto mb-4 size-10 text-g400" />
             <h3 className="text-lg font-semibold text-g900">
-              {search.q ||
-              search.location ||
-              category !== "All medicines" ||
-              inStock
+              {search.q || search.location || category !== "All medicines"
                 ? "No medicines match your search"
                 : "New medicines will appear here"}
             </h3>
@@ -500,7 +412,6 @@ export default function MarketplacePage() {
                 setLocation("");
                 setSearch({ q: "", location: "" });
                 setCategory("All medicines");
-                setInStock(false);
                 setPage(1);
               }}
               className="mt-5 text-sm font-semibold text-p"
@@ -629,14 +540,15 @@ export default function MarketplacePage() {
 
       <dialog
         ref={detailDialog}
+        aria-label={selected ? `Purchase ${selected.name}` : "Medicine details"}
         onCancel={(event) => {
           if (paying) event.preventDefault();
         }}
-        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-3xl border border-g200 bg-w p-0 text-g800 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm"
+        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-3xl overflow-y-auto rounded-3xl border border-g200 bg-w p-0 text-g800 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm"
       >
         {selected && (
           <>
-            <div className="flex items-center justify-between border-b border-g100 px-6 py-4">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-g100 bg-w px-6 py-4">
               <p className="text-xs font-semibold text-g500">
                 Medicine details
               </p>
@@ -753,20 +665,22 @@ export default function MarketplacePage() {
                     />
                   </label>
                   {selected.prescriptionRequired && (
-                    <label className="grid gap-2 text-xs font-semibold text-g600">
-                      Approved prescription ID
-                      <input
-                        className={field}
-                        required
-                        disabled={paying}
-                        placeholder="Enter your prescription reference"
-                        value={prescription}
-                        onChange={(event) => {
-                          setPrescription(event.target.value);
-                          checkoutKey.current = crypto.randomUUID();
-                        }}
-                      />
-                    </label>
+                    <CheckoutPrescriptionSelect
+                      key={selected.id}
+                      value={prescription}
+                      disabled={paying}
+                      medicineId={
+                        selected.medicineId ??
+                        selected.medicine_id ??
+                        selected.drug_id ??
+                        selected.medicine?.id
+                      }
+                      onChange={(value) => {
+                        setPrescription(value);
+                        setCheckoutError("");
+                        checkoutKey.current = crypto.randomUUID();
+                      }}
+                    />
                   )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-g500">Estimated subtotal</span>
@@ -790,7 +704,12 @@ export default function MarketplacePage() {
                   <button
                     className={`${primary} w-full`}
                     type="submit"
-                    disabled={paying || !purchasable(selected)}
+                    disabled={
+                      paying ||
+                      !purchasable(selected) ||
+                      (selected.prescriptionRequired &&
+                        !isPrescriptionUuid(prescription))
+                    }
                   >
                     {paying ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -804,203 +723,6 @@ export default function MarketplacePage() {
             </div>
           </>
         )}
-      </dialog>
-
-      <dialog
-        ref={uploadDialog}
-        onCancel={(event) => {
-          if (saving) event.preventDefault();
-        }}
-        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-3xl border border-g200 bg-w p-6 text-g800 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm"
-      >
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-p">
-              Pharmacy workspace
-            </p>
-            <h2 className="mt-2 text-xl font-bold text-g900">
-              List a medicine
-            </h2>
-            <p className="mt-2 text-xs leading-5 text-g500">
-              Connect your stock, set a price, and add clear product
-              photographs.
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => uploadDialog.current?.close()}
-            className="rounded-lg border border-g200 px-3 py-2 text-xs"
-          >
-            Close
-          </button>
-        </div>
-        <form onSubmit={publish} className="grid gap-4 sm:grid-cols-2">
-          <fieldset
-            disabled={saving}
-            className="col-span-full grid gap-4 sm:grid-cols-2"
-          >
-            <label className="grid gap-2 text-xs font-semibold text-g600 sm:col-span-2">
-              Inventory item ID
-              <input
-                className={field}
-                name="inventoryItemId"
-                required
-                placeholder="Reference of a batch in your facility inventory"
-              />
-            </label>
-            <label className="grid gap-2 text-xs font-semibold text-g600">
-              Category
-              <select className={field} name="category">
-                {categories.slice(1).map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-2 text-xs font-semibold text-g600">
-              Price per unit (₦)
-              <input
-                className={field}
-                name="unitPriceNaira"
-                type="number"
-                required
-                min="0.01"
-                step="0.01"
-                placeholder="0.00"
-              />
-            </label>
-            <label className="grid gap-2 text-xs font-semibold text-g600">
-              Available quantity
-              <input
-                className={field}
-                name="availableQuantity"
-                type="number"
-                required
-                min="1"
-                step="1"
-                placeholder="e.g. 20"
-              />
-            </label>
-            <label className="grid gap-2 text-xs font-semibold text-g600">
-              Selling unit
-              <select className={field} name="unit">
-                <option value="vial">Vial</option>
-                <option value="pack">Pack</option>
-                <option value="bottle">Bottle</option>
-                <option value="box">Box</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-xs font-semibold text-g600 sm:col-span-2">
-              Storage requirements
-              <input
-                className={field}
-                name="storage"
-                required
-                placeholder="Enter the product’s labelled storage requirements"
-              />
-            </label>
-            <label className="grid gap-2 text-xs font-semibold text-g600 sm:col-span-2">
-              Product description
-              <textarea
-                className={field}
-                name="description"
-                required
-                maxLength={2000}
-                rows={3}
-                placeholder="Describe the product and pack contents"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-xs text-g600 sm:col-span-2">
-              <input
-                type="checkbox"
-                name="prescriptionRequired"
-                defaultChecked
-                className="accent-p"
-              />{" "}
-              Prescription required
-            </label>
-            <div className="sm:col-span-2">
-              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-p/40 bg-pl/20 p-6 text-center">
-                <ImagePlus className="size-7 text-p" />
-                <span className="text-sm font-semibold text-g800">
-                  Add product photographs
-                </span>
-                <span className="text-xs text-g500">
-                  1–5 JPG, PNG or WebP images · Up to 5 MB each
-                </span>
-                <input
-                  name="photos"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  className="mt-2 w-full max-w-xs text-xs text-g500"
-                  onChange={(event) => {
-                    const selectedFiles = Array.from(event.target.files ?? []);
-                    if (
-                      selectedFiles.length > 5 ||
-                      selectedFiles.some(
-                        (file) =>
-                          !["image/jpeg", "image/png", "image/webp"].includes(
-                            file.type,
-                          ) || file.size > 5 * 1024 * 1024,
-                      )
-                    ) {
-                      setUploadError(
-                        "Choose up to 5 JPG, PNG or WebP images, no larger than 5 MB each.",
-                      );
-                      event.target.value = "";
-                      setFiles([]);
-                      return;
-                    }
-                    setUploadError("");
-                    setFiles(selectedFiles);
-                  }}
-                />
-              </label>
-              {previews.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-3">
-                  {previews.map((url, index) => (
-                    <div key={url} className="relative">
-                      {/* biome-ignore lint/performance/noImgElement: Local blob URLs are temporary upload previews. */}
-                      <img
-                        src={url}
-                        alt={`Upload preview ${index + 1}`}
-                        className="size-20 rounded-xl border border-g200 object-contain"
-                      />
-                      {index === 0 && (
-                        <span className="absolute inset-x-0 bottom-0 rounded-b-xl bg-p px-1 py-1 text-center text-[9px] text-white">
-                          Cover image
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="mt-3 text-[11px] leading-5 text-g400">
-                Use photographs of the actual product and packaging. Medicine
-                name, strength, batch, and expiry come from the linked inventory
-                record. The first photo is your cover image.
-              </p>
-            </div>
-          </fieldset>
-          {uploadError && (
-            <p role="alert" className="col-span-full text-xs text-err">
-              {uploadError}
-            </p>
-          )}
-          <button
-            className={`${primary} col-span-full`}
-            type="submit"
-            disabled={saving}
-          >
-            {saving ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Check className="size-4" />
-            )}
-            {saving ? "Uploading & submitting…" : "Submit medicine listing"}
-          </button>
-        </form>
       </dialog>
     </div>
   );

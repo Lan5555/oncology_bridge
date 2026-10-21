@@ -1,20 +1,20 @@
 "use client";
 
-import { toast } from "sonner";
+import { BellOff, FilePlus2 } from "lucide-react";
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
+import { toast } from "sonner";
+import EmptyState from "@/app/components/EmptyState";
 import type { ModalId } from "@/app/lib/types";
-import { REPORT_SERVICE } from "@/app/services/report-service/report-service";
-import { TRANSFER_SERVICE } from "@/app/services/transfer-service/transfer-service";
+import { useProvider } from "@/app/providers/provider";
 import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
-import { PRESCRIPTION_SERVICE } from "@/app/services/prescription-service/prescription-service";
-import { NOTIFICATION_SERVICE } from "@/app/services/notification-service/notification-service";
-import { unwrapArray } from "@/app/services/response-utils";
 import { MEDICINE_SERVICE } from "@/app/services/medicine-service/medicine-service";
 import { NETWORK_SERVICE } from "@/app/services/network-service/network-service";
-import { useProvider } from "@/app/providers/provider";
-import { BellOff, FilePlus2 } from "lucide-react";
-import EmptyState from "@/app/components/EmptyState";
+import { NOTIFICATION_SERVICE } from "@/app/services/notification-service/notification-service";
+import { PRESCRIPTION_SERVICE } from "@/app/services/prescription-service/prescription-service";
+import { REPORT_SERVICE } from "@/app/services/report-service/report-service";
+import { unwrapArray } from "@/app/services/response-utils";
+import { TRANSFER_SERVICE } from "@/app/services/transfer-service/transfer-service";
 
 interface Props {
   openModalId: ModalId | null;
@@ -407,7 +407,9 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
                       <option key={medicine.id} value={medicine.id}>
                         {medicine.generic_name ?? medicine.name ?? "Medicine"}
                         {medicine.strength ? ` · ${medicine.strength}` : ""}
-                        {medicine.brand ? ` (${medicine.brand})` : ""}
+                        {medicine.brand_name || medicine.brand
+                          ? ` (${medicine.brand_name ?? medicine.brand})`
+                          : ""}
                       </option>
                     ))}
                   </select>

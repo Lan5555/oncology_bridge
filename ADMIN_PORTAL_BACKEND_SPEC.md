@@ -164,6 +164,8 @@ Require `integration.read` for health, `integration.manage` for configuration sc
 
 ## Security and operational requirements
 
+- Super Admin permissions are protected: reject permission-assignment changes targeting the system `SUPERADMIN` role (currently role ID 4), including `PUT /api/roles/:roleId/permissions` and any alternate role-update endpoint that accepts permissions. Enforce this for every caller, including other Super Admin sessions. Keep permission reads available to authorized administrators. Resolve the protected role by its immutable server-side identity; display-name changes must not bypass this rule. Return a clear forbidden response without changing assignments. The frontend renders this role's permission selector read-only, but server enforcement is required.
+
 - Use admin-only bearer authentication on each admin route. The shared login endpoint must issue an admin-capable session only for `ADMIN` or `SUPERADMIN`, complete MFA where configured, and bypass facility/licence review requirements for those operator roles. Validate token issuer/audience, expiry, MFA state, and the specific role permission on every admin endpoint; reserve destructive/global actions for `SUPERADMIN` if that is the policy.
 - Apply pagination bounds, query validation, rate limits on login and registry rechecks, and generic error handling that does not leak account existence or infrastructure secrets.
 - Derive reviewer and actor IDs from the authenticated principal.

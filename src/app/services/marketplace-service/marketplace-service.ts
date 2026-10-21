@@ -1,6 +1,13 @@
 import { CoreService } from "@/app/hooks/service/core-service";
+import type { MedicineState } from "@/app/lib/medicine-availability";
 
 export interface DrugListing {
+  medicine?: (MedicineState & { id?: string }) | null;
+  medicineId?: string;
+  medicine_id?: string;
+  drug_id?: string;
+  medicine_deleted?: boolean;
+  medicine_active?: boolean;
   id: string;
   inventoryItemId: string;
   name: string;

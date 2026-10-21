@@ -1,5 +1,4 @@
 "use client";
-import BrandLogo from "@/app/components/BrandLogo";
 
 import {
   Activity,
@@ -48,9 +47,11 @@ import {
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
+import BrandLogo from "@/app/components/BrandLogo";
 import management from "@/app/components/Management.module.css";
 import { ToastLayer } from "@/app/components/ToastLayer";
-import { useProvider } from "@/app/providers/provider";
+import { ADMIN_SESSION_INVALIDATED } from "@/app/hooks/service/core-service";
+import { useDashboardRefresh } from "@/app/hooks/useDashboardRefresh";
 import { useManagementDialog } from "@/app/hooks/useManagementDialog";
 import {
   ACCOUNT_TYPES,
@@ -59,10 +60,12 @@ import {
   getRegistryLabel,
   type VerificationStatus,
 } from "@/app/lib/accounts";
+import { permissionDetails } from "@/app/lib/permission-labels";
 import type { ModalId, PageId } from "@/app/lib/types";
 import AuditPage from "@/app/pages/dashboard/AuditPage";
 import FacilitiesPage from "@/app/pages/dashboard/FacilitiesPage";
 import UsersPage from "@/app/pages/dashboard/UsersPage";
+import { useProvider } from "@/app/providers/provider";
 import {
   ADMIN_RESOURCES,
   type AdminResourceId,
@@ -165,6 +168,19 @@ function readAdminRoleName(session: any): string {
   return normalized;
 }
 
+function isSuperAdminRole(role: any): boolean {
+  return (
+    String(role?.id) === "4" ||
+    [role?.name, role?.code, role?.key, role?.title].some(
+      (value) =>
+        typeof value === "string" &&
+        ["SUPERADMIN", "SUPERADMINISTRATOR"].includes(
+          value.toUpperCase().replace(/[^A-Z]/g, ""),
+        ),
+    )
+  );
+}
+
 function readApplicationRows(value: any): any[] {
   if (Array.isArray(value)) return value;
   if (!value || typeof value !== "object") return [];
@@ -254,13 +270,26 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const [summary, setSummary] = useState<any>({});
   const [activityRows, setActivityRows] = useState<any[]>([]);
   const [roleRows, setRoleRows] = useState<any[]>([]);
+  const [expandedRolePermissions, setExpandedRolePermissions] = useState<
+    Record<string, boolean>
+  >({});
+  const [roleDialog, setRoleDialog] = useState<
+    | { action: "create" }
+    | { action: "edit" | "delete"; id: string; name: string }
+    | null
+  >(null);
+  const [roleName, setRoleName] = useState("");
+  const [roleSaving, setRoleSaving] = useState(false);
+  const [roleError, setRoleError] = useState("");
   const [permissionsTarget, setPermissionsTarget] = useState<{
     id: string | number;
     name: string;
     permissions: string[];
     availablePermissions: string[];
+    readOnly: boolean;
   } | null>(null);
   const [permissionsSaving, setPermissionsSaving] = useState(false);
+  const [permissionSearch, setPermissionSearch] = useState("");
   const [integrationRows, setIntegrationRows] = useState<any[]>([]);
   const [integrationsLoading, setIntegrationsLoading] = useState(false);
   const [integrationTarget, setIntegrationTarget] = useState<any | null>(null);
@@ -549,6 +578,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
 
   // --- FIX: Initialize with safe defaults to prevent hydration mismatch ---
   const [isAuthed, setIsAuthed] = useState(false);
+  const { refreshVersion: adminSummaryRefresh } = useDashboardRefresh(isAuthed);
   const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
   const [adminPermissionsKnown, setAdminPermissionsKnown] = useState(false);
   const [adminRoleName, setAdminRoleName] = useState("");
@@ -571,21 +601,82 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     );
   };
 
-  // Detect theme and auth on client-side only
+  // Stored credentials are untrusted until the backend validates them.
   useEffect(() => {
-    setMounted(true);
-
-    try {
-      const session = JSON.parse(
-        window.localStorage.getItem("adminSession") ?? "{}",
+    let current = true;
+    const resetSession = () => {
+      setRoleDialog(null);
+      setIsAuthed(false);
+      setAdminPermissions([]);
+      setAdminPermissionsKnown(false);
+      setAdminRoleName("");
+      setAdminPass("");
+      setLoginError(
+        "Your admin session is invalid or has expired. Sign in again.",
       );
-      setIsAuthed(Boolean(session?.token));
-      setAdminPermissions(readPermissionKeys(session));
-      setAdminPermissionsKnown(hasPermissionClaim(session));
-      setAdminRoleName(readAdminRoleName(session));
-    } catch {
-      window.localStorage.removeItem("adminSession");
-    }
+    };
+    const syncStorage = (event: StorageEvent) => {
+      if (event.key === "adminSession" || event.key === null) {
+        // Revalidate in this tab before displaying another tab's session.
+        window.location.reload();
+      }
+    };
+    window.addEventListener(ADMIN_SESSION_INVALIDATED, resetSession);
+    window.addEventListener("storage", syncStorage);
+    const restoreSession = async () => {
+      try {
+        const session = JSON.parse(
+          window.localStorage.getItem("adminSession") ?? "{}",
+        );
+        if (!session?.token || typeof session.token !== "string") {
+          window.localStorage.removeItem("adminSession");
+          return;
+        }
+        const response = await ADMIN_SERVICE.session();
+        if (!current) return;
+        if (!response.success) {
+          setLoginError(
+            response.message ||
+              "Admin session could not be verified. Sign in again.",
+          );
+          return;
+        }
+        // Ignore a validation response if the session changed while awaiting it.
+        const stored = JSON.parse(
+          window.localStorage.getItem("adminSession") ?? "{}",
+        );
+        if (stored?.token !== session.token) return;
+        const profile = response.data;
+        const verified = { ...profile, user: profile?.user ?? profile };
+        const roleName = readAdminRoleName(verified);
+        if (
+          !/^(?:ADMIN|SUPERADMIN|NETWORK\s*ADMIN|NETWORK\s*ADMINISTRATOR|SUPER\s*ADMINISTRATOR)$/i.test(
+            roleName,
+          )
+        ) {
+          window.localStorage.removeItem("adminSession");
+          setLoginError(
+            "This account does not have ADMIN or SUPERADMIN access.",
+          );
+          return;
+        }
+        setAdminPermissions(readPermissionKeys(verified));
+        setAdminPermissionsKnown(hasPermissionClaim(verified));
+        setAdminRoleName(roleName);
+        setIsAuthed(true);
+      } catch {
+        window.localStorage.removeItem("adminSession");
+        resetSession();
+      } finally {
+        if (current) setMounted(true);
+      }
+    };
+    void restoreSession();
+    return () => {
+      current = false;
+      window.removeEventListener(ADMIN_SESSION_INVALIDATED, resetSession);
+      window.removeEventListener("storage", syncStorage);
+    };
   }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reload API data when session or authorization claims change; loaders intentionally use the current render closures.
@@ -633,6 +724,29 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       },
     );
   }, [isAuthed, adminPermissions, adminPermissionsKnown, adminRoleName]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Refresh rechecks the current admin summary using the current authorization claims.
+  useEffect(() => {
+    if (
+      !isAuthed ||
+      adminSummaryRefresh === 0 ||
+      !hasAdminPermission("dashboard.read")
+    )
+      return;
+    let current = true;
+    void DASHBOARD_SERVICE.summary(true).then((response) => {
+      if (current && response.success) setSummary(response.data ?? {});
+    });
+    return () => {
+      current = false;
+    };
+  }, [
+    isAuthed,
+    adminSummaryRefresh,
+    adminPermissions,
+    adminPermissionsKnown,
+    adminRoleName,
+  ]);
 
   const isDark = theme === "dark";
 
@@ -698,41 +812,56 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       Array.isArray(value) ? value : (value?.items ?? value?.roles ?? []),
     );
   };
-  const createRole = async () => {
-    const name = window.prompt("Role name");
-    if (!name?.trim()) return;
-    const response = await USER_SERVICE.createRole({ name: name.trim() }, true);
-    notify(
-      response.message ||
-        (response.success ? "Role created." : "Role could not be created."),
+  const openRoleDialog = (action: "create" | "edit" | "delete", role?: any) => {
+    setRoleError("");
+    setRoleName(action === "edit" ? (role?.name ?? "") : "");
+    setRoleDialog(
+      action === "create"
+        ? { action }
+        : { action, id: role.id, name: role.name },
     );
-    if (response.success) await loadRoles();
   };
-  const editRole = async (role: any) => {
-    const name = window.prompt("Role name", role.name ?? "");
-    if (!name?.trim()) return;
-    const response = await USER_SERVICE.updateRole(
-      role.id,
-      { name: name.trim() },
-      true,
-    );
-    notify(
-      response.message ||
-        (response.success ? "Role updated." : "Role could not be updated."),
-    );
-    if (response.success) await loadRoles();
-  };
-  const deleteRole = async (role: any) => {
-    if (!window.confirm(`Delete the ${role.name} role?`)) return;
-    const response = await USER_SERVICE.deleteRole(role.id, true);
-    notify(
-      response.message ||
-        (response.success ? "Role deleted." : "Role could not be deleted."),
-    );
-    if (response.success) await loadRoles();
+  const saveRole = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!roleDialog || roleSaving) return;
+    if (roleDialog.action !== "delete" && !roleName.trim()) {
+      setRoleError("Enter a role name.");
+      return;
+    }
+    setRoleSaving(true);
+    setRoleError("");
+    try {
+      const response =
+        roleDialog.action === "create"
+          ? await USER_SERVICE.createRole({ name: roleName.trim() }, true)
+          : roleDialog.action === "edit"
+            ? await USER_SERVICE.updateRole(
+                roleDialog.id,
+                { name: roleName.trim() },
+                true,
+              )
+            : await USER_SERVICE.deleteRole(roleDialog.id, true);
+      if (!response.success) {
+        setRoleError(
+          response.message || "The role could not be saved. Try again.",
+        );
+        return;
+      }
+      setRoleDialog(null);
+      notify(
+        response.message ||
+          (roleDialog.action === "delete" ? "Role deleted." : "Role saved."),
+      );
+      await loadRoles();
+    } catch {
+      setRoleError("The request could not be completed. Try again.");
+    } finally {
+      setRoleSaving(false);
+    }
   };
 
   const openRolePermissions = async (role: any) => {
+    setPermissionSearch("");
     const response = await USER_SERVICE.rolePermissions(role.id, true);
     if (!response.success) {
       notify(response.message || "Role permissions could not be loaded.");
@@ -764,6 +893,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     setPermissionsTarget({
       id: role.id,
       name: role.name,
+      readOnly: isSuperAdminRole(role),
       permissions: permissionKeys,
       availablePermissions: [
         ...new Set([...availableKeys, ...permissionKeys]),
@@ -772,7 +902,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   };
 
   const saveRolePermissions = async () => {
-    if (!permissionsTarget) return;
+    if (
+      !permissionsTarget ||
+      permissionsTarget.readOnly ||
+      permissionsSaving ||
+      isSuperAdminRole(
+        roleRows.find(
+          (role) => String(role.id) === String(permissionsTarget.id),
+        ),
+      )
+    )
+      return;
     setPermissionsSaving(true);
     const response = await USER_SERVICE.updateRolePermissions(
       permissionsTarget.id,
@@ -993,13 +1133,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const stats = [
     {
       label: "Facilities",
-      value: String(summary.nodes ?? summary.facilityCount ?? "N/A"),
+      value: String(summary.nodes ?? summary.facilityCount ?? 0),
       icon: Building2,
       color: "#1B3A6B",
     },
     {
       label: "Active users",
-      value: String(summary.activeUsers ?? "N/A"),
+      value: String(summary.activeUsers ?? 0),
       icon: Users,
       color: "#0F766E",
     },
@@ -1007,7 +1147,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       label: "Inventory items",
       value:
         summary.totalInventoryItems == null && summary.inventoryItems == null
-          ? "N/A"
+          ? "0"
           : Number(
               summary.totalInventoryItems ?? summary.inventoryItems,
             ).toLocaleString(),
@@ -1016,7 +1156,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     },
     {
       label: "Near expiry",
-      value: String(summary.nearExpiryCount ?? summary.nearExpiry ?? "N/A"),
+      value: String(summary.nearExpiryCount ?? summary.nearExpiry ?? 0),
       icon: AlertCircle,
       color: "#C4622D",
     },
@@ -1034,7 +1174,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       value: applicationsLoaded
         ? String(pendingCount)
         : applicationsLoadError
-          ? "N/A"
+          ? "0"
           : "…",
       icon: UserCheck,
       color: "#0E7490",
@@ -1058,8 +1198,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const roles = roleRows.map((role: any) => ({
     id: role.id,
     name: role.name ?? role.title ?? `Role ${role.id}`,
+    code: role.code,
+    key: role.key,
     desc: role.description ?? "",
-    count: role.userCount ?? role.user_count ?? "N/A",
+    count: role.userCount ?? role.user_count ?? 0,
     icon: /doctor/i.test(role.name ?? "")
       ? Stethoscope
       : /pharmac/i.test(role.name ?? "")
@@ -1194,13 +1336,19 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
           ? "decision"
           : permissionsTarget
             ? "permissions"
-            : null,
-    Boolean(integrationActionKey) || decisionSaving || permissionsSaving,
+            : roleDialog
+              ? `role-${roleDialog.action}`
+              : null,
+    Boolean(integrationActionKey) ||
+      decisionSaving ||
+      permissionsSaving ||
+      roleSaving,
     () => {
       setIntegrationTarget(null);
       setReviewTarget(null);
       setDecisionTarget(null);
       setPermissionsTarget(null);
+      setRoleDialog(null);
     },
   );
 
@@ -2023,6 +2171,140 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
           </section>
         </div>
       )}
+      {roleDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-8 backdrop-blur-sm"
+          role="presentation"
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="role-dialog-title"
+            aria-describedby="role-dialog-description"
+            aria-busy={roleSaving}
+            className={`w-full max-w-lg rounded-2xl border p-6 shadow-2xl ${cardClasses}`}
+          >
+            <form onSubmit={(event) => void saveRole(event)}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div
+                    className={`mb-4 flex size-11 items-center justify-center rounded-xl border ${borderColor}`}
+                  >
+                    {roleDialog.action === "delete" ? (
+                      <Trash2 className="size-5 text-red-500" />
+                    ) : (
+                      <Shield
+                        className="size-5"
+                        style={{ color: accentBlue }}
+                      />
+                    )}
+                  </div>
+                  <p
+                    className={`text-xs font-semibold uppercase tracking-[0.16em] ${mutedText}`}
+                  >
+                    Access control
+                  </p>
+                  <h2
+                    id="role-dialog-title"
+                    className={`mt-2 text-xl font-semibold ${headingText}`}
+                  >
+                    {roleDialog.action === "create"
+                      ? "Create role"
+                      : roleDialog.action === "edit"
+                        ? "Rename role"
+                        : "Delete role?"}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close role dialog"
+                  disabled={roleSaving}
+                  onClick={() => setRoleDialog(null)}
+                  className={`rounded-lg p-2 disabled:opacity-50 ${mutedText}`}
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+              <p
+                id="role-dialog-description"
+                className={`mt-3 text-sm leading-6 ${mutedText}`}
+              >
+                {roleDialog.action === "delete"
+                  ? `Delete the ${roleDialog.name} role? This cannot be undone. Roles assigned to users may need to be reassigned before deletion.`
+                  : roleDialog.action === "edit"
+                    ? `Update the name of the ${roleDialog.name} role.`
+                    : "Give the new role a clear name. You can configure its permissions after creating it."}
+              </p>
+              {roleDialog.action !== "delete" && (
+                <label
+                  htmlFor="role-dialog-name"
+                  className={`mt-5 block text-sm font-medium ${headingText}`}
+                >
+                  Role name
+                  <input
+                    id="role-dialog-name"
+                    required
+                    value={roleName}
+                    disabled={roleSaving}
+                    onChange={(event) => {
+                      setRoleName(event.target.value);
+                      setRoleError("");
+                    }}
+                    placeholder="Enter role name"
+                    aria-invalid={Boolean(roleError)}
+                    aria-describedby={
+                      roleError ? "role-dialog-error" : undefined
+                    }
+                    className={`${baseInputClasses} mt-2 px-3 py-2.5`}
+                  />
+                </label>
+              )}
+              {roleError && (
+                <p
+                  id="role-dialog-error"
+                  role="alert"
+                  className="mt-4 rounded-lg border border-red-500/25 bg-red-500/10 p-3 text-sm text-red-500"
+                >
+                  {roleError}
+                </p>
+              )}
+              <div
+                className={`mt-6 flex justify-end gap-3 border-t pt-5 ${borderColor}`}
+              >
+                <button
+                  type="button"
+                  disabled={roleSaving}
+                  onClick={() => setRoleDialog(null)}
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium disabled:opacity-50 ${borderColor} ${headingText}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    roleSaving ||
+                    (roleDialog.action !== "delete" && !roleName.trim())
+                  }
+                  className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  style={{
+                    backgroundColor:
+                      roleDialog.action === "delete" ? "#B91C1C" : accentBlue,
+                  }}
+                >
+                  {roleSaving && <Loader2 className="size-4 animate-spin" />}
+                  {roleSaving
+                    ? "Saving…"
+                    : roleDialog.action === "delete"
+                      ? "Delete role"
+                      : roleDialog.action === "create"
+                        ? "Create role"
+                        : "Save changes"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
       {permissionsTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-8 backdrop-blur-sm">
           <section
@@ -2043,48 +2325,97 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
               {permissionsTarget.name} permissions
             </h2>
             <p className={`mt-2 text-sm ${mutedText}`}>
-              Select the backend-defined permissions assigned to this role.
+              {permissionsTarget.readOnly
+                ? "Super Admin permissions are protected and cannot be changed here. You can review the assigned permissions below."
+                : "Choose what members with this role can do. Access remains limited to their authorized facilities and records."}
+            </p>
+            <label
+              className={`mt-4 block text-xs font-semibold ${headingText}`}
+            >
+              Find a permission
+              <input
+                type="search"
+                value={permissionSearch}
+                onChange={(event) => setPermissionSearch(event.target.value)}
+                placeholder="Search stock, listings, users…"
+                className={`${baseInputClasses} mt-2 px-3 py-2.5`}
+              />
+            </label>
+            <p className={`mt-3 text-xs ${mutedText}`} aria-live="polite">
+              {permissionsTarget.permissions.length} permissions selected
             </p>
             <div className="mt-5 grid max-h-[50vh] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
-              {permissionsTarget.availablePermissions.map((permission) => {
-                const checked =
-                  permissionsTarget.permissions.includes(permission);
-                return (
-                  <label
-                    key={permission}
-                    className={`flex items-center gap-3 rounded-lg border p-3 text-sm ${borderColor} ${headingText}`}
+              {permissionsTarget.availablePermissions
+                .filter((permission) => {
+                  const details = permissionDetails(permission);
+                  return `${permission} ${details.label} ${details.description}`
+                    .toLowerCase()
+                    .includes(permissionSearch.trim().toLowerCase());
+                })
+                .map((permission) => {
+                  const details = permissionDetails(permission);
+                  const checked =
+                    permissionsTarget.permissions.includes(permission);
+                  return (
+                    <label
+                      key={permission}
+                      title={permission}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors ${checked ? "border-teal-500/50 bg-teal-500/5" : borderColor} ${headingText}`}
+                    >
+                      <input
+                        type="checkbox"
+                        disabled={
+                          permissionsSaving || permissionsTarget.readOnly
+                        }
+                        checked={checked}
+                        onChange={() =>
+                          setPermissionsTarget((current) =>
+                            !current || current.readOnly
+                              ? current
+                              : {
+                                  ...current,
+                                  permissions: checked
+                                    ? current.permissions.filter(
+                                        (item) => item !== permission,
+                                      )
+                                    : [...current.permissions, permission],
+                                },
+                          )
+                        }
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-teal-600"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-xs font-semibold leading-5">
+                          {details.label}
+                        </span>
+                        <span
+                          className={`mt-1 block text-[11px] font-normal leading-5 ${mutedText}`}
+                        >
+                          {details.description}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              {permissionsTarget.availablePermissions.length > 0 &&
+                !permissionsTarget.availablePermissions.some((permission) => {
+                  const details = permissionDetails(permission);
+                  return `${permission} ${details.label} ${details.description}`
+                    .toLowerCase()
+                    .includes(permissionSearch.trim().toLowerCase());
+                }) && (
+                  <p
+                    className={`col-span-full rounded-lg border border-dashed p-4 text-sm ${borderColor} ${mutedText}`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() =>
-                        setPermissionsTarget((current) =>
-                          !current
-                            ? current
-                            : {
-                                ...current,
-                                permissions: checked
-                                  ? current.permissions.filter(
-                                      (item) => item !== permission,
-                                    )
-                                  : [...current.permissions, permission],
-                              },
-                        )
-                      }
-                      className="h-4 w-4 accent-[#1B3A6B]"
-                    />
-                    <span className="break-all">
-                      {permission.replaceAll("_", " ")}
-                    </span>
-                  </label>
-                );
-              })}
+                    No permissions match your search. Try a different word.
+                  </p>
+                )}
               {!permissionsTarget.availablePermissions.length && (
                 <p
                   className={`col-span-full rounded-lg border border-dashed p-4 text-sm ${borderColor} ${mutedText}`}
                 >
-                  The backend must return available permission keys with this
-                  role before assignments can be changed.
+                  No permissions are available to assign yet. Contact your
+                  system administrator to configure them.
                 </p>
               )}
             </div>
@@ -2095,23 +2426,25 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                 onClick={() => setPermissionsTarget(null)}
                 className={`rounded-lg border px-4 py-2 text-sm font-medium ${borderColor} ${headingText}`}
               >
-                Cancel
+                {permissionsTarget.readOnly ? "Close" : "Cancel"}
               </button>
-              <button
-                type="button"
-                disabled={
-                  permissionsSaving ||
-                  !permissionsTarget.availablePermissions.length
-                }
-                onClick={() => void saveRolePermissions()}
-                className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                style={{ backgroundColor: primaryCta }}
-              >
-                {permissionsSaving && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                )}
-                Save permissions
-              </button>
+              {!permissionsTarget.readOnly && (
+                <button
+                  type="button"
+                  disabled={
+                    permissionsSaving ||
+                    !permissionsTarget.availablePermissions.length
+                  }
+                  onClick={() => void saveRolePermissions()}
+                  className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  style={{ backgroundColor: primaryCta }}
+                >
+                  {permissionsSaving && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                  Save permissions
+                </button>
+              )}
             </div>
           </section>
         </div>
@@ -2420,7 +2753,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                       {[
                         {
                           label: "Transactions",
-                          value: String(settlements?.transactionCount ?? "N/A"),
+                          value: String(settlements?.transactionCount ?? 0),
                         },
                         {
                           label: "Volume",
@@ -2438,7 +2771,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                         },
                         {
                           label: "Payouts queued",
-                          value: String(settlements?.payoutsQueued ?? "N/A"),
+                          value: String(settlements?.payoutsQueued ?? 0),
                         },
                       ].map(({ label, value }) => (
                         <div
@@ -2675,7 +3008,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                           [
                             [
                               "REVIEW",
-                              `Needs review (${applicationsLoaded ? pendingCount : "N/A"})`,
+                              `Needs review (${applicationsLoaded ? pendingCount : 0})`,
                             ],
                             ["VERIFIED", "Verified"],
                             ["REJECTED", "Rejected"],
@@ -2852,7 +3185,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                     </h3>
                     <button
                       type="button"
-                      onClick={() => void createRole()}
+                      onClick={() => openRoleDialog("create")}
                       className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-white transition-colors duration-150"
                       style={{ backgroundColor: accentAmber }}
                     >
@@ -2862,19 +3195,26 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                   </div>
                   {roles.map((role) => {
                     const Icon = role.icon;
+                    const roleKey = String(role.id);
+                    const permissionsExpanded = Boolean(
+                      expandedRolePermissions[roleKey],
+                    );
+                    const visiblePermissions = permissionsExpanded
+                      ? role.sees
+                      : role.sees.slice(0, 4);
                     return (
                       <div
-                        key={role.name}
+                        key={roleKey}
                         className={`rounded-xl p-4 ${interactiveCardClasses}`}
                       >
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="flex items-start gap-3">
+                          <div className="flex min-w-0 flex-1 items-start gap-3">
                             <div
                               className={`rounded-md border p-2 ${borderColor}`}
                             >
                               <Icon className={`h-5 w-5 ${mutedText}`} />
                             </div>
-                            <div>
+                            <div className="min-w-0 flex-1">
                               <div className={`font-medium ${headingText}`}>
                                 {role.name}
                               </div>
@@ -2887,30 +3227,56 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                                 <Users className="h-3 w-3" />
                                 {role.count}
                               </div>
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                {role.sees.map((s: string) => (
+                              <div
+                                id={`role-permissions-preview-${roleKey}`}
+                                className={`mt-2 flex flex-wrap gap-1.5 ${permissionsExpanded ? "max-h-44 overflow-y-auto pr-2" : ""}`}
+                              >
+                                {visiblePermissions.map((s: string) => (
                                   <span
                                     key={s}
                                     className={`rounded-md border px-2 py-0.5 text-[11px] ${borderColor} ${mutedText}`}
                                   >
-                                    {s}
+                                    {permissionDetails(s).label}
                                   </span>
                                 ))}
                               </div>
+                              {role.sees.length > 4 && (
+                                <button
+                                  type="button"
+                                  aria-expanded={permissionsExpanded}
+                                  aria-controls={`role-permissions-preview-${roleKey}`}
+                                  onClick={() =>
+                                    setExpandedRolePermissions((current) => ({
+                                      ...current,
+                                      [roleKey]: !current[roleKey],
+                                    }))
+                                  }
+                                  className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-p hover:underline"
+                                >
+                                  {permissionsExpanded
+                                    ? "Show less"
+                                    : `Show ${role.sees.length - 4} more permissions`}
+                                  <ChevronRight
+                                    className={`size-3.5 transition-transform ${permissionsExpanded ? "-rotate-90" : "rotate-90"}`}
+                                  />
+                                </button>
+                              )}
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex shrink-0 flex-wrap gap-2">
                             <button
                               type="button"
                               onClick={() => void openRolePermissions(role)}
                               className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${borderColor} ${headingText}`}
                             >
                               <Shield className="h-3 w-3" />
-                              Permissions
+                              {isSuperAdminRole(role)
+                                ? "View permissions"
+                                : "Permissions"}
                             </button>
                             <button
                               type="button"
-                              onClick={() => void editRole(role)}
+                              onClick={() => openRoleDialog("edit", role)}
                               className={`flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors duration-150 ${
                                 isDark
                                   ? "border-[#1E3358] text-[#EAF0FA] hover:border-[#4C8DFF]"
@@ -2922,7 +3288,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                             </button>
                             <button
                               type="button"
-                              onClick={() => void deleteRole(role)}
+                              onClick={() => openRoleDialog("delete", role)}
                               className="flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors duration-150"
                               style={{
                                 borderColor: accentAmber,

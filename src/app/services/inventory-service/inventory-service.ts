@@ -1,5 +1,6 @@
 import { CoreService } from "@/app/hooks/service/core-service";
 import { Routes } from "../api-routes";
+
 class InventoryService extends CoreService {
   async list(params = "") {
     return await this.get(Routes.INVENTORY(params));
@@ -13,8 +14,11 @@ class InventoryService extends CoreService {
   async remove(id: string) {
     return await this.delete(Routes.INVENTORY_ITEM(id));
   }
-  async nearExpiry(limit = 7) {
-    return await this.get(Routes.INVENTORY_NEAR_EXPIRY(limit));
+  async nearExpiry(limit = 7, admin = false) {
+    return await this.get(Routes.INVENTORY_NEAR_EXPIRY(limit), {
+      admin,
+      facilityOnly: !admin,
+    });
   }
   async quarantine(id: string) {
     return await this.send(Routes.INVENTORY_QUARANTINE(id), {});

@@ -11,11 +11,13 @@ import {
   Tooltip,
 } from "chart.js/auto";
 import { Activity, ChartColumn, ChartPie, Package } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
+import DashboardChartState from "@/app/components/DashboardChartState";
 import EmptyState from "@/app/components/EmptyState";
+import { useDashboardChartSeries } from "@/app/hooks/useDashboardChartSeries";
+import { unitLabel, unitSeries } from "@/app/lib/dashboard-chart-data";
 import { useProvider } from "@/app/providers/provider";
-import { DASHBOARD_SERVICE } from "@/app/services/dashboard-service/dashboard-service";
 import { unwrapArray } from "@/app/services/response-utils";
 import { SCAN_SERVICE } from "@/app/services/scan-service/scan-service";
 
@@ -156,257 +158,299 @@ export function TemperatureHistoryChart({
   );
 }
 
-/** Line chart: Biologic Inventory, Network Wide (dashboard) */
-export function InventoryChart() {
-  const { P, GL, GM } = useChartTheme();
-  const [points, setPoints] = useState<Array<{ label: string; vials: number }>>(
-    [],
+type DashboardChartProps = { refreshKey?: number };
+
+function UnitChartFrame({
+  units,
+  selected,
+  onSelect,
+  asOf,
+  children,
+}: {
+  units: string[];
+  selected: string;
+  onSelect: (unit: string) => void;
+  asOf?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <label className="m-0 flex items-center gap-2 text-[10px] text-g500">
+          Selling unit
+          <select
+            aria-label="Chart selling unit"
+            value={selected}
+            onChange={(event) => onSelect(event.target.value)}
+            className="w-auto rounded-lg border border-g200 bg-w px-2 py-1 text-[11px] text-g700"
+          >
+            {(units.length ? units : [selected]).map((unit) => (
+              <option key={unit} value={unit}>
+                {unitLabel(unit)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {asOf && Number.isFinite(Date.parse(asOf)) && (
+          <time
+            dateTime={asOf}
+            className="text-[9px] text-g400"
+            title={new Date(asOf).toLocaleString("en-NG")}
+          >
+            As of{" "}
+            {new Date(asOf).toLocaleTimeString("en-NG", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </time>
+        )}
+      </div>
+      <div className="relative min-h-0 flex-1">{children}</div>
+    </div>
   );
-  useEffect(() => {
-    void DASHBOARD_SERVICE.charts().then((response) => {
-      const data = response.data as any;
-      if (response.success)
-        setPoints(
-          unwrapArray(data?.inventoryOverTime ?? data)
-            .map((point) => ({
-              label: point.label,
-              vials: Number(point.vials ?? point.qty ?? Number.NaN),
-            }))
-            .filter((row) => Number.isFinite(row.vials)),
-        );
-    });
-  }, []);
-  if (!points.length)
+}
+
+export function InventoryChart({ refreshKey = 0 }: DashboardChartProps = {}) {
+  const { P, GL, GM } = useChartTheme();
+  const { rows, loading, error, retry, asOf } = useDashboardChartSeries(
+    "inventoryOverTime",
+    refreshKey,
+  );
+  const [preferred, setPreferred] = useState("vial");
+  const series = unitSeries(rows, preferred, true);
+  if (loading || error)
+    return (
+      <DashboardChartState loading={loading} error={error} onRetry={retry} />
+    );
+  if (!rows.length)
     return (
       <EmptyState
         compact
         icon={ChartColumn}
-        title="No inventory trend yet"
-        description="This chart will fill in when inventory history is available."
+        title="No available stock yet"
+        description="Eligible stock will appear by the month it was added. This view shows current remaining stock, not past month-end balances."
       />
     );
   return (
-    <Line
-      data={{
-        labels: points.map((point) => point.label),
-        datasets: [
-          {
-            label: "Inventory",
-            data: points.map((point) => point.vials),
-            borderColor: P,
-            backgroundColor: `${P}18`,
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-            pointRadius: 3,
-            pointBackgroundColor: P,
-          },
-        ],
-      }}
-      options={{
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: GM, font: { size: 11 } },
-          },
-          y: {
-            grid: { color: GL },
-            ticks: {
-              color: GM,
-              font: { size: 11 },
-              callback: (v) => `${v} vials`,
+    <UnitChartFrame
+      units={series.units}
+      selected={series.selected}
+      onSelect={setPreferred}
+      asOf={asOf}
+    >
+      <Bar
+        data={{
+          labels: series.rows.map((row) => row.label),
+          datasets: [
+            {
+              label: unitLabel(series.selected),
+              data: series.rows.map((row) => row.value),
+              backgroundColor: P,
+              borderRadius: 5,
+            },
+          ],
+        }}
+        options={{
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: GM, font: { size: 10 } },
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: GL },
+              ticks: { color: GM, precision: 0 },
             },
           },
-        },
-      }}
-    />
+        }}
+      />
+    </UnitChartFrame>
   );
 }
 
-/** Doughnut chart: Drug Availability Split (dashboard) */
-export function DrugSplitChart() {
+export function DrugSplitChart({ refreshKey = 0 }: DashboardChartProps = {}) {
   const { P } = useChartTheme();
-  const [split, setSplit] = useState<Array<{ drug: string; pct: number }>>([]);
-  useEffect(() => {
-    void DASHBOARD_SERVICE.charts().then((response) => {
-      const data = response.data as any;
-      if (response.success)
-        setSplit(
-          unwrapArray(data?.drugSplit)
-            .map((row) => ({
-              drug: row.drug,
-              pct: Number(row.pct ?? Number.NaN),
-            }))
-            .filter((row) => Number.isFinite(row.pct)),
-        );
-    });
-  }, []);
-  if (!split.length)
+  const { rows, loading, error, retry, asOf } = useDashboardChartSeries(
+    "drugSplit",
+    refreshKey,
+  );
+  const [preferred, setPreferred] = useState("vial");
+  const series = unitSeries(rows, preferred);
+  if (loading || error)
+    return (
+      <DashboardChartState loading={loading} error={error} onRetry={retry} />
+    );
+  if (!rows.some((row) => row.value > 0))
     return (
       <EmptyState
         compact
         icon={ChartPie}
-        title="No availability mix yet"
-        description="Medicine shares will appear after the catalog and stock data are linked."
+        title="No medicine mix to show"
+        description="Available stock will appear here, with separate percentages for each selling unit."
       />
     );
   return (
-    <Doughnut
-      data={{
-        labels: split.map((row) => row.drug),
-        datasets: [
-          {
-            data: split.map((row) => row.pct),
-            backgroundColor: [P, AC, OK, WN, ER],
-            borderWidth: 3,
-            borderColor: "#fff",
-            hoverOffset: 6,
+    <UnitChartFrame
+      units={series.units}
+      selected={series.selected}
+      onSelect={setPreferred}
+      asOf={asOf}
+    >
+      <Doughnut
+        data={{
+          labels: series.rows.map((row) => row.label),
+          datasets: [
+            {
+              data: series.rows.map((row) => row.value),
+              backgroundColor: [P, AC, OK, WN, ER],
+              borderWidth: 2,
+              hoverOffset: 3,
+            },
+          ],
+        }}
+        options={{
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "65%",
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: { boxWidth: 9, font: { size: 10 } },
+            },
+            tooltip: {
+              callbacks: {
+                label: (item) =>
+                  `${item.label}: ${item.parsed}% (${unitLabel(series.selected)})`,
+              },
+            },
           },
-        ],
-      }}
-      options={{
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "68%",
-        plugins: {
-          legend: { display: true, position: "bottom" },
-        },
-      }}
-    />
+        }}
+      />
+    </UnitChartFrame>
   );
 }
 
-/** Horizontal bar chart: Network Redistribution Efficiency (dashboard) */
-export function RedistributionEfficiencyChart() {
-  const { P, GL, GM, G7 } = useChartTheme();
-  const [efficiency, setEfficiency] = useState<
-    Array<{ label: string; days: number }>
-  >([]);
-  useEffect(() => {
-    void DASHBOARD_SERVICE.charts().then((response) => {
-      const data = response.data as any;
-      if (response.success)
-        setEfficiency(
-          unwrapArray(data?.redistributionEfficiency)
-            .map((row) => ({
-              label: row.label,
-              days: Number(row.days ?? Number.NaN),
-            }))
-            .filter((row) => Number.isFinite(row.days)),
-        );
-    });
-  }, []);
-  if (!efficiency.length)
+export function RedistributionEfficiencyChart({
+  refreshKey = 0,
+}: DashboardChartProps = {}) {
+  const { rows, loading, error, retry, asOf } = useDashboardChartSeries(
+    "redistributionEfficiency",
+    refreshKey,
+  );
+  if (loading || error)
+    return (
+      <DashboardChartState loading={loading} error={error} onRetry={retry} />
+    );
+  if (!rows.length)
     return (
       <EmptyState
         compact
         icon={Activity}
-        title="No transfer trend yet"
-        description="Completed transfer records will power this trend."
+        title="No completed redistributions yet"
+        description="Delivered stock transfers will appear here with their original quantities and selling units."
       />
     );
   return (
-    <Bar
-      data={{
-        labels: efficiency.map((row) => row.label),
-        datasets: [
-          {
-            label: "Avg Days",
-            data: efficiency.map((row) => row.days),
-            backgroundColor: P,
-            borderRadius: 4,
-            barThickness: 12,
-          },
-          {
-            label: "Target",
-            data: efficiency.map(() => 2),
-            backgroundColor: `${AC}20`,
-            borderColor: AC,
-            borderWidth: 1,
-            borderRadius: 4,
-            barThickness: 12,
-          },
-        ],
-      }}
-      options={{
-        indexAxis: "y" as const,
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: {
-            grid: { color: GL },
-            ticks: { color: GM, font: { size: 11 }, callback: (v) => `${v}d` },
-            max: 4,
-          },
-          y: {
-            grid: { display: false },
-            ticks: { color: G7, font: { size: 11, weight: 500 } },
-          },
-        },
-      }}
-    />
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <p className="shrink-0 text-[11px] text-g500">
+        Delivered transfers. Delivery duration is not recorded.
+      </p>
+      <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-g200">
+        <table className="w-full text-xs">
+          <thead>
+            <tr>
+              <th className="text-left">Transfer</th>
+              <th className="text-right">Quantity</th>
+              <th className="text-left">Selling unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={row.id ?? `${row.label}-${index}`}>
+                <td>{row.label}</td>
+                <td className="text-right font-semibold">
+                  {row.value.toLocaleString()}
+                </td>
+                <td>{unitLabel(row.unit)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {asOf && Number.isFinite(Date.parse(asOf)) && (
+        <time dateTime={asOf} className="text-[9px] text-g400">
+          As of {new Date(asOf).toLocaleString("en-NG")}
+        </time>
+      )}
+    </div>
   );
 }
 
-/** Horizontal bar chart: current therapeutic stock from the dashboard API. */
-export function TherapeuticStockChart() {
+export function TherapeuticStockChart({
+  refreshKey = 0,
+}: DashboardChartProps = {}) {
   const { P, GL, GM, G7 } = useChartTheme();
-  const [stock, setStock] = useState<Array<{ drug: string; qty: number }>>([]);
-  useEffect(() => {
-    void DASHBOARD_SERVICE.charts().then((response) => {
-      const data = response.data as any;
-      if (response.success)
-        setStock(
-          unwrapArray(data?.therapeuticStock)
-            .map((row) => ({
-              drug: row.drug,
-              qty: Number(row.qty ?? Number.NaN),
-            }))
-            .filter((row) => Number.isFinite(row.qty)),
-        );
-    });
-  }, []);
-  if (!stock.length)
+  const { rows, loading, error, retry, asOf } = useDashboardChartSeries(
+    "therapeuticStock",
+    refreshKey,
+  );
+  const [preferred, setPreferred] = useState("vial");
+  const series = unitSeries(rows, preferred);
+  if (loading || error)
+    return (
+      <DashboardChartState loading={loading} error={error} onRetry={retry} />
+    );
+  if (!rows.length)
     return (
       <EmptyState
         compact
         icon={Package}
-        title="No stock quantities yet"
-        description="Therapeutic stock appears when inventory has been recorded."
+        title="No stock to display"
+        description="Add eligible medicine batches in Inventory to see available quantities, separated by selling unit."
       />
     );
   return (
-    <Bar
-      data={{
-        labels: stock.map((row) => row.drug),
-        datasets: [
-          {
-            label: "Units in stock",
-            data: stock.map((row) => row.qty),
-            backgroundColor: P,
-            borderRadius: 4,
-            barThickness: 16,
+    <UnitChartFrame
+      units={series.units}
+      selected={series.selected}
+      onSelect={setPreferred}
+      asOf={asOf}
+    >
+      <Bar
+        data={{
+          labels: series.rows.map((row) => row.label),
+          datasets: [
+            {
+              label: unitLabel(series.selected),
+              data: series.rows.map((row) => row.value),
+              backgroundColor: P,
+              borderRadius: 4,
+              maxBarThickness: 20,
+            },
+          ],
+        }}
+        options={{
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              beginAtZero: true,
+              grid: { color: GL },
+              ticks: { color: GM, precision: 0 },
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: G7, font: { size: 11 } },
+            },
           },
-        ],
-      }}
-      options={{
-        indexAxis: "y" as const,
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: GL }, ticks: { color: GM, font: { size: 10 } } },
-          y: {
-            grid: { display: false },
-            ticks: { color: G7, font: { size: 11 } },
-          },
-        },
-      }}
-    />
+        }}
+      />
+    </UnitChartFrame>
   );
 }
 

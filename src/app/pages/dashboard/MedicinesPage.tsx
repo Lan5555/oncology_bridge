@@ -1,17 +1,22 @@
 "use client";
 
-import { notifyResult } from "@/app/lib/notifications";
+import { Edit2, Pill, Trash2, X } from "lucide-react";
 
 import { type FormEvent, useEffect, useState } from "react";
+import EmptyState from "@/app/components/EmptyState";
+import { medicineUnavailable } from "@/app/lib/medicine-availability";
+import { notifyResult } from "@/app/lib/notifications";
 import { MEDICINE_SERVICE } from "@/app/services/medicine-service/medicine-service";
 import { unwrapArray } from "@/app/services/response-utils";
-import EmptyState from "@/app/components/EmptyState";
-import { Edit2, Pill, Trash2, X } from "lucide-react";
 
 type Medicine = {
   id: string;
   generic_name?: string;
   brand?: string;
+  brand_name?: string;
+  manufacturer?: string;
+  dosage_form?: string;
+  storage_temperature?: string;
   strength?: string;
   gtin?: string;
 };
@@ -20,6 +25,9 @@ export default function MedicinesPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [genericName, setGenericName] = useState("");
   const [brand, setBrand] = useState("");
+  const [manufacturer, setManufacturer] = useState("");
+  const [dosageForm, setDosageForm] = useState("");
+  const [storageTemperature, setStorageTemperature] = useState("");
   const [strength, setStrength] = useState("");
   const [gtin, setGtin] = useState("");
   const [notice, setNotice] = useState("");
@@ -27,9 +35,41 @@ export default function MedicinesPage() {
   const [editTarget, setEditTarget] = useState<Medicine | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Medicine | null>(null);
 
+  const resetForm = () => {
+    setGenericName("");
+    setBrand("");
+    setManufacturer("");
+    setDosageForm("");
+    setStorageTemperature("");
+    setStrength("");
+    setGtin("");
+  };
+
+  const requiredFields = {
+    generic_name: genericName.trim(),
+    brand_name: brand.trim(),
+    manufacturer: manufacturer.trim(),
+    dosage_form: dosageForm.trim(),
+    storage_temperature: storageTemperature.trim(),
+  };
+  const validateForm = () => {
+    if (Object.values(requiredFields).some((value) => !value)) {
+      setNotice(
+        "Enter a generic name, brand name, manufacturer, dosage form, and storage temperature.",
+      );
+      return false;
+    }
+    return true;
+  };
+
   const load = async () => {
     const response = await MEDICINE_SERVICE.list();
-    if (response.success) setMedicines(unwrapArray(response.data));
+    if (response.success)
+      setMedicines(
+        unwrapArray(response.data).filter(
+          (medicine) => !medicineUnavailable(medicine),
+        ),
+      );
     else setNotice(response.message || "Medicine catalog could not be loaded.");
   };
 
@@ -39,11 +79,10 @@ export default function MedicinesPage() {
 
   const createMedicine = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!genericName.trim()) return;
+    if (busy || !validateForm()) return;
     setBusy(true);
     const response = await MEDICINE_SERVICE.create({
-      generic_name: genericName.trim(),
-      brand: brand.trim() || undefined,
+      ...requiredFields,
       strength: strength.trim() || undefined,
       gtin: gtin.trim() || undefined,
     });
@@ -59,10 +98,7 @@ export default function MedicinesPage() {
           : "Medicine could not be created."),
     );
     if (response.success) {
-      setGenericName("");
-      setBrand("");
-      setStrength("");
-      setGtin("");
+      resetForm();
       await load();
     }
     setBusy(false);
@@ -70,11 +106,10 @@ export default function MedicinesPage() {
 
   const updateMedicine = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!editTarget || !genericName.trim()) return;
+    if (!editTarget || busy || !validateForm()) return;
     setBusy(true);
     const response = await MEDICINE_SERVICE.update(editTarget.id, {
-      generic_name: genericName.trim(),
-      brand: brand.trim() || null,
+      ...requiredFields,
       strength: strength.trim() || null,
       gtin: gtin.trim() || null,
     });
@@ -91,10 +126,7 @@ export default function MedicinesPage() {
     );
     if (response.success) {
       setEditTarget(null);
-      setGenericName("");
-      setBrand("");
-      setStrength("");
-      setGtin("");
+      resetForm();
       await load();
     }
     setBusy(false);
@@ -103,7 +135,10 @@ export default function MedicinesPage() {
   const startEdit = (medicine: Medicine) => {
     setEditTarget(medicine);
     setGenericName(medicine.generic_name ?? "");
-    setBrand(medicine.brand ?? "");
+    setBrand(medicine.brand_name ?? medicine.brand ?? "");
+    setManufacturer(medicine.manufacturer ?? "");
+    setDosageForm(medicine.dosage_form ?? "");
+    setStorageTemperature(medicine.storage_temperature ?? "");
     setStrength(medicine.strength ?? "");
     setGtin(medicine.gtin ?? "");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -165,10 +200,40 @@ export default function MedicinesPage() {
           />
         </label>
         <label className="grid gap-1 text-xs font-semibold text-g600">
-          Brand
+          Brand name
           <input
+            required
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
+            className="rounded-lg border border-g200 bg-w px-3 py-2 text-sm text-g900"
+          />
+        </label>
+        <label className="grid gap-1 text-xs font-semibold text-g600">
+          Manufacturer
+          <input
+            required
+            value={manufacturer}
+            onChange={(e) => setManufacturer(e.target.value)}
+            className="rounded-lg border border-g200 bg-w px-3 py-2 text-sm text-g900"
+          />
+        </label>
+        <label className="grid gap-1 text-xs font-semibold text-g600">
+          Dosage form
+          <input
+            required
+            value={dosageForm}
+            placeholder="e.g. Tablet, capsule, injection"
+            onChange={(e) => setDosageForm(e.target.value)}
+            className="rounded-lg border border-g200 bg-w px-3 py-2 text-sm text-g900"
+          />
+        </label>
+        <label className="grid gap-1 text-xs font-semibold text-g600">
+          Storage temperature
+          <input
+            required
+            value={storageTemperature}
+            placeholder="Enter conditions from the product label"
+            onChange={(e) => setStorageTemperature(e.target.value)}
             className="rounded-lg border border-g200 bg-w px-3 py-2 text-sm text-g900"
           />
         </label>
@@ -201,10 +266,7 @@ export default function MedicinesPage() {
             type="button"
             onClick={() => {
               setEditTarget(null);
-              setGenericName("");
-              setBrand("");
-              setStrength("");
-              setGtin("");
+              resetForm();
             }}
             className="w-fit rounded-lg border border-g200 px-4 py-2 text-sm font-semibold text-g600"
           >
@@ -227,7 +289,9 @@ export default function MedicinesPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-g800">
                     {medicine.generic_name ?? "Unnamed medicine"}
-                    {medicine.brand ? ` · ${medicine.brand}` : ""}
+                    {medicine.brand_name || medicine.brand
+                      ? ` · ${medicine.brand_name ?? medicine.brand}`
+                      : ""}
                   </p>
                   <p className="mt-1 text-xs text-g500">
                     {medicine.strength ?? "Strength not specified"}
@@ -288,9 +352,11 @@ export default function MedicinesPage() {
                 </h2>
                 <p className="mt-2 text-sm text-g600">
                   {deleteTarget.generic_name}
-                  {deleteTarget.brand ? ` · ${deleteTarget.brand}` : ""} will be
-                  removed from the catalog. Existing records may remain in
-                  historical transactions.
+                  {deleteTarget.brand_name || deleteTarget.brand
+                    ? ` · ${deleteTarget.brand_name ?? deleteTarget.brand}`
+                    : ""}{" "}
+                  will be removed from the catalog. Existing records may remain
+                  in historical transactions.
                 </p>
               </div>
               <button

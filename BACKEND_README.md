@@ -154,7 +154,7 @@ The registration endpoint accepts `license.verification_status` and `license.reg
 ### 4.5 Inventory (`pg-inventory`) - new
 
 - `GET /api/inventory?category=all|expiry|quarantine|redistributed&facilityId=&q=&page=` -> `{ items:[{id,drug,gtin,lot,facility,qty,expiry,temp,status,category}], stats:{totalVials,gs1VerifiedPct,nearExpiry,quarantined} }`. Return raw values (ISO `expiry`, numeric `tempC`) and let UI format; classes like `statusStyle` stay in the frontend.
-- `POST /api/inventory` manual entry `{drug,batchNumber,expiry,quantity,facilityId}`.
+- `POST /api/inventory` manual entry `{medicineId,batchNumber,expiry,quantity,unit,facilityId}`. Persist the selling `unit` (`vial`, `pack`, `bottle`, or `box`) and count quantity in that unit. Return the reviewed selling unit with inventory records so listings use the same unit. Link the selected existing catalogue medicine by ID; derive and enforce facility ownership from the authenticated session. The frontend no longer sends a free-text `drug`. See `INVENTORY_MEDICINE_BACKEND_HANDOFF.md` for validation, selectable medicine pagination, response compatibility, and rollout requirements.
 - `PATCH /api/inventory/:id`, `DELETE /api/inventory/:id`.
 - `GET /api/inventory/export.csv`.
 - `POST /api/inventory/:id/quarantine` and `POST /api/inventory/:id/dispose` (Breach modal confirm).
