@@ -10,7 +10,7 @@ function setup(status, body, { userToken, beforeResponse } = {}) {
   const storage = new Map([
     ["adminSession", JSON.stringify({ token: "admin-token" })],
   ]);
-  if (userToken) storage.set("userSession", JSON.stringify({ token: userToken }));
+  if (userToken) storage.set("userSession", JSON.stringify({ token: userToken, refreshToken: "refresh-token" }));
   const localStorage = {
     getItem: (key) => storage.get(key) ?? null,
     removeItem: (key) => storage.delete(key),
@@ -49,8 +49,29 @@ function setup(status, body, { userToken, beforeResponse } = {}) {
   }
   const core = load("src/app/hooks/service/core-service.ts");
   const { ADMIN_SERVICE } = load("src/app/services/admin-service/admin-service.ts");
-  return { client: new core.CoreService(), admin: ADMIN_SERVICE, storage, events, requests };
+  const { AUTH_SERVICE } = load("src/app/services/auth-service/auth-service.ts");
+  return { client: new core.CoreService(), admin: ADMIN_SERVICE, auth: AUTH_SERVICE, storage, events, requests };
 }
+
+test("password recovery sends public requests with exact payloads", async () => {
+  const app = setup(200, { success: true, data: { emailQueued: true } }, { userToken: "facility-token" });
+  await app.auth.forgotPassword("person@example.test");
+  await app.auth.resetPassword({ token: "reset-token", password: "new-password" });
+  assert.deepEqual(app.requests.map(({ url, method, headers, body }) => ({ url, method, authorization: headers.Authorization, body: JSON.parse(body) })), [
+    { url: "https://backend.test/auth/api/forgot-password", method: "POST", authorization: undefined, body: { email: "person@example.test" } },
+    { url: "https://backend.test/auth/api/reset-password", method: "POST", authorization: undefined, body: { token: "reset-token", password: "new-password" } },
+  ]);
+  assert.deepEqual(app.events, []);
+});
+
+test("an invalid reset token never refreshes or clears an existing session", async () => {
+  const app = setup(401, { success: false, message: "Invalid reset token" }, { userToken: "facility-token" });
+  assert.equal((await app.auth.resetPassword({ token: "expired", password: "new-password" })).success, false);
+  assert.equal(app.requests.length, 1);
+  assert.ok(app.storage.has("userSession"));
+  assert.ok(app.storage.has("adminSession"));
+  assert.deepEqual(app.events, []);
+});
 
 test("session validation uses /api/me and the admin token even with a facility session", async () => {
   const app = setup(200, { success: true, data: { role: "ADMIN" } }, { userToken: "facility-token" });

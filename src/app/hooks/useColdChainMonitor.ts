@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useProvider } from "@/app/providers/provider";
 import { COLDCHAIN_SERVICE } from "@/app/services/coldchain-service/coldchain-service";
 import { unwrapArray } from "@/app/services/response-utils";
+import { coldChainReadingState } from "@/app/lib/cold-chain-reading-state";
 
 export type ColdChainEventFilters = {
   unitId: string;
@@ -250,23 +251,21 @@ export function useColdChainMonitor({
         );
         if (!Number.isFinite(celsius)) return;
         const recordedAt =
-          reading.recordedAt ??
-          reading.at ??
-          reading.timestamp ??
-          new Date().toISOString();
-        const low = Number(knownUnit.targetMin ?? knownUnit.target_min ?? 2);
-        const high = Number(knownUnit.targetMax ?? knownUnit.target_max ?? 8);
-        const readingState =
-          reading.readingState ??
-          (celsius < low || celsius > high ? "BREACH" : "NOMINAL");
+          reading.recordedAt ?? reading.at ?? reading.timestamp;
+        if (!recordedAt || !Number.isFinite(new Date(recordedAt).getTime()))
+          return;
+        const readingState = coldChainReadingState(
+          reading.readingState,
+          celsius,
+          knownUnit.targetMin ?? knownUnit.target_min,
+          knownUnit.targetMax ?? knownUnit.target_max,
+        );
         const updatedUnit = {
           ...knownUnit,
           currentC: celsius,
           currentReadingAt: recordedAt,
           lastSeenAt: recordedAt,
-          readingState: validReadingState(readingState)
-            ? readingState
-            : "NOMINAL",
+          readingState,
         };
         const nextUnits = unitsRef.current.map((unit) =>
           String(unit.id) === id ? updatedUnit : unit,

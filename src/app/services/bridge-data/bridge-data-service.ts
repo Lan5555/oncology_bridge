@@ -60,7 +60,7 @@ export interface VerificationApplication {
   registry_name?: string | null;
   id: string;
   name: string;
-  accountType: AccountType;
+  accountType?: AccountType;
   license: string;
   workplace: string;
   submitted: string;
@@ -83,8 +83,8 @@ class BridgeDataService {
 
   async createInvoice(
     orderId: string,
-    quantity = 1,
-    unitPriceNaira = 0,
+    quantity: number,
+    unitPriceNaira: number,
   ): Promise<{ reference: string; url?: string } | null> {
     if (
       !Number.isInteger(quantity) ||

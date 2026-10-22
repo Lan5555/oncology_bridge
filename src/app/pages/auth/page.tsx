@@ -31,7 +31,8 @@ export default function AuthPage({
   }, []);
 
   const handleDoLogin = () => {
-    // After login navigate to the dashboard route
+    // A fresh sign-in starts on the dashboard, without a stale admin shortcut.
+    window.localStorage.removeItem("adminTarget");
     router.push("/portal");
   };
 

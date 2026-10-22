@@ -1497,7 +1497,7 @@ export default function UsersPage({
                       <div>
                         <dt className="text-xs text-g500">Request status</dt>
                         <dd className="mt-0.5 font-medium text-g800">
-                          {membershipReviewTarget.status ?? "PENDING"}
+                          {membershipReviewTarget.status ?? "Not provided"}
                         </dd>
                       </div>
                     </dl>

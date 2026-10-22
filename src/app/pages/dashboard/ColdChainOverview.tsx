@@ -134,11 +134,11 @@ export default function ColdChainOverview({ onNav }: ColdChainOverviewProps) {
             {monitor.units.slice(0, 6).map((unit) => {
               const temperature =
                 unit.currentC == null ? null : Number(unit.currentC);
-              const state = unit.readingState ?? "OFFLINE";
+              const state = unit.readingState ?? "UNKNOWN";
               const stateClass =
                 state === "BREACH"
                   ? "bg-errl text-err"
-                  : state === "OFFLINE"
+                  : state !== "NOMINAL"
                     ? "bg-warnl text-g700"
                     : "bg-okl text-good";
               return (
@@ -226,7 +226,8 @@ export default function ColdChainOverview({ onNav }: ColdChainOverviewProps) {
                   {event.message}
                 </p>
                 <p className="mt-1 text-xs text-g500">
-                  {event.severity} · {event.status ?? event.state ?? "OPEN"} ·{" "}
+                  {event.severity} ·{" "}
+                  {event.status ?? event.state ?? "Status not provided"} ·{" "}
                   {event.at
                     ? new Date(event.at).toLocaleString("en-NG")
                     : "Time not recorded"}

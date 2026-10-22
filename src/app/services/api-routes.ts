@@ -38,6 +38,10 @@ export class Routes {
   static DASHBOARD_SUMMARY = "/api/dashboard/summary";
   static DASHBOARD_CHARTS = "/api/dashboard/charts";
   static PUBLIC_STATS = "/api/public/stats";
+  static FORM_OPTIONS = (context: string) =>
+    `/api/form-options${query({ context })}`;
+  static PRESCRIPTION_PHARMACIES = (page = 1) =>
+    `/api/prescriptions/pharmacies${query({ page, limit: 100 })}`;
   static REPORT_EXPORT = "/api/reports/export";
 
   static INVENTORY = (params = "") =>
@@ -76,6 +80,10 @@ export class Routes {
     `${Routes.TRANSFER_ITEM(transferId)}/approve`;
   static TRANSFER_REJECT = (transferId: string) =>
     `${Routes.TRANSFER_ITEM(transferId)}/reject`;
+  static TRANSFER_DISPATCH = (transferId: string) =>
+    `${Routes.TRANSFER_ITEM(transferId)}/dispatch`;
+  static TRANSFER_DELIVER = (transferId: string) =>
+    `${Routes.TRANSFER_ITEM(transferId)}/deliver`;
 
   static PRESCRIPTIONS = (tab?: string) =>
     `/api/prescriptions${query({ tab })}`;

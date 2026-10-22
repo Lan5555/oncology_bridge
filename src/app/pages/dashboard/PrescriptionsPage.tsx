@@ -62,11 +62,11 @@ export default function PrescriptionsPage({
         drug:
           row.drug ??
           row.medicine?.generic_name ??
-          `${row.drugName ?? "Medicine"} ×${row.qty ?? row.quantity ?? 1}`,
+          `${row.drugName ?? "Medicine not provided"} · Quantity: ${row.qty ?? row.quantity ?? "not provided"}`,
         insurer: row.insurer ?? "N/A",
         pharmacy: row.pharmacy ?? row.pharmacyName ?? "N/A",
-        status: row.status ?? row.auth_status ?? "Pending",
-        order: row.order ?? row.order_stage ?? "Waiting",
+        status: row.status ?? row.auth_status ?? "Not provided",
+        order: row.order ?? row.order_stage ?? "Not provided",
         statusClass: "bg-pl text-pdd",
         orderClass: "bg-g100 text-g600",
       })),

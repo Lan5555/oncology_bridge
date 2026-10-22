@@ -22,6 +22,7 @@ import {
   Mail,
   Phone,
   History,
+  Info,
 } from "lucide-react";
 
 interface FacilitiesPageProps {
@@ -32,8 +33,18 @@ interface FacilitiesPageProps {
 
 // Mirrors the backend enums (Hospital entity) rather than the old prototype's
 // "Donor Hub / Recipient Hub" placeholder copy.
-type FacilityType = "HOSPITAL" | "CANCER_CENTER" | "CLINIC" | "PHARMACY";
-type FacilityStatus = "PENDING" | "ACTIVE" | "SUSPENDED" | "REJECTED";
+type FacilityType =
+  | "HOSPITAL"
+  | "CANCER_CENTER"
+  | "CLINIC"
+  | "PHARMACY"
+  | "UNKNOWN";
+type FacilityStatus =
+  | "PENDING"
+  | "ACTIVE"
+  | "SUSPENDED"
+  | "REJECTED"
+  | "UNKNOWN";
 
 interface FacilityRow {
   id: string;
@@ -43,7 +54,7 @@ interface FacilityRow {
   city: string;
   state: string;
   ip: string;
-  devices: number;
+  devices: number | null;
   lastActive: string;
   status: FacilityStatus;
   phone: string;
@@ -53,6 +64,7 @@ interface FacilityRow {
 const initialFacilities: FacilityRow[] = [];
 
 const typeMeta: Record<FacilityType, { label: string; color: string }> = {
+  UNKNOWN: { label: "Type not provided", color: "#6B7280" },
   HOSPITAL: { label: "Hospital", color: "#1B3A6B" },
   CANCER_CENTER: { label: "Cancer Center", color: "#6D28D9" },
   CLINIC: { label: "Clinic", color: "#0F766E" },
@@ -63,6 +75,12 @@ const statusMeta: Record<
   FacilityStatus,
   { label: string; color: string; icon: React.ElementType; description: string }
 > = {
+  UNKNOWN: {
+    label: "Status not provided",
+    color: "#6B7280",
+    icon: Info,
+    description: "Choose a recorded facility status before saving.",
+  },
   ACTIVE: {
     label: "Active",
     color: "#15803D",
@@ -132,15 +150,15 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
           name: facility.name,
           hospital_code: facility.hospital_code ?? facility.hospitalCode ?? "",
           facility_type:
-            facility.facility_type ?? facility.facilityType ?? "HOSPITAL",
+            facility.facility_type ?? facility.facilityType ?? "UNKNOWN",
           city: facility.city ?? "",
           state: facility.state ?? "",
           ip: (facility.ip_whitelist ?? []).join(", "),
-          devices: facility.devices?.length ?? 0,
+          devices: facility.devices?.length ?? null,
           lastActive: facility.last_active
             ? new Date(facility.last_active).toLocaleString("en-NG")
             : "N/A",
-          status: facility.status ?? "PENDING",
+          status: facility.status ?? "UNKNOWN",
           phone: facility.phone ?? "",
           email: facility.email ?? "",
         })),
@@ -208,7 +226,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
   };
 
   const saveManage = async () => {
-    if (!manageTarget || !draftStatus) return;
+    if (!manageTarget || !draftStatus || draftStatus === "UNKNOWN") return;
     const changed = draftStatus !== manageTarget.status;
     const response = await FACILITY_SERVICE.updateOneFacility(
       manageTarget.id,
@@ -421,7 +439,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                     <td className="px-4 py-3 text-g600">
                       <span className="flex items-center gap-1.5">
                         <Smartphone className="h-3.5 w-3.5 text-slate" />
-                        {f.devices}
+                        {f.devices ?? "Not provided"}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-g500">{f.lastActive}</td>
@@ -596,7 +614,9 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
                   </p>
                   <p className="flex items-center gap-1.5 text-sm text-g900">
                     <Smartphone className="h-3.5 w-3.5 text-slate" />
-                    {manageTarget.devices} whitelisted
+                    {manageTarget.devices == null
+                      ? "Not provided"
+                      : `${manageTarget.devices} whitelisted`}
                   </p>
                 </div>
                 <div>
@@ -694,6 +714,7 @@ const FacilitiesPage: React.FC<FacilitiesPageProps> = ({
               </button>
               <button
                 onClick={saveManage}
+                disabled={draftStatus === "UNKNOWN"}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-white shadow-[0_10px_24px_-10px_rgba(11,30,61,0.55)] transition-all duration-150 hover:shadow-[0_14px_28px_-10px_rgba(11,30,61,0.6)] active:scale-[0.98]"
                 style={{ backgroundColor: primaryCta }}
               >

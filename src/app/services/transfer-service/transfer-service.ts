@@ -1,6 +1,12 @@
 import { CoreService } from "@/app/hooks/service/core-service";
 import { Routes } from "../api-routes";
 class TransferService extends CoreService {
+  dispatch(id: string) {
+    return this.send(Routes.TRANSFER_DISPATCH(id), {}, { facilityOnly: true });
+  }
+  deliver(id: string) {
+    return this.send(Routes.TRANSFER_DELIVER(id), {}, { facilityOnly: true });
+  }
   async list(status?: string) {
     return await this.get(Routes.TRANSFERS(status));
   }

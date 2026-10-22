@@ -222,7 +222,7 @@ export default function MedicinesPage() {
           <input
             required
             value={dosageForm}
-            placeholder="e.g. Tablet, capsule, injection"
+            placeholder="Enter dosage form"
             onChange={(e) => setDosageForm(e.target.value)}
             className="rounded-lg border border-g200 bg-w px-3 py-2 text-sm text-g900"
           />

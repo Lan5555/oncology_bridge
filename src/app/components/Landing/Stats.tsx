@@ -1,63 +1,57 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DASHBOARD_SERVICE } from "@/app/services/dashboard-service/dashboard-service";
 import Counter from "./Counter";
 import Reveal from "./Reveal";
-import { DASHBOARD_SERVICE } from "@/app/services/dashboard-service/dashboard-service";
-
-const BLOCK =
-  "translate-y-6 bg-navy/50 p-10 text-center transition-[opacity,translate] duration-600";
-const NUM =
-  "mb-2 bg-linear-135 from-sky via-cyan to-teal bg-clip-text font-display text-[clamp(2.2rem,3.5vw,3.2rem)] leading-none font-extrabold tracking-[-2px] text-transparent";
-const LABEL = "text-[13px] font-medium text-white/45";
 
 export default function Stats() {
-  const [stats, setStats] = useState<any>({});
+  const [stats, setStats] = useState<Record<string, unknown>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   useEffect(() => {
+    let current = true;
     void DASHBOARD_SERVICE.publicStats().then((response) => {
+      if (!current) return;
       if (response.success) setStats(response.data ?? {});
+      else setError("Platform statistics are unavailable.");
+      setLoading(false);
     });
+    return () => {
+      current = false;
+    };
   }, []);
-  const valueMillions = Math.round(
-    (stats.valueRecoveredNaira ?? 0) / 1_000_000,
-  );
+  const metrics = [
+    { key: "stockOutRiskPct", label: "Medicines out of stock (%)" },
+    { key: "valueRecoveredNaira", label: "Reported value recovered (NGN)" },
+    { key: "nodes", label: "Active facilities" },
+    { key: "gs1AuthenticatedVials", label: "GS1 authenticated vials" },
+  ];
   return (
     <section
-      className="bg-navy-2 px-10 py-20 max-[600px]:px-5 max-[600px]:py-12"
+      className="bg-navy-2 px-10 py-20 text-white"
       aria-label="Platform statistics"
+      aria-busy={loading}
     >
-      <div className="mx-auto grid max-w-[1100px] grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-0.5 overflow-hidden rounded-2xl border border-white/6 bg-white/4">
-        <Reveal className={BLOCK} delayMs={0}>
-          <div className={NUM}>
-            <Counter target={stats.stockOutRiskPct ?? 0} />
-            <span className="align-super text-[0.5em] [-webkit-text-fill-color:var(--color-cyan)]">
-              %
-            </span>
-          </div>
-          <div className={LABEL}>
-            of Nigerian patients face medication stock-outs
-          </div>
-        </Reveal>
-        <Reveal className={BLOCK} delayMs={100}>
-          <div className={NUM}>
-            ₦<Counter target={valueMillions} />M
-          </div>
-          <div className={LABEL}>in drug wastage prevented this quarter</div>
-        </Reveal>
-        <Reveal className={BLOCK} delayMs={200}>
-          <div className={NUM}>
-            <Counter target={stats.nodes ?? 0} />
-          </div>
-          <div className={LABEL}>
-            verified facilities in the Lagos–Ibadan corridor
-          </div>
-        </Reveal>
-        <Reveal className={BLOCK} delayMs={300}>
-          <div className={NUM}>
-            <Counter target={stats.gs1AuthenticatedVials ?? 0} />
-          </div>
-          <div className={LABEL}>biologics verified via GS1 this month</div>
-        </Reveal>
+      {error && <p role="alert">{error}</p>}
+      <div className="mx-auto grid max-w-[1100px] grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+        {metrics.map(({ key, label }) => {
+          const value = stats[key];
+          return (
+            <Reveal key={key} className="p-8 text-center">
+              <div className="mb-2 text-3xl font-bold">
+                {loading ? (
+                  "Loading?"
+                ) : typeof value === "number" && Number.isFinite(value) ? (
+                  <Counter target={value} />
+                ) : (
+                  "Not available"
+                )}
+              </div>
+              <div className="text-sm text-white/60">{label}</div>
+            </Reveal>
+          );
+        })}
       </div>
     </section>
   );

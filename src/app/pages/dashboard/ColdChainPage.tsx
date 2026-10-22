@@ -101,12 +101,12 @@ export default function ColdChainPage() {
               const current =
                 unit.currentC == null ? null : Number(unit.currentC);
               const state = String(
-                unit.readingState ?? "OFFLINE",
+                unit.readingState ?? "UNKNOWN",
               ).toUpperCase();
               const tone =
                 state === "BREACH"
                   ? "border-err/40 bg-errl text-err"
-                  : state === "OFFLINE"
+                  : state !== "NOMINAL"
                     ? "border-g200 bg-g50 text-g500"
                     : "border-green-200 bg-green-50 text-green-700";
               return (

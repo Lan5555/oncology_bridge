@@ -190,7 +190,7 @@ export default function PublicFlows() {
                 maxLength={64}
                 onChange={(event) => setInvoiceRef(event.target.value)}
                 pattern="(?:[A-Za-z0-9]|-){3,64}"
-                placeholder="e.g. OB-89201"
+                placeholder="Enter your invoice reference"
                 required
                 value={invoiceRef}
               />

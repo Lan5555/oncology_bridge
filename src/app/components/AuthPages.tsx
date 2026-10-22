@@ -513,7 +513,7 @@ export default function AuthPages({
                     autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@facility.org"
+                    placeholder="Enter your email address"
                     className={inputClasses}
                   />
                 </div>
@@ -553,7 +553,14 @@ export default function AuthPages({
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-1">
+                <div className="flex justify-between pt-1">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-medium"
+                    style={{ color: accent }}
+                  >
+                    Forgot password?
+                  </Link>
                   <button
                     type="button"
                     onClick={() => {
@@ -940,7 +947,7 @@ export default function AuthPages({
                             type="text"
                             value={facilityName}
                             onChange={(e) => setFacilityName(e.target.value)}
-                            placeholder="e.g. LUTH Pharmacy"
+                            placeholder="Enter facility name"
                             className={inputClasses}
                           />
                         </div>
@@ -987,7 +994,7 @@ export default function AuthPages({
                                 onChange={(e) =>
                                   setFacilityPhone(e.target.value)
                                 }
-                                placeholder="+234"
+                                placeholder="Enter facility phone number"
                                 className={`${inputClasses} pl-10`}
                               />
                             </div>
@@ -1015,7 +1022,7 @@ export default function AuthPages({
                                   onChange={(e) =>
                                     setFacilityEmail(e.target.value)
                                   }
-                                  placeholder="records@facility.org"
+                                  placeholder="Enter facility email address"
                                   className={`${inputClasses} pl-10`}
                                 />
                               </div>
@@ -1062,7 +1069,7 @@ export default function AuthPages({
                               type="text"
                               value={facilityCity}
                               onChange={(e) => setFacilityCity(e.target.value)}
-                              placeholder="e.g. Lagos"
+                              placeholder="Enter city"
                               className={inputClasses}
                             />
                           </div>
@@ -1079,7 +1086,7 @@ export default function AuthPages({
                               type="text"
                               value={facilityState}
                               onChange={(e) => setFacilityState(e.target.value)}
-                              placeholder="e.g. Lagos State"
+                              placeholder="Enter state"
                               className={inputClasses}
                             />
                           </div>
@@ -1277,7 +1284,7 @@ export default function AuthPages({
                           type="email"
                           value={workEmail}
                           onChange={(e) => setWorkEmail(e.target.value)}
-                          placeholder="admin@facility.org"
+                          placeholder="Enter your work email address"
                           className={inputClasses}
                         />
                       </div>
@@ -1294,7 +1301,7 @@ export default function AuthPages({
                           type="tel"
                           value={adminPhone}
                           onChange={(e) => setAdminPhone(e.target.value)}
-                          placeholder="+234"
+                          placeholder="Enter your phone number"
                           className={inputClasses}
                         />
                       </div>

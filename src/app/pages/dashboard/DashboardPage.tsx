@@ -115,7 +115,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 }) => {
   const { userData } = useProvider();
   const accountType = userData.user?.account_type;
-  const role = getAccountInfo(accountType)?.label ?? "Network Admin";
+  const role = getAccountInfo(accountType)?.label ?? "Account";
   const sections = accountType
     ? (ROLE_SECTIONS[accountType] ?? [])
     : [
@@ -528,7 +528,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   </span>
                   <span className="text-g500">
                     {item.daysLeft ?? "N/A"} days ·{" "}
-                    {item.qty ?? item.quantity ?? 0} units
+                    {item.qty ?? item.quantity ?? "Quantity not provided"}{" "}
+                    {item.unit ?? "(unit not provided)"}
                   </span>
                 </li>
               ))}

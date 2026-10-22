@@ -1,5 +1,7 @@
 # Oncosourz Backend Build Guide
 
+Current integration supplement: [API_GAPS_BACKEND_CONTRACT.md](API_GAPS_BACKEND_CONTRACT.md), with an OpenAPI contract and generated client endpoint inventory. It supersedes the older form-option, prescription-pharmacy, transfer-lifecycle and report-download descriptions below. Client references do not establish backend deployment status.
+
 Spec for a backend that makes every frontend section work. Frontend: Next.js (`src/app`). Backend: any stack (REST + JSON, PostgreSQL recommended).
 
 Product: a live, GS1-authenticated inventory, verification and redistribution network for oncology biologics (Trastuzumab, Rituximab, Bevacizumab, Pertuzumab, Cetuximab) across the Lagos–Ibadan corridor. Compliance: NDPA 2023, NAFDAC, GS1 DataMatrix, ICD-10, 2–8 °C cold chain.

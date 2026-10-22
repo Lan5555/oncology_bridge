@@ -16,6 +16,7 @@ import {
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import CheckoutPrescriptionSelect from "@/app/components/CheckoutPrescriptionSelect";
+import ApiOptionSelect from "@/app/components/ApiOptionSelect";
 import { isPrescriptionUuid } from "@/app/lib/checkout-prescriptions";
 import { linkedMedicineUnavailable } from "@/app/lib/medicine-availability";
 import {
@@ -34,13 +35,6 @@ const field =
   "w-full rounded-xl border border-g200 bg-w px-3.5 py-3 text-sm text-g800 outline-none transition focus:border-p focus:ring-2 focus:ring-p/15";
 const primary =
   "inline-flex items-center justify-center gap-2 rounded-xl bg-p px-5 py-3 text-sm font-semibold text-white transition hover:bg-pd disabled:cursor-not-allowed disabled:opacity-50 dk:text-navy";
-const categories = [
-  "All medicines",
-  "Biologics",
-  "Chemotherapy",
-  "Supportive care",
-  "Other",
-];
 const dateLabel = (value: string) =>
   Number.isNaN(Date.parse(value))
     ? "Not provided"
@@ -92,7 +86,8 @@ function ProductImage({
 export default function MarketplacePage() {
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
-  const [category, setCategory] = useState("All medicines");
+  const [category, setCategory] = useState("");
+  const [categoryDraft, setCategoryDraft] = useState("");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -103,7 +98,7 @@ export default function MarketplacePage() {
   const [search, setSearch] = useState({ q: "", location: "" });
   const [selected, setSelected] = useState<DrugListing | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
-  const [quantity, setQuantity] = useState("1");
+  const [quantity, setQuantity] = useState("");
   const [prescription, setPrescription] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [paying, setPaying] = useState(false);
@@ -119,7 +114,7 @@ export default function MarketplacePage() {
     setItems([]);
     const params = new URLSearchParams({
       ...search,
-      category: category === "All medicines" ? "" : category,
+      category: category.trim(),
       sort,
       inStock: "true",
       page: String(page),
@@ -151,7 +146,7 @@ export default function MarketplacePage() {
   const openProduct = (item: DrugListing) => {
     setSelected(item);
     setImageIndex(0);
-    setQuantity("1");
+    setQuantity("");
     setPrescription("");
     setCheckoutError("");
     checkoutKey.current = crypto.randomUUID();
@@ -272,6 +267,7 @@ export default function MarketplacePage() {
             event.preventDefault();
             setPage(1);
             setSearch({ q: query.trim(), location: location.trim() });
+            setCategory(categoryDraft.trim());
             setRefresh((value) => value + 1);
           }}
           className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]"
@@ -305,20 +301,15 @@ export default function MarketplacePage() {
           </button>
         </form>
         <div className="flex flex-wrap gap-2 border-t border-g100 pt-4">
-          {categories.map((value) => (
-            <button
-              type="button"
-              key={value}
-              aria-pressed={category === value}
-              onClick={() => {
-                setCategory(value);
-                setPage(1);
-              }}
-              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${category === value ? "bg-p text-white dk:text-navy" : "bg-g50 text-g500 hover:bg-pl hover:text-p"}`}
-            >
-              {value}
-            </button>
-          ))}
+          <ApiOptionSelect
+            context="marketplace"
+            field="categories"
+            label="Category filter"
+            emptyLabel="All categories"
+            value={categoryDraft}
+            onChange={setCategoryDraft}
+            inputClassName={field}
+          />
         </div>
       </section>
 

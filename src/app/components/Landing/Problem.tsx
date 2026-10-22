@@ -5,8 +5,8 @@ import { EYEBROW, H2_DARK, INNER, P_DARK, SECTION } from "./classes";
 const POINTS = [
   {
     num: "Problem 01",
-    title: "The 50% Stock-Out Rate",
-    body: "Half of Nigerian oncology patients regularly experience medication stock-outs during critical treatment windows, forcing families to manually hunt for life-saving drugs across cities.",
+    title: "Medication Stock-Outs",
+    body: "Medication stock-outs can interrupt treatment and require families to search for medicines across facilities.",
   },
   {
     num: "Problem 02",

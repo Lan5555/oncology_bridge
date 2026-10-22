@@ -39,7 +39,6 @@ interface Item {
 }
 
 const ITEMS: Item[] = [
-  { id: "pg-marketplace", label: "Marketplace", icon: ShoppingBag, section: "Overview", description: "Find medicines, compare and purchase." },
   {
     id: "pg-dashboard",
     label: "Dashboard",
@@ -47,6 +46,7 @@ const ITEMS: Item[] = [
     section: "Overview",
     description: "Facility activity and key updates.",
   },
+  { id: "pg-marketplace", label: "Marketplace", icon: ShoppingBag, section: "Overview", description: "Find medicines, compare and purchase." },
   { id: "pg-network", label: "Network map", icon: Map, section: "Overview", description: "Explore connected facilities." },
   { id: "pg-users", label: "Facility team", icon: Users, section: "Facility team", description: "Invite members and manage facility access." },
   {

@@ -107,6 +107,7 @@ export class CoreService {
       );
       if (
         response.status === 401 &&
+        options.auth !== false &&
         token &&
         !retried &&
         !options.admin &&

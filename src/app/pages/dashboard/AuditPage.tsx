@@ -108,7 +108,7 @@ export default function AuditPage({
               {entry.detail ?? entry.message ?? "N/A"}
             </p>
             <p className="mt-1 text-[11px] text-g400">
-              {entry.actor?.name ?? entry.actor ?? "System"}
+              {entry.actor?.name ?? entry.actor ?? "Actor not provided"}
               {entry.severity ? ` · ${entry.severity}` : ""}
             </p>
           </article>

@@ -50,8 +50,11 @@ export default function VerificationGate() {
   };
   const user = userData.user;
   const info = getAccountInfo(user?.account_type);
-  const status = user?.verification_status ?? "PENDING";
-  const copy = VERIFICATION_COPY[status];
+  const status = user?.verification_status;
+  const copy = (status ? VERIFICATION_COPY[status] : undefined) ?? {
+    title: "Verification status unavailable",
+    body: "Your verification status has not been returned. Refresh your account status or contact your administrator.",
+  };
   const rejected = status === "REJECTED";
 
   return (

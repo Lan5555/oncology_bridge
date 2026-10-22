@@ -336,7 +336,7 @@ export default function ResearchPage() {
                     type="email"
                     autoComplete="email"
                     inputMode="email"
-                    placeholder="you@organisation.com"
+                    placeholder="Enter your email address"
                     required
                     maxLength={254}
                     aria-invalid={Boolean(errors.email)}

@@ -5,20 +5,22 @@ import { BellOff, FilePlus2 } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 import EmptyState from "@/app/components/EmptyState";
-import type { ModalId } from "@/app/lib/types";
+import ApiOptionSelect from "@/app/components/ApiOptionSelect";
+import TransferRequestForm from "@/app/components/TransferRequestForm";
+import type { ModalId, PageId } from "@/app/lib/types";
+import { reportDownload } from "@/app/lib/report-download";
 import { useProvider } from "@/app/providers/provider";
 import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
 import { MEDICINE_SERVICE } from "@/app/services/medicine-service/medicine-service";
-import { NETWORK_SERVICE } from "@/app/services/network-service/network-service";
 import { NOTIFICATION_SERVICE } from "@/app/services/notification-service/notification-service";
 import { PRESCRIPTION_SERVICE } from "@/app/services/prescription-service/prescription-service";
 import { REPORT_SERVICE } from "@/app/services/report-service/report-service";
 import { unwrapArray } from "@/app/services/response-utils";
-import { TRANSFER_SERVICE } from "@/app/services/transfer-service/transfer-service";
 
 interface Props {
   openModalId: ModalId | null;
   onCloseModal: (id: ModalId) => void;
+  onNav: (id: PageId) => void;
 }
 const TITLES: Record<ModalId, string> = {
   "modal-export": "Export report",
@@ -30,12 +32,12 @@ const TITLES: Record<ModalId, string> = {
   "modal-user": "Invite a user",
 };
 
-export default function Modals({ openModalId, onCloseModal }: Props) {
+export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
   const [values, setValues] = useState<Record<string, string>>({
-    type: "CSV",
+    type: "",
     from: "",
     to: "",
-    quantity: "1",
+    quantity: "",
     tnmStage: "",
     insurer: "",
     icd10: "",
@@ -45,6 +47,8 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [medicines, setMedicines] = useState<any[]>([]);
   const [pharmacies, setPharmacies] = useState<any[]>([]);
+  const [pharmacyPage, setPharmacyPage] = useState(1);
+  const [morePharmacies, setMorePharmacies] = useState(false);
   const [loadingPrescriptionOptions, setLoadingPrescriptionOptions] =
     useState(false);
   const [prescriptionOptionsMessage, setPrescriptionOptionsMessage] =
@@ -68,13 +72,23 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
   }, [openModalId]);
 
   useEffect(() => {
+    if (openModalId === "modal-prescription") {
+      setPharmacyPage(1);
+      setMorePharmacies(false);
+    }
+  }, [openModalId]);
+
+  useEffect(() => {
     if (openModalId !== "modal-prescription") return;
     let current = true;
     setLoadingPrescriptionOptions(true);
     setMedicines([]);
-    setPharmacies([]);
+    if (pharmacyPage === 1) setPharmacies([]);
     setPrescriptionOptionsMessage("");
-    void Promise.all([MEDICINE_SERVICE.list(), NETWORK_SERVICE.getNetwork()])
+    void Promise.all([
+      MEDICINE_SERVICE.list(),
+      PRESCRIPTION_SERVICE.pharmacies(pharmacyPage),
+    ])
       .then(([medicineResponse, networkResponse]) => {
         if (!current) return;
         if (medicineResponse.success)
@@ -84,14 +98,43 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
             medicineResponse.message || "Medicine catalog could not be loaded.",
           );
         if (networkResponse.success) {
-          const networkFacilities =
-            (networkResponse.data as any)?.facilities ?? networkResponse.data;
-          const activePharmacies = unwrapArray(networkFacilities).filter(
+          const directory = networkResponse.data;
+          if (
+            !Array.isArray(directory?.items) ||
+            !directory.pagination ||
+            typeof directory.pagination.total !== "number"
+          ) {
+            setPrescriptionOptionsMessage(
+              "The pharmacy directory returned an invalid response.",
+            );
+            return;
+          }
+          const activePharmacies = directory.items.filter(
             (facility: any) =>
-              (facility.facility_type ?? facility.facilityType) ===
-                "PHARMACY" && (facility.status ?? "ACTIVE") === "ACTIVE",
+              facility &&
+              typeof facility === "object" &&
+              typeof facility.id === "string" &&
+              typeof facility.name === "string" &&
+              facility.status === "ACTIVE" &&
+              facility.verified === true,
           );
-          setPharmacies(activePharmacies);
+          setPharmacies((current) =>
+            pharmacyPage === 1
+              ? activePharmacies
+              : [
+                  ...new Map(
+                    [...current, ...activePharmacies].map((facility) => [
+                      facility.id,
+                      facility,
+                    ]),
+                  ).values(),
+                ],
+          );
+          setMorePharmacies(
+            directory.items.length > 0 &&
+              pharmacyPage * directory.pagination.limit <
+                directory.pagination.total,
+          );
           const ownFacilityId = userData.user?.hospital?.id;
           if (
             ownFacilityId &&
@@ -115,10 +158,24 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
     return () => {
       current = false;
     };
-  }, [openModalId, userData.user?.hospital?.id]);
+  }, [openModalId, userData.user?.hospital?.id, pharmacyPage]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (busy) return;
+    if (
+      openModalId === "modal-prescription" &&
+      (loadingPrescriptionOptions ||
+        !medicines.some((medicine) => medicine.id === values.drugId) ||
+        !pharmacies.some(
+          (pharmacy) => pharmacy.id === values.pharmacyFacilityId,
+        ))
+    ) {
+      setMessage(
+        "Select a medicine and an available pharmacy from the loaded options.",
+      );
+      return;
+    }
     setBusy(true);
     setMessage("");
     let response;
@@ -127,12 +184,6 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
         type: values.type,
         from: values.from,
         to: values.to,
-      });
-    else if (openModalId === "modal-transfer")
-      response = await TRANSFER_SERVICE.create({
-        inventoryItemId: values.inventoryItemId,
-        recipientFacilityId: values.recipientFacilityId,
-        quantity: Number(values.quantity),
       });
     else if (openModalId === "modal-breach")
       response = await INVENTORY_SERVICE.dispose(values.inventoryItemId);
@@ -148,14 +199,22 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
         ...(userData.user?.id ? { prescriber_id: userData.user.id } : {}),
       });
     if (response && openModalId === "modal-export" && response.success) {
-      const csv = (response.data as any)?.csv;
-      if (csv) {
-        const blob = new Blob([csv], { type: "text/csv" });
+      try {
+        const { blob, filename } = reportDownload(response.data);
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = "oncosourz-report.csv";
+        link.download = filename;
         link.click();
-        URL.revokeObjectURL(link.href);
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      } catch (failure) {
+        const message =
+          failure instanceof Error
+            ? failure.message
+            : "Report download failed.";
+        setMessage(message);
+        toast.error(message);
+        setBusy(false);
+        return;
       }
     }
     if (response) {
@@ -187,7 +246,7 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
         tnmStage: "",
         insurer: "",
         drugId: "",
-        quantity: "1",
+        quantity: "",
       }));
     }
     setBusy(false);
@@ -215,27 +274,8 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
       />
     </label>
   );
-  const select = (key: string, label: string, options: string[]) => (
-    <label className="mb-3 block text-xs font-semibold text-g600" key={key}>
-      {label}
-      <select
-        className="mt-1 w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal"
-        value={values[key] ?? ""}
-        onChange={set(key)}
-        required
-      >
-        <option value="" disabled>
-          Select {label.toLowerCase()}
-        </option>
-        {options.map((option) => (
-          <option key={option}>{option}</option>
-        ))}
-      </select>
-    </label>
-  );
   const isForm = [
     "modal-export",
-    "modal-transfer",
     "modal-breach",
     "modal-prescription",
   ].includes(openModalId);
@@ -338,25 +378,40 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
         {openModalId === "modal-user" ? (
           <div className="p-6">
             <p className="text-sm leading-6 text-g600">
-              The connected API supports listing and updating users, but it does
-              not expose a user invitation endpoint yet.
+              Invite a colleague from Facility team. Select their account type
+              and facility, then send the invitation.
             </p>
+            <button
+              type="button"
+              className="mt-4 rounded-lg bg-p px-4 py-2 text-sm text-white"
+              onClick={() => {
+                onCloseModal("modal-user");
+                onNav("pg-users");
+              }}
+            >
+              Open facility team
+            </button>
           </div>
         ) : null}
+        {openModalId === "modal-transfer" && (
+          <TransferRequestForm onClose={() => onCloseModal("modal-transfer")} />
+        )}
         {isForm ? (
           <form className="p-6" onSubmit={(event) => void submit(event)}>
             {openModalId === "modal-export" ? (
               <>
-                {select("type", "Report type", ["CSV", "PDF", "XLSX"])}
+                <ApiOptionSelect
+                  context="reports"
+                  field="reportFormats"
+                  label="Report type"
+                  value={values.type}
+                  required
+                  onChange={(value) =>
+                    setValues((current) => ({ ...current, type: value }))
+                  }
+                />
                 {field("from", "From date", "", "date")}
                 {field("to", "To date", "", "date")}
-              </>
-            ) : null}
-            {openModalId === "modal-transfer" ? (
-              <>
-                {field("inventoryItemId", "Inventory item ID", "UUID")}
-                {field("recipientFacilityId", "Recipient facility ID", "UUID")}
-                {field("quantity", "Quantity", "1", "number")}
               </>
             ) : null}
             {openModalId === "modal-breach" ? (
@@ -381,13 +436,16 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
                 )}
                 {field("icd10", "ICD-10 diagnosis", "Enter diagnosis code")}
                 {field("tnmStage", "TNM stage", "Enter clinical stage")}
-                {select("insurer", "Insurer", [
-                  "AXA Mansard",
-                  "Hygeia",
-                  "NHIA",
-                  "Reliance",
-                  "Cash Pay",
-                ])}
+                <ApiOptionSelect
+                  context="prescription"
+                  field="insurers"
+                  label="Insurer / payment method"
+                  value={values.insurer}
+                  required
+                  onChange={(value) =>
+                    setValues((current) => ({ ...current, insurer: value }))
+                  }
+                />
                 <label className="mb-3 block text-xs font-semibold text-g600">
                   Medicine
                   <select
@@ -414,7 +472,7 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
                     ))}
                   </select>
                 </label>
-                {field("quantity", "Quantity", "1", "number")}
+                {field("quantity", "Quantity", "Enter quantity", "number")}
                 <label className="mb-3 block text-xs font-semibold text-g600">
                   Pharmacy
                   <select
@@ -437,6 +495,16 @@ export default function Modals({ openModalId, onCloseModal }: Props) {
                   </select>
                 </label>
                 <p className="mb-3 text-xs leading-5 text-g500">
+                  {morePharmacies && (
+                    <button
+                      type="button"
+                      className="mb-3 block text-p underline"
+                      disabled={loadingPrescriptionOptions}
+                      onClick={() => setPharmacyPage((page) => page + 1)}
+                    >
+                      Load more pharmacies
+                    </button>
+                  )}
                   Your signed-in account will be recorded as the prescriber. Use
                   a coded patient reference; do not enter a patient name.
                 </p>

@@ -19,6 +19,7 @@ import { UserResponse } from "@/app/models/user-model";
 import { useProvider } from "@/app/providers/provider";
 import { SETTINGS_SERVICE } from "@/app/services/settings-service/settings-service";
 import styles from "./SettingsPage.module.css";
+import ApiOptionSelect from "@/app/components/ApiOptionSelect";
 
 type Section = "profile" | "preferences" | "security";
 type Profile = {
@@ -148,6 +149,9 @@ export default function SettingsPage() {
       ? JSON.stringify(profile) !== JSON.stringify(savedProfile)
       : keys.some((key) => preferences[key] !== savedPreferences[key]);
   const loadError = section === "profile" ? profileError : settingsError;
+  const availableSecurityControls = controls.filter(
+    (control) => typeof preferences[control.key] === "boolean",
+  );
   const updatePreference = (key: string, value: unknown) =>
     setPreferences((current) => ({ ...current, [key]: value }));
   const reset = () => {
@@ -475,18 +479,15 @@ export default function SettingsPage() {
                     />
                     <small>Days before expiry to flag stock for review.</small>
                   </label>
-                  <label className={styles.field}>
-                    Currency
-                    <select
-                      value={String(preferences.currency ?? "NGN")}
-                      onChange={(event) =>
-                        updatePreference("currency", event.target.value)
-                      }
-                    >
-                      <option value="NGN">NGN - Nigerian naira</option>
-                      <option value="USD">USD - US dollar</option>
-                    </select>
-                  </label>
+                  <ApiOptionSelect
+                    context="settings"
+                    field="currencies"
+                    label="Currency"
+                    required
+                    value={String(preferences.currency ?? "")}
+                    onChange={(value) => updatePreference("currency", value)}
+                    className={styles.field}
+                  />
                   <label className={styles.field}>
                     Notification email
                     <input
@@ -507,7 +508,12 @@ export default function SettingsPage() {
               ) : (
                 <>
                   <div>
-                    {controls.map((control) => (
+                    {!availableSecurityControls.length && (
+                      <p className={styles.hint}>
+                        No security preferences were returned for this account.
+                      </p>
+                    )}
+                    {availableSecurityControls.map((control) => (
                       <div key={control.key} className={styles.switchRow}>
                         <div>
                           <h3 id={"setting-" + control.key}>{control.label}</h3>

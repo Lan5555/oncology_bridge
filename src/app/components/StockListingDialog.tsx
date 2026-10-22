@@ -29,14 +29,8 @@ import { notifyResult } from "@/app/lib/notifications";
 import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
 import { MARKETPLACE_SERVICE } from "@/app/services/marketplace-service/marketplace-service";
 import styles from "./StockListingDialog.module.css";
+import ApiOptionSelect from "./ApiOptionSelect";
 
-const categories = [
-  "All medicines",
-  "Biologics",
-  "Chemotherapy",
-  "Supportive care",
-  "Other",
-];
 export default function StockListingDialog({
   onClose,
   onSubmitted,
@@ -58,6 +52,7 @@ export default function StockListingDialog({
   const [stockPage, setStockPage] = useState(0);
   const [hasMoreStock, setHasMoreStock] = useState(false);
   const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
   const [listingQuantity, setListingQuantity] = useState("");
   const selectedStock = stock.find((item) => item.id === stockId);
   const unit = selectedStock?.unit ?? "";
@@ -390,14 +385,17 @@ export default function StockListingDialog({
                   </div>
                 </div>
                 <div className={styles.grid}>
-                  <label className={styles.label}>
-                    Category
-                    <select className={styles.input} name="category">
-                      {categories.slice(1).map((value) => (
-                        <option key={value}>{value}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <ApiOptionSelect
+                    context="marketplace"
+                    field="categories"
+                    label="Category"
+                    name="category"
+                    required
+                    value={category}
+                    onChange={setCategory}
+                    className={styles.label}
+                    inputClassName={styles.input}
+                  />
                   <label className={styles.label}>
                     Inventory selling unit
                     <input

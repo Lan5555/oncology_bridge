@@ -360,8 +360,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
         userId: row.userId ?? row.user_id ?? user.id,
         facilityId: row.facilityId ?? row.facility_id ?? facility.id,
         name,
-        accountType:
-          row.accountType ?? row.account_type ?? user.account_type ?? "DOCTOR",
+        accountType: row.accountType ?? row.account_type ?? user.account_type,
         license:
           license.number ??
           (typeof license === "string" ? license : undefined) ??
@@ -1133,13 +1132,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const stats = [
     {
       label: "Facilities",
-      value: String(summary.nodes ?? summary.facilityCount ?? 0),
+      value: String(summary.nodes ?? summary.facilityCount ?? "Not available"),
       icon: Building2,
       color: "#1B3A6B",
     },
     {
       label: "Active users",
-      value: String(summary.activeUsers ?? 0),
+      value: String(summary.activeUsers ?? "Not available"),
       icon: Users,
       color: "#0F766E",
     },
@@ -1147,7 +1146,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       label: "Inventory items",
       value:
         summary.totalInventoryItems == null && summary.inventoryItems == null
-          ? "0"
+          ? "Not available"
           : Number(
               summary.totalInventoryItems ?? summary.inventoryItems,
             ).toLocaleString(),
@@ -1156,7 +1155,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     },
     {
       label: "Near expiry",
-      value: String(summary.nearExpiryCount ?? summary.nearExpiry ?? 0),
+      value: String(
+        summary.nearExpiryCount ?? summary.nearExpiry ?? "Not available",
+      ),
       icon: AlertCircle,
       color: "#C4622D",
     },
@@ -1174,7 +1175,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       value: applicationsLoaded
         ? String(pendingCount)
         : applicationsLoadError
-          ? "0"
+          ? "Not available"
           : "…",
       icon: UserCheck,
       color: "#0E7490",
@@ -1190,7 +1191,11 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       ].join(":"),
     action: event.action ?? event.type ?? event.description ?? "Audit event",
     time: event.createdAt ?? event.created_at ?? event.at ?? "N/A",
-    user: event.actor?.name ?? event.actor?.email ?? event.actor ?? "System",
+    user:
+      event.actor?.name ??
+      event.actor?.email ??
+      event.actor ??
+      "Actor not provided",
     icon: Activity,
     alert: /fail|reject|error/i.test(String(event.action ?? event.type ?? "")),
   }));
@@ -1201,7 +1206,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     code: role.code,
     key: role.key,
     desc: role.description ?? "",
-    count: role.userCount ?? role.user_count ?? 0,
+    count: role.userCount ?? role.user_count ?? "Not available",
     icon: /doctor/i.test(role.name ?? "")
       ? Stethoscope
       : /pharmac/i.test(role.name ?? "")
@@ -1820,7 +1825,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                 <p className={`mt-1 text-sm ${mutedText}`}>
                   {reviewTarget.name} ·{" "}
                   {getAccountInfo(reviewTarget.accountType)?.label ??
-                    reviewTarget.accountType}
+                    reviewTarget.accountType ??
+                    "Not provided"}
                 </p>
               </div>
               <button
@@ -1841,7 +1847,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs ${isDark ? "bg-amber-400/10 text-amber-200" : "bg-amber-100 text-amber-900"}`}
                 >
-                  Facility: {reviewTarget.facilityStatus ?? "PENDING"}
+                  Facility: {reviewTarget.facilityStatus ?? "Not provided"}
                 </span>
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs ${isDark ? "bg-amber-400/10 text-amber-200" : "bg-amber-100 text-amber-900"}`}
@@ -1901,7 +1907,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                   <div>
                     <dt className={mutedText}>Account type</dt>
                     <dd className={`mt-0.5 ${headingText}`}>
-                      {reviewTarget.accountType}
+                      {reviewTarget.accountType ?? "Not provided"}
                     </dd>
                   </div>
                 </dl>
@@ -2753,7 +2759,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                       {[
                         {
                           label: "Transactions",
-                          value: String(settlements?.transactionCount ?? 0),
+                          value: String(
+                            settlements?.transactionCount ?? "Not available",
+                          ),
                         },
                         {
                           label: "Volume",
@@ -2771,7 +2779,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                         },
                         {
                           label: "Payouts queued",
-                          value: String(settlements?.payoutsQueued ?? 0),
+                          value: String(
+                            settlements?.payoutsQueued ?? "Not available",
+                          ),
                         },
                       ].map(({ label, value }) => (
                         <div
@@ -3078,8 +3088,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                         )}
 
                       {visible.map((app) => {
-                        const Icon = TYPE_ICONS[app.accountType];
-                        const info = getAccountInfo(app.accountType)!;
+                        const Icon = app.accountType
+                          ? (TYPE_ICONS[app.accountType] ?? UserCheck)
+                          : UserCheck;
+                        const info = getAccountInfo(app.accountType);
                         return (
                           <div
                             key={app.id}
@@ -3107,7 +3119,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                                     </span>
                                   </div>
                                   <div className={`text-sm ${mutedText}`}>
-                                    {info.label} &middot; {app.workplace}
+                                    {info?.label ?? "Account type not provided"}{" "}
+                                    &middot; {app.workplace}
                                   </div>
                                   <div
                                     className={`mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs ${mutedText}`}

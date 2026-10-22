@@ -50,13 +50,7 @@ const DashboardView: React.FC = () => {
     baseAllowedPages && showFacilityTeam
       ? [...new Set([...baseAllowedPages, "pg-users" as PageId])]
       : baseAllowedPages;
-  const defaultPage: PageId =
-    accountType === "DOCTOR" || accountType === "PHARMACIST"
-      ? "pg-prescriptions"
-      : "pg-dashboard";
-  const [activePage, setActivePage] = useState<PageId>(
-    isVerified ? defaultPage : "pg-dashboard",
-  );
+  const [activePage, setActivePage] = useState<PageId>("pg-dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openModalId, setOpenModalId] = useState<ModalId | null>(null);
 
@@ -177,6 +171,7 @@ const DashboardView: React.FC = () => {
       </div>
 
       <Modals
+        onNav={handleNav}
         openModalId={openModalId}
         onCloseModal={() => setOpenModalId(null)}
       />

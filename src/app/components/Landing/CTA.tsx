@@ -1,7 +1,7 @@
 "use client";
 import { EYEBROW } from "./classes";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+
 export default function CTA() {
   const router = useRouter();
   return (
@@ -15,9 +15,9 @@ export default function CTA() {
           Every patient deserves verified medicine, precisely when they need it.
         </h2>
         <p className="mb-10 text-base leading-[1.8] text-white/50">
-          We&rsquo;re onboarding anchor institutions across Lagos and Ibadan.
-          Apply for early access and place your facility at the centre of
-          Nigeria&rsquo;s oncology supply solution.
+          Connect your institution to the network. Apply for early access and
+          place your facility at the centre of Nigeria&rsquo;s oncology supply
+          solution.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <button
@@ -28,9 +28,9 @@ export default function CTA() {
           </button>
           <button
             className="cursor-pointer rounded-[10px] border border-white/20 bg-transparent px-7 py-3.5 font-display text-sm font-bold text-white/75 transition-all duration-250 hover:border-white/40 hover:text-white"
-            onClick={() => toast.info("Demo would be scheduled here..")}
+            onClick={() => router.push("/research")}
           >
-            Schedule a Demo
+            Contact the team
           </button>
         </div>
       </div>

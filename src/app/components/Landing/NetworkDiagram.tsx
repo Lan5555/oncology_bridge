@@ -4,7 +4,7 @@ export default function NetworkDiagram() {
       id="networkSvg"
       viewBox="0 0 700 260"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Animated hospital supply network showing vials moving between facilities"
+      aria-label="Illustration of medicine transfers between generic facilities"
     >
       <defs>
         <filter id="glow">
@@ -115,7 +115,7 @@ export default function NetworkDiagram() {
         fontFamily="Inter"
         fontWeight="600"
       >
-        LUTH
+        Facility A
       </text>
       <circle
         cx="120"
@@ -232,7 +232,7 @@ export default function NetworkDiagram() {
         fontFamily="Inter"
         fontWeight="600"
       >
-        UCH
+        Facility C
       </text>
       <text
         x="420"
@@ -242,7 +242,7 @@ export default function NetworkDiagram() {
         fontSize="6"
         fontFamily="Inter"
       >
-        Ibadan
+        Recipient
       </text>
 
       <circle
@@ -270,7 +270,7 @@ export default function NetworkDiagram() {
         fontFamily="Inter"
         fontWeight="600"
       >
-        LASUTH
+        Facility D
       </text>
 
       <circle
@@ -298,7 +298,7 @@ export default function NetworkDiagram() {
         fontFamily="Inter"
         fontWeight="600"
       >
-        Lagos
+        Facility
       </text>
       <text
         x="420"
@@ -308,7 +308,7 @@ export default function NetworkDiagram() {
         fontSize="6"
         fontFamily="Inter"
       >
-        Island GH
+        Recipient
       </text>
 
       <circle
@@ -336,7 +336,7 @@ export default function NetworkDiagram() {
         fontFamily="Inter"
         fontWeight="600"
       >
-        Lagos
+        Facility
       </text>
       <text
         x="580"
@@ -346,7 +346,7 @@ export default function NetworkDiagram() {
         fontSize="6"
         fontFamily="Inter"
       >
-        State Hosp.
+        Recipient
       </text>
 
       <circle
@@ -374,7 +374,7 @@ export default function NetworkDiagram() {
         fontFamily="Inter"
         fontWeight="600"
       >
-        Island
+        Facility F
       </text>
       <text
         x="580"
