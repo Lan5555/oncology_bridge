@@ -1,5 +1,9 @@
 # Link inventory batches to catalogue medicines
 
+Medicine Catalog uses its standard form and record list; its Graph view option has been removed. Inventory retains an optional Graph view alongside the original intake form and stock list. Inventory graphs connect a live catalog medicine, Text batch number and Expiry date into Batch details; that record, a Number quantity and Selling unit feed Stock quantity, then Review inventory intake. All required processing inputs need wires. Math and boolean nodes are available, with an optional final condition that must be true when connected.
+
+Inventory graphs require a final preview and explicit Confirm and save. Preview/cancel performs no write, confirmation revalidates the graph against the reviewed payload and current medicine/facility context, and duplicate confirmation is guarded. Stock intake uses the existing `POST /api/inventory` payload below. The graph adds no endpoints. Inventory save requires `inventory.manage`, a current facility ID, a live catalog choice, valid expiry today or later, positive whole quantity and an explicit supported unit. Backend authorization and atomic validation remain required. Success refreshes the page's list and clears source values while keeping nodes/wires; failure retains the modal and draft. Switching views keeps the draft until leaving the page.
+
 Please update manual inventory intake to link each batch to an existing medicine by ID. The frontend now uses a medicine dropdown instead of a free-text drug name and sends:
 
 ```http

@@ -1,8 +1,7 @@
 "use client";
 
 import { Edit2, Pill, Trash2, X } from "lucide-react";
-
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import EmptyState from "@/app/components/EmptyState";
 import { medicineUnavailable } from "@/app/lib/medicine-availability";
 import { notifyResult } from "@/app/lib/notifications";
@@ -62,7 +61,7 @@ export default function MedicinesPage() {
     return true;
   };
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const response = await MEDICINE_SERVICE.list();
     if (response.success)
       setMedicines(
@@ -71,11 +70,11 @@ export default function MedicinesPage() {
         ),
       );
     else setNotice(response.message || "Medicine catalog could not be loaded.");
-  };
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   const createMedicine = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -178,9 +177,7 @@ export default function MedicinesPage() {
         </p>
       </header>
       {notice ? (
-        <p role="status" className="mb-4 text-sm text-g600">
-          {notice}
-        </p>
+        <output className="mb-4 block text-sm text-g600">{notice}</output>
       ) : null}
       <form
         onSubmit={editTarget ? updateMedicine : createMedicine}
@@ -328,19 +325,19 @@ export default function MedicinesPage() {
         )}
       </section>
       {deleteTarget ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !busy)
-              setDeleteTarget(null);
-          }}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <button
+            type="button"
+            aria-label="Close medicine removal dialog"
+            disabled={busy}
+            className="absolute inset-0"
+            onClick={() => setDeleteTarget(null)}
+          />
           <section
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-medicine-title"
-            className="w-full max-w-md rounded-2xl border border-g200 bg-w p-5 shadow-xl"
+            className="relative w-full max-w-md rounded-2xl border border-g200 bg-w p-5 shadow-xl"
           >
             <div className="flex items-start justify-between gap-4">
               <div>

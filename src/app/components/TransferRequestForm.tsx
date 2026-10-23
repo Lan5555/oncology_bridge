@@ -1,23 +1,11 @@
 "use client";
 
-import {
-  type FormEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  inventoryBatchRows,
-  type ListingStock,
-  listingStock,
-} from "@/app/lib/listing-stock";
-import {
-  type TransferRecipient,
-  transferRecipients,
-} from "@/app/lib/transfer-recipients";
-import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
+  EMPTY_RECIPIENT_MESSAGE,
+  useTransferRequestOptions,
+} from "@/app/hooks/useTransferRequestOptions";
 import { TRANSFER_SERVICE } from "@/app/services/transfer-service/transfer-service";
 
 export default function TransferRequestForm({
@@ -25,104 +13,25 @@ export default function TransferRequestForm({
 }: {
   onClose: () => void;
 }) {
-  const [stock, setStock] = useState<ListingStock[]>([]);
   const [stockId, setStockId] = useState("");
-  const [stockLoading, setStockLoading] = useState(true);
-  const [stockError, setStockError] = useState("");
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [recipients, setRecipients] = useState<TransferRecipient[]>([]);
   const [recipientId, setRecipientId] = useState("");
-  const [recipientLoading, setRecipientLoading] = useState(false);
-  const [recipientError, setRecipientError] = useState("");
-  const [retry, setRetry] = useState(0);
   const [quantity, setQuantity] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const submitting = useRef(false);
+  const {
+    stock,
+    stockLoading,
+    stockError,
+    page,
+    hasMore,
+    loadStock,
+    recipients,
+    recipientLoading,
+    recipientError,
+    retryRecipients,
+  } = useTransferRequestOptions(stockId);
   const selected = stock.find((item) => item.id === stockId);
-
-  const loadStock = useCallback(async (nextPage: number) => {
-    setStockLoading(true);
-    setStockError("");
-    try {
-      const response = await INVENTORY_SERVICE.list(
-        `page=${nextPage}&limit=100`,
-      );
-      if (!response.success)
-        throw new Error(response.message || "Stock could not be loaded.");
-      const data = response.data;
-      const batches = inventoryBatchRows(data);
-      const options = listingStock(batches);
-      setStock((current) => [
-        ...new Map(
-          (nextPage === 1 ? options : [...current, ...options]).map((item) => [
-            item.id,
-            item,
-          ]),
-        ).values(),
-      ]);
-      const total = data?.total ?? data?.pagination?.total ?? data?.meta?.total;
-      const limit =
-        data?.limit ?? data?.pagination?.limit ?? data?.meta?.limit ?? 100;
-      setHasMore(
-        batches.length > 0 &&
-          (typeof total === "number"
-            ? nextPage * limit < total
-            : batches.length === 100),
-      );
-      setPage(nextPage);
-    } catch (failure) {
-      setStockError(
-        failure instanceof Error
-          ? failure.message
-          : "Stock could not be loaded.",
-      );
-    } finally {
-      setStockLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadStock(1);
-  }, [loadStock]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Retry explicitly reloads suggestions for the same batch.
-  useEffect(() => {
-    let current = true;
-    setRecipients([]);
-    setRecipientId("");
-    setRecipientError("");
-    setError("");
-    if (!stockId) {
-      setRecipientLoading(false);
-      return;
-    }
-    setRecipientLoading(true);
-    void TRANSFER_SERVICE.suggest(stockId)
-      .then((response) => {
-        if (!current) return;
-        if (!response.success)
-          throw new Error(
-            response.message || "Recipient suggestions could not be loaded.",
-          );
-        setRecipients(transferRecipients(response.data));
-      })
-      .catch((failure) => {
-        if (current)
-          setRecipientError(
-            failure instanceof Error
-              ? failure.message
-              : "Recipient suggestions could not be loaded.",
-          );
-      })
-      .finally(() => {
-        if (current) setRecipientLoading(false);
-      });
-    return () => {
-      current = false;
-    };
-  }, [stockId, retry]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -190,6 +99,7 @@ export default function TransferRequestForm({
           value={stockId}
           onChange={(event) => {
             setStockId(event.target.value);
+            setError("");
             setRecipientId("");
             setQuantity("");
           }}
@@ -273,7 +183,7 @@ export default function TransferRequestForm({
             type="button"
             className="underline"
             disabled={saving}
-            onClick={() => setRetry((value) => value + 1)}
+            onClick={() => retryRecipients()}
           >
             Try again
           </button>
@@ -284,8 +194,15 @@ export default function TransferRequestForm({
         !recipientError &&
         !recipients.length && (
           <p className="text-sm text-g600">
-            No recipient suggestions were returned for this batch. Choose
-            another batch or try again later.
+            {EMPTY_RECIPIENT_MESSAGE}{" "}
+            <button
+              type="button"
+              className="underline"
+              disabled={saving}
+              onClick={retryRecipients}
+            >
+              Retry suggestions
+            </button>
           </p>
         )}
       <label

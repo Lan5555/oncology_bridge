@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import InventoryEditDialog, {
   type EditableInventoryBatch,
 } from "@/app/components/InventoryEditDialog";
+import RecordGraph from "@/app/components/RecordGraph";
 import StockListingDialog from "@/app/components/StockListingDialog";
 import {
   linkedMedicineUnavailable,
@@ -41,6 +42,8 @@ const TAB_OPTIONS = [
 ];
 
 const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
+  const [entryView, setEntryView] = useState<"standard" | "graph">("standard");
+  const [graphOpened, setGraphOpened] = useState(false);
   const { userData } = useProvider();
   const canEditStock =
     userData.user?.permissions.includes("inventory.manage") ?? false;
@@ -375,157 +378,209 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
         />
       )}
 
-      <form
-        className="mb-6 grid grid-cols-1 items-end gap-3 rounded-xl border border-g200 bg-w p-5 md:grid-cols-2 xl:grid-cols-[minmax(180px,1.5fr)_minmax(120px,1fr)_minmax(140px,1fr)_110px_100px_auto]"
-        onSubmit={(event: FormEvent<HTMLFormElement>) => void addBatch(event)}
+      <nav
+        aria-label="Inventory entry view"
+        className="mb-4 flex flex-wrap gap-2"
       >
-        <div>
-          <label htmlFor="intake-drug">Medicine</label>
-          <select
-            className="w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm text-g900"
-            id="intake-drug"
-            onChange={(event) => setMedicineId(event.target.value)}
-            required
-            disabled={
-              savingBatch ||
-              (medicinesLoading && !medicines.length) ||
-              !medicines.length
-            }
-            value={medicineId}
-            aria-describedby="intake-medicine-help"
+        {(["standard", "graph"] as const).map((view) => (
+          <button
+            key={view}
+            type="button"
+            aria-pressed={entryView === view}
+            onClick={() => {
+              setEntryView(view);
+              if (view === "graph") setGraphOpened(true);
+            }}
+            className={`rounded-lg px-4 py-2 text-xs font-semibold ${entryView === view ? "bg-p text-white" : "border border-g200 bg-w text-g600"}`}
           >
-            <option value="" disabled>
-              {medicinesLoading && !medicines.length
-                ? "Loading medicines…"
-                : medicines.length
-                  ? "Select a medicine"
-                  : "No medicines available"}
-            </option>
-            {medicines.map((medicine) => (
-              <option key={medicine.id} value={String(medicine.id)}>
-                {[
-                  medicine.generic_name ?? "Unnamed medicine",
-                  medicine.brand_name ?? medicine.brand,
-                  medicine.strength,
-                  medicine.dosage_form,
-                  medicine.gtin ? `GTIN ${medicine.gtin}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="intake-batch">Batch number</label>
-          <input
-            className="rounded-lg border border-g200 px-3 py-2.5 text-sm"
-            id="intake-batch"
-            onChange={(event) => setBatchNumber(event.target.value)}
-            required
-            value={batchNumber}
+            {view === "standard" ? "Standard view" : "Graph view"}
+          </button>
+        ))}
+      </nav>
+      {graphOpened && (
+        <div hidden={entryView !== "graph"} className="mb-6">
+          <RecordGraph
+            mode="inventory"
+            medicines={medicines.map((medicine) => ({
+              id: String(medicine.id),
+              name: [
+                medicine.generic_name ?? "Unnamed medicine",
+                medicine.brand_name ?? medicine.brand,
+                medicine.strength,
+                medicine.dosage_form,
+                medicine.gtin ? `GTIN ${medicine.gtin}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            }))}
+            facilityId={userData.user?.hospital?.id}
+            canCreate={canEditStock}
+            optionsLoading={medicinesLoading}
+            optionsError={medicinesError}
+            hasMore={moreMedicines}
+            onReloadOptions={() => void loadMedicines(1)}
+            onLoadMore={() => void loadMedicines(medicinePage + 1)}
+            onCreated={() => {
+              setIntakeStatus("Batch added from graph.");
+              void loadInventory();
+            }}
           />
         </div>
-        <div>
-          <label htmlFor="intake-expiry">Expiration date</label>
-          <input
-            className="rounded-lg border border-g200 px-3 py-2.5 text-sm"
-            id="intake-expiry"
-            min={new Date().toISOString().slice(0, 10)}
-            onChange={(event) => setExpiryDate(event.target.value)}
-            required
-            type="date"
-            value={expiryDate}
-          />
-        </div>
-        <div>
-          <label htmlFor="intake-unit">Selling unit</label>
-          <select
-            id="intake-unit"
-            required
-            value={sellingUnit}
-            onChange={(event) => setSellingUnit(event.target.value)}
-            className="rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm text-g900"
-            aria-describedby="intake-unit-help"
-          >
-            <option value="" disabled>
-              Select unit
-            </option>
-            <option value="vial">Vial</option>
-            <option value="pack">Pack</option>
-            <option value="bottle">Bottle</option>
-            <option value="box">Box</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor="intake-quantity">
-            Quantity{sellingUnit ? ` (${sellingUnit}s)` : ""}
-          </label>
-          <input
-            className="rounded-lg border border-g200 px-3 py-2.5 text-sm"
-            id="intake-quantity"
-            min="1"
-            onChange={(event) => setQuantity(event.target.value)}
-            required
-            type="number"
-            value={quantity}
-          />
-        </div>
-        <button
-          className="rounded-lg bg-p px-4 py-2.5 text-sm font-semibold text-white hover:bg-pd"
-          type="submit"
-          disabled={savingBatch || !medicineId || !sellingUnit}
+      )}
+      <div hidden={entryView !== "standard"}>
+        <form
+          className="mb-6 grid grid-cols-1 items-end gap-3 rounded-xl border border-g200 bg-w p-5 md:grid-cols-2 xl:grid-cols-[minmax(180px,1.5fr)_minmax(120px,1fr)_minmax(140px,1fr)_110px_100px_auto]"
+          onSubmit={(event: FormEvent<HTMLFormElement>) => void addBatch(event)}
         >
-          {savingBatch ? "Adding…" : "Add batch"}
-        </button>
-        <p id="intake-unit-help" className="col-span-full text-xs text-g500">
-          Count stock in the selected selling unit. For example, 10 boxes means
-          quantity 10 and unit Box. Marketplace listings will use this same
-          unit.
-        </p>
-        <div
-          id="intake-medicine-help"
-          className="col-span-full text-xs text-g500"
-        >
-          {medicinesError ? (
-            <p role="alert" className="text-red-600">
-              {medicinesError}
-            </p>
-          ) : (
-            <p>
-              {!medicinesLoading && !medicines.length
-                ? "Add a medicine in the Medicines catalogue first, then refresh this list."
-                : "Select the catalogue entry that matches this batch, including its brand and strength."}
-            </p>
-          )}
-          <div className="mt-2 flex gap-3">
-            <button
-              type="button"
-              disabled={medicinesLoading || savingBatch}
-              onClick={() => {
-                setMedicineId("");
-                void loadMedicines();
-              }}
-              className="font-semibold text-p disabled:opacity-50"
+          <div>
+            <label htmlFor="intake-drug">Medicine</label>
+            <select
+              className="w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm text-g900"
+              id="intake-drug"
+              onChange={(event) => setMedicineId(event.target.value)}
+              required
+              disabled={
+                savingBatch ||
+                (medicinesLoading && !medicines.length) ||
+                !medicines.length
+              }
+              value={medicineId}
+              aria-describedby="intake-medicine-help"
             >
-              {medicinesLoading ? "Loading…" : "Refresh medicines"}
-            </button>
-            {moreMedicines && (
+              <option value="" disabled>
+                {medicinesLoading && !medicines.length
+                  ? "Loading medicines…"
+                  : medicines.length
+                    ? "Select a medicine"
+                    : "No medicines available"}
+              </option>
+              {medicines.map((medicine) => (
+                <option key={medicine.id} value={String(medicine.id)}>
+                  {[
+                    medicine.generic_name ?? "Unnamed medicine",
+                    medicine.brand_name ?? medicine.brand,
+                    medicine.strength,
+                    medicine.dosage_form,
+                    medicine.gtin ? `GTIN ${medicine.gtin}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="intake-batch">Batch number</label>
+            <input
+              className="rounded-lg border border-g200 px-3 py-2.5 text-sm"
+              id="intake-batch"
+              onChange={(event) => setBatchNumber(event.target.value)}
+              required
+              value={batchNumber}
+            />
+          </div>
+          <div>
+            <label htmlFor="intake-expiry">Expiration date</label>
+            <input
+              className="rounded-lg border border-g200 px-3 py-2.5 text-sm"
+              id="intake-expiry"
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={(event) => setExpiryDate(event.target.value)}
+              required
+              type="date"
+              value={expiryDate}
+            />
+          </div>
+          <div>
+            <label htmlFor="intake-unit">Selling unit</label>
+            <select
+              id="intake-unit"
+              required
+              value={sellingUnit}
+              onChange={(event) => setSellingUnit(event.target.value)}
+              className="rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm text-g900"
+              aria-describedby="intake-unit-help"
+            >
+              <option value="" disabled>
+                Select unit
+              </option>
+              <option value="vial">Vial</option>
+              <option value="pack">Pack</option>
+              <option value="bottle">Bottle</option>
+              <option value="box">Box</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="intake-quantity">
+              Quantity{sellingUnit ? ` (${sellingUnit}s)` : ""}
+            </label>
+            <input
+              className="rounded-lg border border-g200 px-3 py-2.5 text-sm"
+              id="intake-quantity"
+              min="1"
+              onChange={(event) => setQuantity(event.target.value)}
+              required
+              type="number"
+              value={quantity}
+            />
+          </div>
+          <button
+            className="rounded-lg bg-p px-4 py-2.5 text-sm font-semibold text-white hover:bg-pd"
+            type="submit"
+            disabled={savingBatch || !medicineId || !sellingUnit}
+          >
+            {savingBatch ? "Adding…" : "Add batch"}
+          </button>
+          <p id="intake-unit-help" className="col-span-full text-xs text-g500">
+            Count stock in the selected selling unit. For example, 10 boxes
+            means quantity 10 and unit Box. Marketplace listings will use this
+            same unit.
+          </p>
+          <div
+            id="intake-medicine-help"
+            className="col-span-full text-xs text-g500"
+          >
+            {medicinesError ? (
+              <p role="alert" className="text-red-600">
+                {medicinesError}
+              </p>
+            ) : (
+              <p>
+                {!medicinesLoading && !medicines.length
+                  ? "Add a medicine in the Medicines catalogue first, then refresh this list."
+                  : "Select the catalogue entry that matches this batch, including its brand and strength."}
+              </p>
+            )}
+            <div className="mt-2 flex gap-3">
               <button
                 type="button"
                 disabled={medicinesLoading || savingBatch}
-                onClick={() => void loadMedicines(medicinePage + 1)}
+                onClick={() => {
+                  setMedicineId("");
+                  void loadMedicines();
+                }}
                 className="font-semibold text-p disabled:opacity-50"
               >
-                Load more medicines
+                {medicinesLoading ? "Loading…" : "Refresh medicines"}
               </button>
-            )}
+              {moreMedicines && (
+                <button
+                  type="button"
+                  disabled={medicinesLoading || savingBatch}
+                  onClick={() => void loadMedicines(medicinePage + 1)}
+                  className="font-semibold text-p disabled:opacity-50"
+                >
+                  Load more medicines
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-        <p aria-live="polite" className="col-span-full text-xs text-g500">
-          {intakeStatus || "Manual entries are saved to the inventory service."}
-        </p>
-      </form>
+          <p aria-live="polite" className="col-span-full text-xs text-g500">
+            {intakeStatus ||
+              "Manual entries are saved to the inventory service."}
+          </p>
+        </form>
+      </div>
 
       <section
         aria-label="Inventory summary"
