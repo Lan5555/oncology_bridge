@@ -38,6 +38,7 @@ import {
   Store,
   Sun,
   Trash2,
+  Truck,
   User,
   UserCheck,
   Users,
@@ -48,6 +49,10 @@ import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
 import BrandLogo from "@/app/components/BrandLogo";
+import OrdersScreen from "@/app/components/OrdersScreen";
+import { adminMetric } from "@/app/lib/admin-metric";
+import AdminPrescriptionsPage from "./AdminPrescriptionsPage";
+import ShipmentMonitoringScreen from "@/app/components/ShipmentMonitoringScreen";
 import management from "@/app/components/Management.module.css";
 import { ToastLayer } from "@/app/components/ToastLayer";
 import { ADMIN_SESSION_INVALIDATED } from "@/app/hooks/service/core-service";
@@ -250,6 +255,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     | "users"
     | "facilities"
     | "audit"
+    | "orders"
+    | "shipments"
     | AdminResourceId
   >("overview");
   const [applications, setApplications] = useState<RegistrationApplication[]>(
@@ -268,6 +275,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const [decisionSaving, setDecisionSaving] = useState(false);
   const [settlements, setSettlements] = useState<any>(null);
   const [summary, setSummary] = useState<any>({});
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState("");
   const [activityRows, setActivityRows] = useState<any[]>([]);
   const [roleRows, setRoleRows] = useState<any[]>([]);
   const [expandedRolePermissions, setExpandedRolePermissions] = useState<
@@ -581,6 +590,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
   const [adminPermissionsKnown, setAdminPermissionsKnown] = useState(false);
   const [adminRoleName, setAdminRoleName] = useState("");
+  const [adminActorId, setAdminActorId] = useState("");
   const [adminUser, setAdminUser] = useState("");
   const [adminPass, setAdminPass] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -662,6 +672,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
         setAdminPermissions(readPermissionKeys(verified));
         setAdminPermissionsKnown(hasPermissionClaim(verified));
         setAdminRoleName(roleName);
+        setAdminActorId(String(verified.user?.id ?? ""));
         setIsAuthed(true);
       } catch {
         window.localStorage.removeItem("adminSession");
@@ -681,6 +692,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reload API data when session or authorization claims change; loaders intentionally use the current render closures.
   useEffect(() => {
     if (!isAuthed) return;
+    setSummaryLoading(true);
+    setSummaryError("");
     if (hasAdminPermission("verification.review")) void loadApplications();
     if (hasAdminPermission("integration.read")) void loadIntegrations();
     void Promise.all([
@@ -705,7 +718,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       ]) => {
         if (settlementResponse?.success)
           setSettlements(settlementResponse.data);
-        if (summaryResponse?.success) setSummary(summaryResponse.data ?? {});
+        setSummaryLoading(false);
+        if (summaryResponse?.success) {
+          setSummary(summaryResponse.data ?? {});
+          setSummaryError("");
+        } else {
+          setSummary({});
+          setSummaryError(summaryResponse?.message || "Dashboard metrics are unavailable for this account.");
+        }
         if (activityResponse?.success) {
           const value = activityResponse.data as any;
           setActivityRows(
@@ -733,8 +753,13 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
     )
       return;
     let current = true;
+    setSummaryLoading(true);
+    setSummaryError("");
     void DASHBOARD_SERVICE.summary(true).then((response) => {
-      if (current && response.success) setSummary(response.data ?? {});
+      if (!current) return;
+      setSummaryLoading(false);
+      if (response.success) setSummary(response.data ?? {});
+      else { setSummary({}); setSummaryError(response.message || "Dashboard metrics could not be refreshed."); }
     });
     return () => {
       current = false;
@@ -1019,6 +1044,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
         setAdminPermissions(readPermissionKeys(session));
         setAdminPermissionsKnown(hasPermissionClaim(session));
         setAdminRoleName(readAdminRoleName(session));
+        setAdminActorId(String(session.user?.id ?? session.id ?? ""));
         setIsAuthed(true);
         setSubmitting(false);
       },
@@ -1061,7 +1087,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const mutedText = isDark ? "text-[#8CA0BE]" : "text-[#5B6B85]";
   const headingText = isDark ? "text-[#EAF0FA]" : "text-[#0B1E3D]";
   const borderColor = isDark ? "border-[#1E3358]" : "border-[#E7ECF4]";
-  const accentBlue = isDark ? "#70D5D7" : "#167D89";
+  const accentBlue = isDark ? "#92B9FF" : "#315FBA";
   const accentAmber = isDark ? "#E08A4F" : "#C4622D";
   const accentPositive = isDark ? "#70D5D7" : "#167D89";
   // Sign-in / primary CTA color, kept constant per brief, the one fixed anchor color.
@@ -1074,6 +1100,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       ? true
       : !adminPermissionsKnown || adminPermissions.includes(permission);
   const tabs = [
+    { id: "shipments", label: "Shipment monitoring", icon: Truck, permission: "coldchain.read" },
+    { id: "orders", label: "Orders", icon: Package, permission: "order.read" },
     {
       id: "overview",
       label: "Overview",
@@ -1086,7 +1114,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       icon: UserCheck,
       permission: "verification.review",
     },
-    { id: "users", label: "Users", icon: Users, permission: "user.read" },
+    { id: "users", label: "Users & account types", icon: Users, permission: "user.read" },
     {
       id: "facilities",
       label: "Facilities",
@@ -1118,7 +1146,9 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       permission: resource.permission,
     })),
   ].filter(
-    (tab) => tab.id === "overview" || hasAdminPermission(tab.permission),
+    (tab) => tab.id === "shipments"
+      ? adminPermissions.includes("admin.access") && adminPermissions.includes("coldchain.read")
+      : tab.id === "overview" || hasAdminPermission(tab.permission),
   );
 
   // Dashboard metrics are sourced from the admin APIs. Missing fields stay blank.
@@ -1132,41 +1162,31 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const stats = [
     {
       label: "Facilities",
-      value: String(summary.nodes ?? summary.facilityCount ?? "Not available"),
+      value: adminMetric(summary.nodes ?? summary.facilityCount),
       icon: Building2,
       color: "#1B3A6B",
     },
     {
       label: "Active users",
-      value: String(summary.activeUsers ?? "Not available"),
+      value: adminMetric(summary.activeUsers),
       icon: Users,
       color: "#0F766E",
     },
     {
       label: "Inventory items",
-      value:
-        summary.totalInventoryItems == null && summary.inventoryItems == null
-          ? "Not available"
-          : Number(
-              summary.totalInventoryItems ?? summary.inventoryItems,
-            ).toLocaleString(),
+      value: adminMetric(summary.totalInventoryItems ?? summary.inventoryItems),
       icon: Package,
       color: "#6D28D9",
     },
     {
       label: "Near expiry",
-      value: String(
-        summary.nearExpiryCount ?? summary.nearExpiry ?? "Not available",
-      ),
+      value: adminMetric(summary.nearExpiryCount ?? summary.nearExpiry),
       icon: AlertCircle,
       color: "#C4622D",
     },
     {
       label: "Value recovered",
-      value:
-        summary.valueRecoveredNaira == null
-          ? "N/A"
-          : formatNaira(Number(summary.valueRecoveredNaira)),
+      value: adminMetric(summary.valueRecoveredNaira, true),
       icon: DollarSign,
       color: "#15803D",
     },
@@ -1371,7 +1391,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
         <CheckCircle2
           className="h-3.5 w-3.5 shrink-0"
           style={{
-            color: isDark ? "#70D5D7" : "#A3F1EC",
+            color: isDark ? "#92B9FF" : "#C3D8FF",
           }}
         />
         {toast}
@@ -2366,7 +2386,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                     <label
                       key={permission}
                       title={permission}
-                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors ${checked ? "border-teal-500/50 bg-teal-500/5" : borderColor} ${headingText}`}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors ${checked ? "border-blue-500/50 bg-blue-500/5" : borderColor} ${headingText}`}
                     >
                       <input
                         type="checkbox"
@@ -2388,7 +2408,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                                 },
                           )
                         }
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-teal-600"
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-blue-600"
                       />
                       <span className="min-w-0">
                         <span className="block text-xs font-semibold leading-5">
@@ -2488,7 +2508,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
         />
         <div className={management.sidebarFoot}>
           <div className={management.scopeCard}>
-            <ShieldCheck className="size-5 text-teal-300" />
+            <ShieldCheck className="size-5 text-blue-300" />
             <strong>Network administration</strong>Manage facilities, review
             access, and keep your care network connected.
           </div>
@@ -2558,7 +2578,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
           </div>
         </header>
         <div className={management.content}>
-          {!["users", "facilities", "audit"].includes(section) &&
+          {!["users", "facilities", "audit", "orders", "shipments"].includes(section) &&
             !isAdminResource(section) && (
               <div className={management.pageIntro}>
                 <div>
@@ -2573,6 +2593,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                         users: "Manage members",
                         facilities: "Facility directory",
                         audit: "Activity & audit",
+                        orders: "Orders",
+                        shipments: "Shipment monitoring",
                       }[section]
                     }
                   </h1>
@@ -2590,6 +2612,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                         users: "",
                         facilities: "",
                         audit: "",
+                        orders: "",
+                        shipments: "",
                       }[section]
                     }
                   </p>
@@ -2613,7 +2637,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                 management.panel,
                 "min-w-0",
                 section === "overview" ? "lg:col-span-2" : "lg:col-span-3",
-                ["overview", "users", "facilities", "audit"].includes(
+                ["overview", "users", "facilities", "audit", "orders", "shipments"].includes(
                   section,
                 ) || isAdminResource(section)
                   ? ""
@@ -2621,7 +2645,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
               ].join(" ")}
             >
               {/* Content sections */}
-              {isAdminResource(section) && (
+              {section === "orders" && <OrdersScreen admin />}
+              {section === "shipments" && <ShipmentMonitoringScreen admin canSync={adminPermissions.includes("admin.access") && adminPermissions.includes("coldchain.manage")} />}
+              {section === "prescriptions" && <AdminPrescriptionsPage canReview={adminPermissions.includes("prescription.review")} />}
+              {isAdminResource(section) && section !== "prescriptions" && (
                 <AdminRecordsPage key={section} resource={section} />
               )}
               {section === "overview" && (
@@ -2682,6 +2709,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                       Network snapshot
                     </p>
                     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+                      {summaryError && <p className="col-span-full rounded-xl border border-err bg-errl p-4 text-sm text-err" role="alert">{summaryError}</p>}
                       {stats.map((stat) => {
                         const Icon = stat.icon;
                         return (
@@ -2704,13 +2732,14 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                                 <div
                                   className={`font-mono text-lg font-medium md:text-2xl ${headingText}`}
                                 >
-                                  {stat.value}
+                                  {stat.label !== "Pending verifications" && summaryLoading ? "Loading…" : stat.value}
                                 </div>
                                 <div
                                   className={`text-xs ${mutedText} md:text-sm`}
                                 >
                                   {stat.label}
                                 </div>
+                                {stat.value === "Unavailable" && !summaryLoading && <p className={`mt-2 max-w-[220px] text-[11px] leading-4 ${mutedText}`}>{summaryError ? "Summary request failed. Try refreshing." : stat.label === "Value recovered" ? "Recovery valuation has not been reported." : "This metric was not returned by the summary API."}</p>}
                               </div>
                               <div
                                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
@@ -2921,6 +2950,8 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                 <div className="mt-2">
                   <UsersPage
                     adminMode
+                    canChangeAccountType={adminPermissions.includes("admin.access") && adminPermissions.includes("user.update")}
+                    adminActorId={adminActorId}
                     onNav={(id: PageId) => {
                       window.localStorage.setItem("adminTarget", id);
                       router.push("/pages/dashboard");

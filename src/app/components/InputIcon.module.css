@@ -1,0 +1,22 @@
+.field {
+  position: relative;
+  display: block;
+  margin-top: 6px;
+  min-width: 0;
+}
+.icon {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 14px;
+  width: 17px;
+  height: 17px;
+  transform: translateY(-50%);
+  color: var(--auth-accent, var(--form-accent, #315fba));
+  pointer-events: none;
+  z-index: 1;
+}
+.field > :is(input, select, textarea) {
+  /* Keep space for the icon across shared and page-specific input styles. */
+  padding-inline-start: 42px !important;
+  margin-top: 0;
+}

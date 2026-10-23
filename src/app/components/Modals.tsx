@@ -5,10 +5,12 @@ import { BellOff, FilePlus2 } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 import EmptyState from "@/app/components/EmptyState";
+import PrescriptionDescriptionField from "@/app/components/PrescriptionDescriptionField";
 import ApiOptionSelect from "@/app/components/ApiOptionSelect";
 import TransferRequestForm from "@/app/components/TransferRequestForm";
 import type { ModalId, PageId } from "@/app/lib/types";
 import { reportDownload } from "@/app/lib/report-download";
+import { medicineUnavailable } from "@/app/lib/medicine-availability";
 import { useProvider } from "@/app/providers/provider";
 import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
 import { MEDICINE_SERVICE } from "@/app/services/medicine-service/medicine-service";
@@ -41,6 +43,7 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
     tnmStage: "",
     insurer: "",
     icd10: "",
+    description: "",
   });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -54,6 +57,7 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
   const [prescriptionOptionsMessage, setPrescriptionOptionsMessage] =
     useState("");
   const { userData } = useProvider();
+  const isDoctor = userData.user?.account_type === "DOCTOR";
   const set =
     (key: string) =>
     (
@@ -79,7 +83,7 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
   }, [openModalId]);
 
   useEffect(() => {
-    if (openModalId !== "modal-prescription") return;
+    if (openModalId !== "modal-prescription" || !isDoctor) return;
     let current = true;
     setLoadingPrescriptionOptions(true);
     setMedicines([]);
@@ -92,7 +96,11 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
       .then(([medicineResponse, networkResponse]) => {
         if (!current) return;
         if (medicineResponse.success)
-          setMedicines(unwrapArray(medicineResponse.data));
+          setMedicines(
+            unwrapArray(medicineResponse.data).filter(
+              (medicine) => !medicineUnavailable(medicine),
+            ),
+          );
         else
           setPrescriptionOptionsMessage(
             medicineResponse.message || "Medicine catalog could not be loaded.",
@@ -135,16 +143,6 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
               pharmacyPage * directory.pagination.limit <
                 directory.pagination.total,
           );
-          const ownFacilityId = userData.user?.hospital?.id;
-          if (
-            ownFacilityId &&
-            activePharmacies.some((item: any) => item.id === ownFacilityId)
-          )
-            setValues((currentValues) => ({
-              ...currentValues,
-              pharmacyFacilityId:
-                currentValues.pharmacyFacilityId || ownFacilityId,
-            }));
         } else {
           setPrescriptionOptionsMessage(
             networkResponse.message ||
@@ -158,11 +156,39 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
     return () => {
       current = false;
     };
-  }, [openModalId, userData.user?.hospital?.id, pharmacyPage]);
+  }, [openModalId, isDoctor, pharmacyPage]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (busy) return;
+    if (openModalId === "modal-prescription") {
+      if (!isDoctor) {
+        setMessage("Only a signed-in doctor can create a prescription.");
+        return;
+      }
+      if ((values.description ?? "").length > 2000) {
+        setMessage("Keep the description to 2,000 characters or fewer.");
+        return;
+      }
+      if (
+        !values.icd10?.trim() ||
+        values.icd10.trim().toUpperCase().length > 200
+      ) {
+        setMessage("Enter a diagnosis code of no more than 200 characters.");
+        return;
+      }
+      const quantity = Number(values.quantity);
+      if (
+        !Number.isSafeInteger(quantity) ||
+        quantity <= 0 ||
+        !values.insurer?.trim()
+      ) {
+        setMessage(
+          "Choose a payment option and enter a positive whole quantity.",
+        );
+        return;
+      }
+    }
     if (
       openModalId === "modal-prescription" &&
       (loadingPrescriptionOptions ||
@@ -190,13 +216,15 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
     else if (openModalId === "modal-prescription")
       response = await PRESCRIPTION_SERVICE.create({
         patient_ref: values.patientRef,
+        description: values.description ?? "",
         icd10: values.icd10,
-        tnm_stage: values.tnmStage,
+        ...(values.tnmStage?.trim()
+          ? { tnm_stage: values.tnmStage.trim() }
+          : {}),
         insurer: values.insurer,
         drug_id: values.drugId,
         qty: Number(values.quantity),
         pharmacy_facility_id: values.pharmacyFacilityId,
-        ...(userData.user?.id ? { prescriber_id: userData.user.id } : {}),
       });
     if (response && openModalId === "modal-export" && response.success) {
       try {
@@ -242,6 +270,7 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
       setValues((current) => ({
         ...current,
         patientRef: "",
+        description: "",
         icd10: "",
         tnmStage: "",
         insurer: "",
@@ -258,6 +287,7 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
     label: string,
     placeholder = "",
     type = "text",
+    helpText?: string,
   ) => (
     <label className="mb-3 block text-xs font-semibold text-g600" key={key}>
       {label}
@@ -266,19 +296,28 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
         type={type}
         value={values[key] ?? ""}
         onChange={set(key)}
-        pattern={key === "icd10" ? "^C\\d{2}(\\.\\d{1,2})?$" : undefined}
+        maxLength={key === "icd10" ? 200 : undefined}
         min={type === "number" ? 1 : undefined}
         step={type === "number" ? 1 : undefined}
         placeholder={placeholder}
-        required
+        aria-describedby={helpText ? `prescription-${key}-help` : undefined}
+        required={key !== "tnmStage"}
       />
+      {helpText && (
+        <span
+          id={`prescription-${key}-help`}
+          className="mt-1.5 block text-xs font-normal leading-5 text-g500"
+        >
+          {helpText}
+        </span>
+      )}
     </label>
   );
-  const isForm = [
-    "modal-export",
-    "modal-breach",
-    "modal-prescription",
-  ].includes(openModalId);
+  const isForm =
+    ["modal-export", "modal-breach", "modal-prescription"].includes(
+      openModalId,
+    ) &&
+    (openModalId !== "modal-prescription" || isDoctor);
 
   return (
     <div
@@ -286,7 +325,7 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
       onClick={() => onCloseModal(openModalId)}
     >
       <section
-        className="max-h-[90vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-w shadow-2xl"
+        className="portal-dialog max-h-[90vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-w shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-center justify-between border-b border-g100 bg-g50/70 px-6 py-5">
@@ -396,6 +435,12 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
         {openModalId === "modal-transfer" && (
           <TransferRequestForm onClose={() => onCloseModal("modal-transfer")} />
         )}
+        {openModalId === "modal-prescription" && !isDoctor && (
+          <p className="p-6 text-sm text-g600">
+            Only a signed-in doctor can create a prescription. You can still
+            view dispensing records available to your account.
+          </p>
+        )}
         {isForm ? (
           <form className="p-6" onSubmit={(event) => void submit(event)}>
             {openModalId === "modal-export" ? (
@@ -429,17 +474,51 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
             ) : null}
             {openModalId === "modal-prescription" ? (
               <>
+                <p className="mb-5 text-sm leading-6 text-g500">
+                  Enter the patient code and clinical details from the care
+                  record, then choose the medicine and dispensing pharmacy. All
+                  fields are required except cancer stage and description.
+                </p>
+                <h3 className="mb-3 text-sm font-semibold text-g800">
+                  Patient &amp; diagnosis
+                </h3>
                 {field(
                   "patientRef",
-                  "Pseudonymized patient reference",
-                  "Enter a coded reference (no patient name)",
+                  "Patient reference code",
+                  "Enter your facility's patient code",
+                  "text",
+                  "Use a coded reference your care team can recognize. Do not enter the patient's name, phone number or email.",
                 )}
-                {field("icd10", "ICD-10 diagnosis", "Enter diagnosis code")}
-                {field("tnmStage", "TNM stage", "Enter clinical stage")}
+                {field(
+                  "icd10",
+                  "Diagnosis code (ICD-10)",
+                  "Enter the recorded diagnosis code",
+                  "text",
+                  "Copy the ICD-10 value from the clinician's diagnosis (up to 200 characters). Codes for cancer and other conditions are accepted.",
+                )}
+                {field(
+                  "tnmStage",
+                  "Cancer stage (TNM, optional)",
+                  "Enter the recorded TNM stage",
+                  "text",
+                  "If applicable, use the TNM stage documented by the treating clinician. Leave blank when it does not apply or is not recorded.",
+                )}
+                <PrescriptionDescriptionField
+                  value={values.description ?? ""}
+                  disabled={busy}
+                  onChange={(description) =>
+                    setValues((current) => ({ ...current, description }))
+                  }
+                />
+                <h3 className="mb-3 mt-5 text-sm font-semibold text-g800">
+                  Payment &amp; dispensing
+                </h3>
                 <ApiOptionSelect
                   context="prescription"
                   field="insurers"
-                  label="Insurer / payment method"
+                  label="How will this prescription be paid for?"
+                  emptyLabel="Choose an insurer or payment method"
+                  helpText="Select an insurer if listed, or choose card, bank transfer or USSD for direct payment. USSD uses your bank's short-code menu on a phone. Selecting an option does not take payment."
                   value={values.insurer}
                   required
                   onChange={(value) =>
@@ -447,10 +526,11 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
                   }
                 />
                 <label className="mb-3 block text-xs font-semibold text-g600">
-                  Medicine
+                  Medicine to prescribe
                   <select
                     className="mt-1 w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal"
                     value={values.drugId ?? ""}
+                    aria-describedby="prescription-medicine-help"
                     onChange={set("drugId")}
                     required
                   >
@@ -471,13 +551,27 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
                       </option>
                     ))}
                   </select>
+                  <span
+                    id="prescription-medicine-help"
+                    className="mt-1.5 block text-xs font-normal leading-5 text-g500"
+                  >
+                    Check the medicine name, strength and brand before
+                    selecting.
+                  </span>
                 </label>
-                {field("quantity", "Quantity", "Enter quantity", "number")}
+                {field(
+                  "quantity",
+                  "Quantity to dispense",
+                  "Enter number of units",
+                  "number",
+                  "Enter a whole number of units in the medicine's dispensing unit, rather than a dose in milligrams.",
+                )}
                 <label className="mb-3 block text-xs font-semibold text-g600">
-                  Pharmacy
+                  Dispensing pharmacy
                   <select
                     className="mt-1 w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal"
                     value={values.pharmacyFacilityId ?? ""}
+                    aria-describedby="prescription-pharmacy-help"
                     onChange={set("pharmacyFacilityId")}
                     required
                   >
@@ -493,6 +587,13 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
                       </option>
                     ))}
                   </select>
+                  <span
+                    id="prescription-pharmacy-help"
+                    className="mt-1.5 block text-xs font-normal leading-5 text-g500"
+                  >
+                    Choose the verified pharmacy that should receive this
+                    prescription.
+                  </span>
                 </label>
                 <p className="mb-3 text-xs leading-5 text-g500">
                   {morePharmacies && (

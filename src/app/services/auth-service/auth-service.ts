@@ -2,6 +2,17 @@ import { CoreService } from "@/app/hooks/service/core-service";
 import { Routes } from "../api-routes";
 
 class AuthService extends CoreService {
+  public async resubmitVerification(payload: {
+    email: string;
+    password: string;
+    registry: "MDCN" | "PCN" | "PCN_PREMISES";
+    license_number: string;
+  }) {
+    return await this.send(Routes.RESUBMIT_VERIFICATION, payload, {
+      auth: false,
+    });
+  }
+
   public async signIn(payload: Record<string, any>) {
     return await this.send(Routes.SIGN_IN, payload, { auth: false });
   }

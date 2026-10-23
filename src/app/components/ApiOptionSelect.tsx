@@ -18,6 +18,8 @@ export default function ApiOptionSelect({
   required = false,
   disabled = false,
   emptyLabel = "Select an option",
+  helpText,
+  emptyMessage = "No choices were returned for this field.",
   className = "mb-3 block text-xs font-semibold text-g600",
   inputClassName = "mt-1 w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal",
 }: {
@@ -30,6 +32,8 @@ export default function ApiOptionSelect({
   required?: boolean;
   disabled?: boolean;
   emptyLabel?: string;
+  helpText?: string;
+  emptyMessage?: string;
   className?: string;
   inputClassName?: string;
 }) {
@@ -69,12 +73,12 @@ export default function ApiOptionSelect({
   useEffect(() => {
     if (
       !loading &&
-      !error &&
+      (!error || !required) &&
       value &&
       !options.some((option) => option.value === value)
     )
       onChange("");
-  }, [loading, error, value, options, onChange]);
+  }, [loading, error, value, options, onChange, required]);
   return (
     <div className={className}>
       <label htmlFor={id}>{label}</label>
@@ -82,7 +86,7 @@ export default function ApiOptionSelect({
         id={id}
         name={name}
         required={required}
-        disabled={disabled}
+        disabled={disabled || (!required && (loading || !options.length))}
         className={inputClassName}
         value={options.some((option) => option.value === value) ? value : ""}
         onChange={(event) => onChange(event.target.value)}
@@ -92,7 +96,7 @@ export default function ApiOptionSelect({
         <option value="">
           {loading
             ? "Loading options…"
-            : !options.length
+            : !options.length && required
               ? "No options available"
               : emptyLabel}
         </option>
@@ -103,17 +107,20 @@ export default function ApiOptionSelect({
         ))}
       </select>
       <div id={`${id}-help`}>
+        {helpText && (
+          <p className="mt-2 text-xs font-normal leading-5 text-g500">
+            {helpText}
+          </p>
+        )}
         {error && (
           <p role="alert" className="mt-2 text-xs text-err">
             {error}
           </p>
         )}
         {!loading && !options.length && !error && (
-          <p className="mt-2 text-xs text-g500">
-            No choices were returned for this field.
-          </p>
+          <p className="mt-2 text-xs text-g500">{emptyMessage}</p>
         )}
-        {!loading && (error || !options.length) && (
+        {!loading && (error || (required && !options.length)) && (
           <button
             type="button"
             disabled={disabled}

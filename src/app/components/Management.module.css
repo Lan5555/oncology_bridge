@@ -1,13 +1,13 @@
 .console {
   --management-accent: var(--p);
-  --management-surface: #f0f5fc;
-  --management-line: #cbd8e9;
+  --management-surface: #edf3fc;
+  --management-line: #cddbef;
   --management-muted: #708094;
-  --w: #f0f5fc;
-  --g50: #e4ecf6;
-  --g100: #dce5f1;
-  --g200: #cbd8e9;
-  --pll: #e8f0fc;
+  --w: #f0f5fd;
+  --g50: #e5edf9;
+  --g100: #dce6f5;
+  --g200: #cddbef;
+  --pll: #e0eafb;
   font-family: "Inter", sans-serif;
 }
 
@@ -46,6 +46,131 @@
   max-height: 90dvh;
   overflow-y: auto;
   border-radius: 22px;
+  box-shadow: 0 28px 90px -24px rgb(2 6 23 / 55%);
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+:where(.console [role="dialog"]) h2 {
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+}
+.console [role="dialog"] :is(input, select, textarea) {
+  border-radius: 10px;
+}
+.recordDialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(880px, calc(100vw - 32px));
+  max-height: min(90dvh, 960px);
+  padding: 0;
+  border: 1px solid var(--g200);
+  border-radius: 22px;
+  background: var(--w);
+  color: var(--g900);
+  box-shadow: 0 28px 90px -24px rgb(2 6 23 / 55%);
+  overflow: hidden;
+}
+.recordDialog:not([open]) {
+  display: none;
+}
+.recordDialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.recordDialog::backdrop {
+  background: rgb(2 6 23 / 65%);
+  backdrop-filter: blur(5px);
+}
+.dialogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+  border-bottom: 1px solid var(--g200);
+  background: var(--g50);
+  flex-shrink: 0;
+}
+.dialogHeader h2 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.dialogBody {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+}
+.dialogFooter {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 1px solid var(--g200);
+  background: var(--g50);
+  flex-shrink: 0;
+}
+.reviewSection {
+  min-width: 0;
+  border: 1px solid var(--g200);
+  border-radius: 14px;
+  padding: 18px;
+}
+.reviewSection h3 {
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.recordFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.recordField {
+  min-width: 0;
+  border: 1px solid var(--g200);
+  border-radius: 12px;
+  padding: 14px;
+}
+.recordField dt {
+  color: var(--g500);
+  font-size: 11px;
+  font-weight: 650;
+  margin-bottom: 6px;
+  text-transform: capitalize;
+}
+.recordField dd {
+  color: var(--g800);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.recordField:has(details) {
+  grid-column: 1 / -1;
+}
+.recordField details > summary {
+  cursor: pointer;
+  color: var(--p);
+  font-size: 12px;
+  font-weight: 650;
+  padding-bottom: 10px;
+}
+@media (max-width: 640px) {
+  .recordFields {
+    grid-template-columns: 1fr;
+  }
+  .dialogHeader,
+  .dialogBody {
+    padding: 18px;
+  }
+  .dialogFooter {
+    padding: 14px 18px;
+  }
 }
 .console button:disabled,
 .team button:disabled {
@@ -64,7 +189,7 @@
   display: flex;
   flex-direction: column;
   width: 248px;
-  background: #102c3c;
+  background: #102443;
   color: #fff;
   padding: 30px 18px 20px;
   overflow-y: auto;
@@ -82,7 +207,7 @@
   height: 40px;
   width: 40px;
   border-radius: 13px;
-  background: #238c96;
+  background: #315fba;
   color: #fff;
 }
 .brand strong {
@@ -128,16 +253,16 @@
   color: #fff;
 }
 .navItem[aria-current="page"] {
-  background: #238c9626;
-  border-color: #50c4c338;
-  color: #a3f1ec;
+  background: #315fba26;
+  border-color: #7fa5ee38;
+  color: #c3d8ff;
 }
 .navItem[aria-current="page"]::after {
   content: "";
   width: 5px;
   height: 5px;
   border-radius: 100%;
-  background: #7ae4d5;
+  background: #96baff;
   margin-left: auto;
 }
 .sidebarFoot {
@@ -197,7 +322,7 @@
   height: 5px;
   width: 5px;
   border-radius: 50%;
-  background: #7ae4d5;
+  background: #96baff;
 }
 
 .navChildren {
@@ -450,7 +575,7 @@
   color: var(--w);
   font-size: 12px;
   font-weight: 600;
-  box-shadow: 0 4px 10px #167d8918;
+  box-shadow: 0 4px 10px #315fba18;
   transition: background 0.2s;
 }
 .primaryButton:hover {
@@ -764,17 +889,52 @@
   max-height: 90dvh;
   overflow-y: auto;
   border-radius: 22px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--w) 95%, var(--p)),
+    var(--w)
+  );
+  box-shadow: 0 28px 80px -32px rgb(15 35 60 / 40%);
 }
 .team [role="presentation"] {
   z-index: 70;
   backdrop-filter: blur(5px);
 }
-.team [role="dialog"] :is(input, select),
-.team form[aria-labelledby] :is(input, select) {
-  background: var(--w);
+.team
+  [role="dialog"]
+  :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
+.team
+  form[aria-labelledby]
+  :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
+.console
+  form
+  :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  background: color-mix(in srgb, var(--g50) 65%, var(--w));
   color: var(--g800);
-  border-radius: 10px;
-  min-height: 42px;
+  border: 1px solid var(--g200);
+  border-radius: 12px;
+  min-height: 44px;
+  padding: 11px 13px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.console form :is(input, select, textarea):focus,
+.team form :is(input, select, textarea):focus {
+  border-color: var(--p);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--p) 12%, transparent);
+}
+.team form[aria-labelledby] fieldset {
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--pll) 70%, var(--w));
+}
+.team form[aria-labelledby] > div:first-child {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--g200);
+}
+.team form[aria-labelledby] > div:last-child {
+  border-top: 1px solid var(--g200);
+  padding-top: 18px;
 }
 
 @media (max-width: 1100px) {

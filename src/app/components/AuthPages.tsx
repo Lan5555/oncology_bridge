@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff,
   Info,
+  LockKeyhole,
   Mail,
   MapPin,
   Moon,
@@ -29,6 +30,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import Link from "next/link";
+import InputIcon from "./InputIcon";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -478,6 +480,13 @@ export default function AuthPages({
             <>
               {/* Header */}
               <div className={auth.intro}>
+                <span className={auth.loginMark}>
+                  <ShieldCheck
+                    className="size-6"
+                    strokeWidth={1.7}
+                    aria-hidden="true"
+                  />
+                </span>
                 <span className={auth.kicker}>Your care network awaits</span>
                 <h2
                   className={`text-2xl font-bold tracking-tight ${headingText}`}
@@ -506,16 +515,18 @@ export default function AuthPages({
                   >
                     Email Address
                   </label>
-                  <input
-                    id="auth-input-1"
-                    type="email"
-                    required
-                    autoComplete="username"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    className={inputClasses}
-                  />
+                  <InputIcon icon={Mail}>
+                    <input
+                      id="auth-input-1"
+                      type="email"
+                      required
+                      autoComplete="username"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email address"
+                      className={inputClasses}
+                    />
+                  </InputIcon>
                 </div>
 
                 <div>
@@ -525,7 +536,7 @@ export default function AuthPages({
                   >
                     Password
                   </label>
-                  <div className="relative">
+                  <InputIcon icon={LockKeyhole}>
                     <input
                       id="auth-input-2"
                       type={showPassword ? "text" : "password"}
@@ -550,17 +561,11 @@ export default function AuthPages({
                         <Eye className="h-4 w-4" />
                       )}
                     </button>
-                  </div>
+                  </InputIcon>
                 </div>
 
-                <div className="flex justify-between pt-1">
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm font-medium"
-                    style={{ color: accent }}
-                  >
-                    Forgot password?
-                  </Link>
+                <div className={auth.loginActions}>
+                  <Link href="/forgot-password">Forgot password?</Link>
                   <button
                     type="button"
                     onClick={() => {
@@ -569,12 +574,17 @@ export default function AuthPages({
                       setRegistrationSubmitted(false);
                       setRegistrationNotice("");
                     }}
-                    className="text-sm font-medium transition-colors"
-                    style={{ color: accent }}
                   >
                     Create account
                   </button>
                 </div>
+
+                <Link
+                  href="/verification/resubmit"
+                  className={auth.licenceLink}
+                >
+                  Account type changed? Submit your new licence
+                </Link>
 
                 <button
                   type="submit"

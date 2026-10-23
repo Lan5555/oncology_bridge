@@ -42,7 +42,9 @@ Downstream fields: prescription `insurer`, marketplace multipart `category` and 
 
 Return `{success:true,message,data:{items:[{id,name,city,status:"ACTIVE",verified:true}],pagination:{page,limit,total}}}`. IDs are facility UUIDs. Pagination is required; the UI appends subsequent pages using `page * limit < total`. Return only verified active pharmacies eligible to receive this caller's prescription. Do not expose the unrestricted facility network or require network-operator permissions. `items:[]` with `total:0` is a successful empty directory.
 
-The create payload stays `{patient_ref,icd10,tnm_stage,insurer,drug_id,qty,pharmacy_facility_id,prescriber_id?}`. Validate the pharmacy and medicine, positive whole quantity, clinical fields and managed insurer value. Derive the prescriber from the authenticated principal; do not trust a supplied ID to switch authors. Clinical details remain inside the app and out of notification email.
+Creation retains `{patient_ref,icd10,tnm_stage?,insurer,drug_id,qty,pharmacy_facility_id,prescriber_id?}`. The chosen pharmacy is retained; the caller's facility is never substituted. Only a doctor may prescribe, and any supplied prescriber must match the signed-in doctor. A current medicine, eligible pharmacy, positive whole quantity, non-empty ICD-10 value (maximum 200 characters), and current insurer choice are required. ICD-10 values are trimmed and uppercased on creation and update, with no cancer-code prefix or regex restriction; this is input validation, not a registry lookup. Creation and its first event are atomic. Clinical fields are not sent by email. Prescribers can read their own prescriptions alongside their facility's dispensing records.
+
+Prescription creation and list responses include the saved `insurer`, `pharmacy` object (`id`, `name`, `city`, `status`), and `pharmacy_name` display string; the list pharmacy also includes `state`. The existing `facility` field remains an alias of the selected pharmacy. Render the insurer from `insurer` and the pharmacy from `pharmacy.name` (or `pharmacy_name`). New prescriptions start with `auth_status: "Pending"` and `order_stage: "Waiting"`; creation does not approve authorization or create a marketplace purchase. `patient_ref` is the submitted pseudonymous reference, not a generated patient name.
 
 ## Transfer lifecycle
 
@@ -57,6 +59,10 @@ Lock and validate the transfer and stock, enforce reservations/quantity/unit/med
 ## Report download
 
 Request stays `{type,from,to}`; `type` is a value from `reportFormats`. Return `{success:true,message,data:{fileName,mimeType,contentBase64}}`. Supported MIME types are `text/csv`, `application/pdf`, and `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`. `contentBase64` is the file bytes encoded as base64, not a URL or JSON object. `fileName` must be a simple nonempty filename without path separators/control characters. The existing `{csv:"..."}` JSON response remains supported for CSV. Missing/invalid files show a download error instead of a success toast. Validate date range and export permissions, scope records to the principal, and audit exports.
+
+## Professional account-type changes and new licence evidence
+
+See `ADMIN_ACCOUNT_TYPES_BACKEND_HANDOFF.md` for the supplied backend contract and current frontend integration. Admin editing uses the existing user PATCH route with both `admin.access` and `user.update`. New evidence is submitted from `/verification/resubmit` through a public credential-based `POST /api/me/verification/resubmit`; the old authenticated bodyless request is removed. Production deployment and end-to-end review remain separately unverified.
 
 ## Already connected: do not create duplicate endpoints
 

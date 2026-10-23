@@ -24,6 +24,7 @@ interface TopNavProps {
   activePage: PageId;
   onNav: (id: PageId) => void;
   onToggleSidebar: () => void;
+  sidebarOpen: boolean;
   allowedPages: PageId[] | null;
   onToggleTheme: () => void;
   onOpenModal: (id: "modal-notifications") => void;
@@ -36,6 +37,7 @@ const QUICK_LINKS: {
 }[] = [
   { id: "pg-dashboard", label: "Overview", icon: LayoutDashboard },
   { id: "pg-marketplace", label: "Marketplace", icon: ShoppingBag },
+  { id: "pg-orders", label: "Orders", icon: ClipboardList },
   { id: "pg-inventory", label: "Inventory", icon: Boxes },
   { id: "pg-transfers", label: "Transfers", icon: ArrowLeftRight },
   { id: "pg-prescriptions", label: "Prescriptions", icon: ClipboardList },
@@ -46,11 +48,12 @@ export default function TopNav({
   activePage,
   onNav,
   onToggleSidebar,
+  sidebarOpen,
   onToggleTheme,
   onOpenModal,
   allowedPages,
 }: TopNavProps) {
-  const { userData } = useProvider();
+  const { userData, theme } = useProvider();
   const router = useRouter();
   const user = userData.user;
   const fullName = [user?.first_name, user?.last_name]
@@ -69,10 +72,12 @@ export default function TopNav({
   };
 
   return (
-    <header className="sticky top-0 z-[200] flex h-16 items-center justify-between border-b border-g200 bg-w/95 px-4 shadow-sm backdrop-blur-xl sm:px-6">
+    <header className="portal-topbar sticky top-0 z-[200] flex h-16 items-center justify-between border-b border-g200 bg-w/95 px-4 backdrop-blur-xl sm:px-6">
       <div className="flex min-w-0 items-center gap-3">
         <button
           aria-label="Toggle navigation"
+          aria-expanded={sidebarOpen}
+          aria-controls="portal-sidebar"
           className="hidden size-9 items-center justify-center rounded-lg border border-g200 text-g500 transition hover:border-p hover:text-p max-lg:flex"
           onClick={onToggleSidebar}
           type="button"
@@ -95,7 +100,7 @@ export default function TopNav({
 
       <nav
         aria-label="Quick navigation"
-        className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-xl bg-g50 p-1 max-xl:hidden"
+        className="absolute left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-xl bg-g50 p-1 max-2xl:hidden"
       >
         {QUICK_LINKS.filter(
           ({ id }) => !allowedPages || allowedPages.includes(id),
@@ -121,8 +126,13 @@ export default function TopNav({
             "Network member"}
         </span>
         <button
-          aria-label="Toggle color theme"
-          className="flex size-9 items-center justify-center rounded-lg border border-g200 text-g500 transition hover:border-p hover:text-p"
+          aria-label={
+            theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+          }
+          title={
+            theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+          }
+          className="portal-icon-button flex size-9 items-center justify-center rounded-xl border border-g200 text-g500 hover:border-p hover:text-p"
           onClick={onToggleTheme}
           type="button"
         >
@@ -131,7 +141,7 @@ export default function TopNav({
         </button>
         <button
           aria-label="Notifications"
-          className="flex size-9 items-center justify-center rounded-lg border border-g200 text-g500 transition hover:border-p hover:text-p"
+          className="portal-icon-button flex size-9 items-center justify-center rounded-xl border border-g200 text-g500 hover:border-p hover:text-p"
           onClick={() => onOpenModal("modal-notifications")}
           type="button"
         >
@@ -150,7 +160,7 @@ export default function TopNav({
         </div>
         <button
           aria-label="Sign out"
-          className="flex size-9 items-center justify-center rounded-lg border border-g200 text-g500 transition hover:border-err hover:text-err"
+          className="portal-icon-button flex size-9 items-center justify-center rounded-xl border border-g200 text-g500 hover:border-err hover:text-err"
           onClick={() => void signOut()}
           title="Sign out"
           type="button"

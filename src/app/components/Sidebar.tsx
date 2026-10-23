@@ -7,7 +7,7 @@ import {
   CalendarClock,
   ClipboardList,
   LayoutDashboard,
-  Map,
+  Map as MapIcon,
   Pill,
   ScanLine,
   Settings,
@@ -15,8 +15,12 @@ import {
   Thermometer,
   Users,
 } from "lucide-react";
+import {
+  type AccountType,
+  getAccountInfo,
+  type VerificationStatus,
+} from "../lib/accounts";
 import type { PageId } from "../lib/types";
-import { getAccountInfo, type AccountType, type VerificationStatus } from "../lib/accounts";
 
 interface SidebarProps {
   activePage: PageId;
@@ -46,9 +50,41 @@ const ITEMS: Item[] = [
     section: "Overview",
     description: "Facility activity and key updates.",
   },
-  { id: "pg-marketplace", label: "Marketplace", icon: ShoppingBag, section: "Overview", description: "Find medicines, compare and purchase." },
-  { id: "pg-network", label: "Network map", icon: Map, section: "Overview", description: "Explore connected facilities." },
-  { id: "pg-users", label: "Facility team", icon: Users, section: "Facility team", description: "Invite members and manage facility access." },
+  {
+    id: "pg-marketplace",
+    label: "Marketplace",
+    icon: ShoppingBag,
+    section: "Overview",
+    description: "Find medicines, compare and purchase.",
+  },
+  {
+    id: "pg-orders",
+    label: "Orders",
+    icon: ClipboardList,
+    section: "Overview",
+    description: "Track purchases, payments and delivery.",
+  },
+  {
+    id: "pg-shipments",
+    label: "Shipment monitoring",
+    icon: Thermometer,
+    section: "Overview",
+    description: "Track shipment temperatures and excursions.",
+  },
+  {
+    id: "pg-network",
+    label: "Network map",
+    icon: MapIcon,
+    section: "Overview",
+    description: "Explore connected facilities.",
+  },
+  {
+    id: "pg-users",
+    label: "Facility team",
+    icon: Users,
+    section: "Facility team",
+    description: "Invite members and manage facility access.",
+  },
   {
     id: "pg-scan",
     label: "GS1 scanner",
@@ -100,7 +136,12 @@ const ITEMS: Item[] = [
   },
 ];
 
-const SECTION_ORDER: Section[] = ["Overview", "Facility team", "Pharmacy tools", "Clinical"];
+const SECTION_ORDER: Section[] = [
+  "Overview",
+  "Facility team",
+  "Pharmacy tools",
+  "Clinical",
+];
 
 export default function Sidebar({
   activePage,
@@ -121,16 +162,23 @@ export default function Sidebar({
       ? showFacilityTeam && (!allowedPages || allowedPages.includes(item.id))
       : !allowedPages || allowedPages.includes(item.id),
   );
-  const locked = Boolean(accountType && verificationStatus && verificationStatus !== "VERIFIED");
+  const locked = Boolean(
+    accountType && verificationStatus && verificationStatus !== "VERIFIED",
+  );
   const accountInfo = getAccountInfo(accountType);
 
-  const navButton = (id: PageId, label: string, description: string, Icon: LucideIcon) => {
+  const navButton = (
+    id: PageId,
+    label: string,
+    description: string,
+    Icon: LucideIcon,
+  ) => {
     const active = activePage === id;
     return (
       <button
         key={id}
         aria-current={active ? "page" : undefined}
-        className={`group relative mb-1 flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] transition-all duration-200 ${
+        className={`portal-nav-item group relative mb-1 flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] ${
           active
             ? "bg-p font-semibold text-white shadow-[0_6px_18px_rgba(30,64,175,0.2)]"
             : "font-medium text-g600 hover:bg-g50 hover:text-p"
@@ -145,7 +193,11 @@ export default function Sidebar({
         />
         <span className="min-w-0 flex-1">
           <span className="block">{label}</span>
-          <span className={`mt-0.5 block text-[10px] leading-4 ${active ? "text-white/75" : "text-g400 group-hover:text-g500"}`}>{description}</span>
+          <span
+            className={`mt-0.5 block text-[10px] leading-4 ${active ? "text-white/75" : "text-g400 group-hover:text-g500"}`}
+          >
+            {description}
+          </span>
         </span>
         {active ? (
           <span className="ml-auto size-1.5 rounded-full bg-white/90" />
@@ -156,13 +208,21 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`sticky top-16 flex h-[calc(100vh-64px)] w-(--sidebar-w) shrink-0 flex-col overflow-y-auto border-r border-g200 bg-w px-3 pb-6 pt-5 transition-[translate,box-shadow] duration-300 max-lg:fixed max-lg:left-0 max-lg:z-[300] max-lg:h-[calc(100vh-64px)] max-lg:w-[min(280px,100vw)] ${sidebarOpen ? "max-lg:translate-x-0 max-lg:shadow-2xl" : "max-lg:-translate-x-full"}`}
+      id="portal-sidebar"
+      aria-label="Workspace navigation"
+      className={`portal-sidebar sticky top-16 flex h-[calc(100vh-64px)] w-(--sidebar-w) shrink-0 flex-col overflow-y-auto border-r border-g200 bg-w px-3 pb-6 pt-5 transition-[translate,box-shadow] duration-300 max-lg:fixed max-lg:left-0 max-lg:z-[300] max-lg:h-[calc(100vh-64px)] max-lg:w-[min(280px,100vw)] ${sidebarOpen ? "max-lg:translate-x-0 max-lg:shadow-2xl" : "max-lg:-translate-x-full"}`}
     >
       {accountInfo ? (
-        <div className="mb-5 rounded-xl border border-g200 bg-g50/70 px-3 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-g400">{accountInfo.workspace} workspace</p>
-          <p className="mt-1 text-sm font-semibold text-g800">{accountInfo.label}</p>
-          <p className="mt-1 text-[11px] leading-4 text-g500">{accountInfo.blurb}</p>
+        <div className="portal-account-card mb-5 shrink-0 rounded-2xl border border-g200 px-4 py-4">
+          <p className="text-xs font-semibold leading-5 text-(--portal-accent)">
+            {accountInfo.workspace} workspace
+          </p>
+          <p className="mt-1 text-sm font-semibold text-g900">
+            {accountInfo.label}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-g600">
+            {accountInfo.blurb}
+          </p>
         </div>
       ) : null}
       {SECTION_ORDER.map((section) => {
@@ -185,7 +245,12 @@ export default function Sidebar({
         </p>
       ) : null}
       <div className="mt-auto border-t border-g100 pt-4">
-        {navButton("pg-settings", "Settings", "Account preferences and security.", Settings)}
+        {navButton(
+          "pg-settings",
+          "Settings",
+          "Account preferences and security.",
+          Settings,
+        )}
       </div>
     </aside>
   );

@@ -11,6 +11,21 @@ const id = (value: string) => encodeURIComponent(value);
 
 /** API paths and query builders are kept here so service classes stay route agnostic. */
 export class Routes {
+  static ADMIN_PRESCRIPTIONS = (params = "") => `/admin/api/prescriptions${params ? `?${params}` : ""}`;
+  static ADMIN_PRESCRIPTION = (prescriptionId: string) => `/admin/api/prescriptions/${id(prescriptionId)}`;
+  static ADMIN_PRESCRIPTION_DECISION = (prescriptionId: string) => `${Routes.ADMIN_PRESCRIPTION(prescriptionId)}/decision`;
+  static SHIPMENTS = (page = 1) => `/api/shipments${query({ page, limit: 20 })}`;
+  static SHIPMENT_TEMPERATURE = (shipmentId: string) => `/api/shipments/${id(shipmentId)}/temperature`;
+  static SHIPMENT_HISTORY = (shipmentId: string, page = 1) => `${Routes.SHIPMENT_TEMPERATURE(shipmentId)}/history${query({ page, limit: 20 })}`;
+  static SHIPMENT_EVENTS = (shipmentId: string, page = 1) => `${Routes.SHIPMENT_TEMPERATURE(shipmentId)}/events${query({ page, limit: 20 })}`;
+  static SHIPMENT_SYNC = (shipmentId: string) => `/admin/api/shipments/${id(shipmentId)}/temperature/sync`;
+  static ORDERS = (params = "") => `/api/orders${params ? `?${params}` : ""}`;
+  static ORDER = (orderId: string) => `/api/orders/${id(orderId)}`;
+  static ADMIN_ORDERS = (params = "") =>
+    `/admin/api/orders${params ? `?${params}` : ""}`;
+  static ADMIN_ORDER = (orderId: string) => `/admin/api/orders/${id(orderId)}`;
+  static ADMIN_ORDER_FULFILLMENT = (orderId: string) =>
+    `${Routes.ADMIN_ORDER(orderId)}/fulfillment`;
   static SIGN_IN = "/auth/api/login";
   static SIGN_OUT = (userId: string) => `/auth/api/log-out/${id(userId)}`;
   static PING_SERVER = "/auth/api/ping-server";

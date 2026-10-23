@@ -1,6 +1,21 @@
 type PermissionDetails = { label: string; description: string };
 
 const labels: Record<string, PermissionDetails> = {
+  "prescription.review": {
+    label: "Review prescription authorization",
+    description:
+      "Approve or reject eligible prescriptions and record an audited reason.",
+  },
+  "order.read": {
+    label: "View orders",
+    description:
+      "Track purchase, payment and fulfillment details within the authorized scope.",
+  },
+  "order.manage": {
+    label: "Manage order fulfillment",
+    description:
+      "Update allowed fulfillment stages and shipping details. Payment status is verified separately.",
+  },
   "dashboard.read": {
     label: "View dashboard",
     description: "See dashboard summaries and activity.",

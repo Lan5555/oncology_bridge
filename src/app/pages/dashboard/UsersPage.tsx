@@ -23,12 +23,18 @@ import EmptyState from "@/app/components/EmptyState";
 import management from "@/app/components/Management.module.css";
 import { useManagementDialog } from "@/app/hooks/useManagementDialog";
 import {
+  ACCOUNT_TYPES,
   type AccountType,
   getAccountInfo,
   getRegistryLabel,
 } from "@/app/lib/accounts";
 import { notifyResult } from "@/app/lib/notifications";
 import type { ModalId, PageId } from "@/app/lib/types";
+import {
+  accountTypeChangeConfirmed,
+  accountTypeChangePayload,
+  canReclassifyUser,
+} from "@/app/lib/user-account-type";
 import { FACILITY_SERVICE } from "@/app/services/facility-service/facility-service";
 import { unwrapArray } from "@/app/services/response-utils";
 import { USER_SERVICE } from "@/app/services/user-service/user-service";
@@ -37,6 +43,8 @@ interface Props {
   onNav: (id: PageId) => void;
   onOpenModal: (id: ModalId) => void;
   adminMode?: boolean;
+  canChangeAccountType?: boolean;
+  adminActorId?: string;
   canManageFacilityUsers?: boolean;
 }
 
@@ -108,6 +116,8 @@ function requestDate(value: unknown): string {
 export default function UsersPage({
   onOpenModal,
   adminMode = false,
+  canChangeAccountType = false,
+  adminActorId = "",
   canManageFacilityUsers = false,
 }: Props) {
   const [users, setUsers] = useState<any[]>([]);
@@ -125,6 +135,9 @@ export default function UsersPage({
     string | null
   >(null);
   const [filter, setFilter] = useState("");
+  const [accountTypeFilter, setAccountTypeFilter] = useState("");
+  const [accountTypeDraft, setAccountTypeDraft] = useState("");
+  const [accountTypeReason, setAccountTypeReason] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [userPage, setUserPage] = useState(1);
   const [loadError, setLoadError] = useState("");
@@ -159,6 +172,17 @@ export default function UsersPage({
     email: "",
     phone: "",
   });
+  const canEditAccountType =
+    adminMode &&
+    canChangeAccountType &&
+    canReclassifyUser(
+      adminActorId,
+      String(editTarget?.id ?? ""),
+      editTarget?.role?.name ??
+        editTarget?.role?.code ??
+        editTarget?.role_name ??
+        editTarget?.role,
+    );
   const canManageUsers = adminMode || canManageFacilityUsers;
   const checkApplicantLicense = async (request: any) => {
     if (registryCheckLoading !== null) return;
@@ -269,6 +293,8 @@ export default function UsersPage({
   }, [adminMode]);
   const openEdit = (user: any) => {
     setEditTarget(user);
+    setAccountTypeDraft(user.account_type ?? user.accountType ?? "");
+    setAccountTypeReason("");
     setDraft({
       first_name: user.first_name ?? "",
       last_name: user.last_name ?? "",
@@ -279,13 +305,47 @@ export default function UsersPage({
   };
   const saveUser = async (event: FormEvent) => {
     event.preventDefault();
-    if (!editTarget?.id) return;
+    if (!editTarget?.id || saving) return;
+    const currentAccountType =
+      editTarget.account_type ?? editTarget.accountType ?? null;
+    const accountTypeChanged = accountTypeDraft !== (currentAccountType ?? "");
+    let accountTypePayload: ReturnType<typeof accountTypeChangePayload>;
+    try {
+      accountTypePayload = accountTypeChangePayload(
+        currentAccountType,
+        accountTypeDraft,
+        accountTypeReason,
+        canEditAccountType,
+      );
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "Account type could not be changed.",
+      );
+      return;
+    }
     setSaving(true);
     const response = await USER_SERVICE.updateUser(
       editTarget.id,
-      draft,
+      {
+        ...draft,
+        ...accountTypePayload,
+      },
       adminMode,
     );
+    if (
+      response.success &&
+      accountTypeChanged &&
+      !accountTypeChangeConfirmed(response.data, accountTypeDraft)
+    ) {
+      setSaving(false);
+      setNotice(
+        "The server did not confirm the account-type change. Contact details may have been saved. Refresh the directory and check backend support before retrying.",
+      );
+      await load();
+      return;
+    }
     notifyResult(
       response,
       "Member details updated.",
@@ -480,6 +540,8 @@ export default function UsersPage({
       );
     return (
       matchesRole &&
+      (!accountTypeFilter ||
+        (user.account_type ?? user.accountType) === accountTypeFilter) &&
       matchesSearch &&
       (statusFilter === "all" || memberStatus(user) === statusFilter)
     );
@@ -768,6 +830,24 @@ export default function UsersPage({
               </option>
             ))}
           </select>
+          {adminMode && (
+            <select
+              aria-label="Filter members by account type"
+              value={accountTypeFilter}
+              onChange={(event) => {
+                setAccountTypeFilter(event.target.value);
+                setUserPage(1);
+              }}
+              className="rounded-lg border border-g200 bg-w px-3 py-2 text-xs text-g600"
+            >
+              <option value="">All account types</option>
+              {ACCOUNT_TYPES.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         {loadError ? (
           <div role="alert" className="p-8 text-center">
@@ -805,6 +885,7 @@ export default function UsersPage({
                 <tr>
                   <th scope="col">Member</th>
                   <th scope="col">Role & facility</th>
+                  {adminMode && <th scope="col">Account type</th>}
                   <th scope="col">Licence</th>
                   <th scope="col">Account status</th>
                   <th scope="col" className="text-right">
@@ -842,6 +923,16 @@ export default function UsersPage({
                             "Facility not linked"}
                         </p>
                       </td>
+                      {adminMode && (
+                        <td>
+                          <span className={management.badge} data-tone="muted">
+                            {getAccountInfo(
+                              (user.account_type ??
+                                user.accountType) as AccountType,
+                            )?.label ?? "Not provided"}
+                          </span>
+                        </td>
+                      )}
                       <td>
                         <span
                           className={management.badge}
@@ -924,23 +1015,27 @@ export default function UsersPage({
           <EmptyState
             icon={UsersRound}
             title={
-              search || filter || statusFilter !== "all"
+              search || filter || accountTypeFilter || statusFilter !== "all"
                 ? "No matching members"
                 : "Your team starts here"
             }
             description={
-              search || filter || statusFilter !== "all"
+              search || filter || accountTypeFilter || statusFilter !== "all"
                 ? "Try another search or clear your filters."
                 : "Invite your first member to start building your facility team."
             }
             action={
-              search || filter || statusFilter !== "all" ? (
+              search ||
+              filter ||
+              accountTypeFilter ||
+              statusFilter !== "all" ? (
                 <button
                   type="button"
                   className={management.secondaryButton}
                   onClick={() => {
                     setSearch("");
                     setFilter("");
+                    setAccountTypeFilter("");
                     setStatusFilter("all");
                     setUserPage(1);
                   }}
@@ -1105,7 +1200,9 @@ export default function UsersPage({
                       {field("Role", role)}
                       {field(
                         "Account type",
-                        detailTarget.account_type ?? detailTarget.accountType,
+                        getAccountInfo(
+                          detailTarget.account_type ?? detailTarget.accountType,
+                        )?.label ?? "Not provided",
                       )}
                       {field(
                         "Account status",
@@ -1701,7 +1798,7 @@ export default function UsersPage({
         >
           <form
             onSubmit={(event) => void saveUser(event)}
-            className="w-full max-w-lg rounded-2xl border border-g200 bg-w p-6 shadow-2xl"
+            className="max-h-[90svh] w-full max-w-lg overflow-y-auto rounded-2xl border border-g200 bg-w p-6 shadow-2xl"
             aria-labelledby="edit-user-title"
           >
             <div className="mb-5 flex items-start justify-between gap-4">
@@ -1713,8 +1810,9 @@ export default function UsersPage({
                   Update user details
                 </h2>
                 <p className="mt-1 text-sm text-g500">
-                  Change the user’s contact information. Role and licence
-                  changes require their own authorized workflow.
+                  {adminMode
+                    ? "Update contact information and review the professional account type."
+                    : "Update contact information. Role and licence changes require their own authorized workflow."}
                 </p>
               </div>
               <button
@@ -1755,6 +1853,79 @@ export default function UsersPage({
                 </label>
               ))}
             </div>
+            {adminMode && (
+              <fieldset
+                disabled={saving}
+                className="mt-5 rounded-xl border border-g200 bg-g50 p-4"
+              >
+                <legend className="px-1 text-sm font-semibold text-g900">
+                  Account type
+                </legend>
+                {canEditAccountType ? (
+                  <>
+                    <label
+                      htmlFor="edit-account-type"
+                      className="block text-xs font-medium text-g700"
+                    >
+                      Professional workspace
+                    </label>
+                    <select
+                      id="edit-account-type"
+                      value={accountTypeDraft}
+                      onChange={(event) =>
+                        setAccountTypeDraft(event.target.value)
+                      }
+                      className="mt-1.5 w-full rounded-lg border border-g200 bg-w px-3 py-2 text-sm text-g900"
+                    >
+                      {!ACCOUNT_TYPES.some(
+                        (type) => type.id === accountTypeDraft,
+                      ) && (
+                        <option value={accountTypeDraft} disabled>
+                          Not provided / unsupported
+                        </option>
+                      )}
+                      {ACCOUNT_TYPES.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-2 text-xs leading-5 text-g600">
+                      Changing the type deactivates this account and signs the
+                      user out. They must submit a new licence from the sign-in
+                      screen and complete review before access can be restored.
+                    </p>
+                    {accountTypeDraft !==
+                      (editTarget.account_type ??
+                        editTarget.accountType ??
+                        "") && (
+                      <label className="mt-3 block text-xs font-medium text-g700">
+                        Reason for changing account type
+                        <textarea
+                          required
+                          maxLength={1000}
+                          value={accountTypeReason}
+                          onChange={(event) =>
+                            setAccountTypeReason(event.target.value)
+                          }
+                          className="mt-1.5 w-full rounded-lg border border-g200 bg-w px-3 py-2 text-sm text-g900"
+                          rows={2}
+                        />
+                      </label>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-g600">
+                    {getAccountInfo(
+                      editTarget.account_type ?? editTarget.accountType,
+                    )?.label ?? "Not provided"}
+                    . Account-type editing is unavailable for your session or
+                    this user. Administrator accounts and your own account
+                    cannot be reclassified.
+                  </p>
+                )}
+              </fieldset>
+            )}
             {notice && (
               <output className="mt-3 text-sm text-err">{notice}</output>
             )}

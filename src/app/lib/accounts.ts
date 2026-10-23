@@ -88,8 +88,17 @@ export function getRegistryLabel(...records: unknown[]): string {
 const ALWAYS: PageId[] = ["pg-dashboard", "pg-settings"];
 
 const VERIFIED_BY_TYPE: Record<AccountType, PageId[]> = {
-  DOCTOR: ["pg-marketplace", "pg-prescriptions", "pg-coldchain", "pg-expiry"],
+  DOCTOR: [
+    "pg-marketplace",
+    "pg-orders",
+    "pg-shipments",
+    "pg-prescriptions",
+    "pg-coldchain",
+    "pg-expiry",
+  ],
   PHARMACIST: [
+    "pg-shipments",
+    "pg-orders",
     "pg-marketplace",
     "pg-prescriptions",
     "pg-coldchain",
@@ -97,6 +106,8 @@ const VERIFIED_BY_TYPE: Record<AccountType, PageId[]> = {
     "pg-medicines",
   ],
   PHARMACY_STORE: [
+    "pg-shipments",
+    "pg-orders",
     "pg-marketplace",
     "pg-scan",
     "pg-inventory",
@@ -116,6 +127,8 @@ export function allowedPages(
 ): PageId[] | null {
   if (type && status !== "VERIFIED") return ALWAYS;
   const knownPages = new Set<PageId>([
+    "pg-shipments",
+    "pg-orders",
     "pg-marketplace",
     "pg-dashboard",
     "pg-inventory",

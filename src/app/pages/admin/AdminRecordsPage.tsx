@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import management from "@/app/components/Management.module.css";
+import RecordImageGallery from "@/app/components/RecordImageGallery";
 import {
   ADMIN_RESOURCE_SERVICE,
   ADMIN_RESOURCES,
@@ -83,11 +84,45 @@ function safeDetails(value: unknown): unknown {
       Object.entries(object(value))
         .filter(
           ([key]) =>
-            !/password|secret|token|credential|private.?key/i.test(key),
+            !/password|secret|token|credential|private.?key/i.test(key) &&
+            !/^id$|_id$|Id$|ID$/.test(key),
         )
         .map(([key, item]) => [key, safeDetails(item)]),
     );
   return value;
+}
+function DetailValue({ value }: { value: unknown }) {
+  if (Array.isArray(value))
+    return value.length ? (
+      <div className="space-y-3">
+        {value.map((item, index) => (
+          <div key={String(index)} className="rounded-lg bg-g50 p-3">
+            <DetailValue value={item} />
+          </div>
+        ))}
+      </div>
+    ) : (
+      <span>No entries recorded</span>
+    );
+  if (value && typeof value === "object")
+    return (
+      <details>
+        <summary>View recorded details</summary>
+        <dl className={management.recordFields}>
+          {Object.entries(object(value)).map(([key, item]) => (
+            <div key={key} className={management.recordField}>
+              <dt>
+                {key.replace(/([a-z])([A-Z])/g, "$1 $2").replaceAll("_", " ")}
+              </dt>
+              <dd>
+                <DetailValue value={item} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </details>
+    );
+  return <span>{display(value)}</span>;
 }
 
 export default function AdminRecordsPage({
@@ -314,12 +349,19 @@ export default function AdminRecordsPage({
       </section>
       <dialog
         ref={dialog}
-        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-2xl border border-g200 bg-w p-6 text-g800 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm"
+        className={management.recordDialog}
+        aria-labelledby="admin-record-details-title"
+        onClose={() => setSelected(null)}
       >
-        <div className="mb-5 flex items-center justify-between gap-3">
+        <div className={management.dialogHeader}>
           <div>
             <p className="text-xs text-g500">{config.label}</p>
-            <h2 className="mt-1 text-lg font-bold">Record details</h2>
+            <h2
+              id="admin-record-details-title"
+              className="mt-1 text-lg font-bold"
+            >
+              Record details
+            </h2>
           </div>
           <button
             type="button"
@@ -330,59 +372,47 @@ export default function AdminRecordsPage({
             <X className="size-4" />
           </button>
         </div>
-        {selected && (
-          <>
-            {Array.isArray(selected.images) && (
-              <div className="mb-5 flex flex-wrap gap-3">
-                {selected.images.map((image) => {
-                  const item = object(image);
-                  const url = String(item.url ?? "");
-                  if (!url.startsWith("https://")) return null;
-                  return (
-                    <a
-                      href={url}
-                      key={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-lg border border-g200 p-3 text-xs font-semibold text-p"
-                    >
-                      {String(item.alt ?? "View product image")}
-                    </a>
-                  );
-                })}
-              </div>
-            )}
-            <dl className="grid gap-4 sm:grid-cols-2">
-              {Object.entries(object(safeDetails(selected))).map(
-                ([key, value]) => (
-                  <div
-                    key={key}
-                    className={
-                      typeof value === "object" && value !== null
-                        ? "min-w-0 sm:col-span-2"
-                        : "min-w-0"
-                    }
-                  >
-                    <dt className="mb-2 text-xs font-semibold capitalize text-g500">
-                      {key
-                        .replace(/([a-z])([A-Z])/g, "$1 $2")
-                        .replaceAll("_", " ")}
-                    </dt>
-                    <dd className="break-words rounded-lg bg-g50 p-3 text-xs leading-6">
-                      {typeof value === "object" && value !== null ? (
-                        <pre className="whitespace-pre-wrap break-all font-sans">
-                          {JSON.stringify(value, null, 2)}
-                        </pre>
-                      ) : (
-                        display(value)
-                      )}
-                    </dd>
-                  </div>
-                ),
+        <div className={management.dialogBody}>
+          {selected && (
+            <>
+              {Array.isArray(selected.images) && (
+                <RecordImageGallery
+                  key={String(selected.id ?? "record")}
+                  images={selected.images}
+                />
               )}
-            </dl>
-          </>
-        )}
+              <dl className={management.recordFields}>
+                {Object.entries(object(safeDetails(selected)))
+                  .filter(
+                    ([key]) =>
+                      key !== "images" || !Array.isArray(selected.images),
+                  )
+                  .map(([key, value]) => (
+                    <div key={key} className={management.recordField}>
+                      <dt className="mb-2 text-xs font-semibold capitalize text-g500">
+                        {key
+                          .replace(/([a-z])([A-Z])/g, "$1 $2")
+                          .replaceAll("_", " ")}
+                      </dt>
+                      <dd>
+                        <DetailValue value={value} />
+                      </dd>
+                    </div>
+                  ))}
+              </dl>
+            </>
+          )}
+        </div>
+        <footer className={management.dialogFooter}>
+          <span className="text-xs text-g500">Saved record details</span>
+          <button
+            type="button"
+            className={management.secondaryButton}
+            onClick={() => dialog.current?.close()}
+          >
+            Close details
+          </button>
+        </footer>
       </dialog>
     </div>
   );

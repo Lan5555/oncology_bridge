@@ -1,20 +1,18 @@
 "use client";
 
-import { notifyResult } from "@/app/lib/notifications";
-
+import Link from "next/link";
+import { useEffect } from "react";
 import {
   getAccountInfo,
   getRegistryLabel,
   VERIFICATION_COPY,
 } from "../lib/accounts";
-import { useProvider } from "../providers/provider";
-import { useEffect, useState } from "react";
-import { SETTINGS_SERVICE } from "../services/settings-service/settings-service";
 import { UserResponse } from "../models/user-model";
+import { useProvider } from "../providers/provider";
+import { SETTINGS_SERVICE } from "../services/settings-service/settings-service";
 
 export default function VerificationGate() {
   const { userData, setUser } = useProvider();
-  const [notice, setNotice] = useState("");
   useEffect(() => {
     const refreshStatus = async () => {
       const response = await SETTINGS_SERVICE.me();
@@ -35,19 +33,6 @@ export default function VerificationGate() {
     const timer = window.setInterval(() => void refreshStatus(), 30_000);
     return () => window.clearInterval(timer);
   }, [setUser]);
-  const resubmit = async () => {
-    const response = await SETTINGS_SERVICE.resubmitVerification();
-    notifyResult(
-      response,
-      "Verification resubmitted for review.",
-      "Could not resubmit verification.",
-    );
-    setNotice(
-      response.success
-        ? response.message || "Verification resubmitted for review."
-        : response.message || "Could not resubmit verification.",
-    );
-  };
   const user = userData.user;
   const info = getAccountInfo(user?.account_type);
   const status = user?.verification_status;
@@ -64,6 +49,7 @@ export default function VerificationGate() {
           className={`mx-auto mb-4 flex size-12 items-center justify-center rounded-full ${rejected ? "bg-errl text-err" : "bg-warnl text-warn"}`}
         >
           <svg
+            aria-hidden="true"
             viewBox="0 0 24 24"
             className="size-6 fill-none stroke-current stroke-2"
           >
@@ -93,19 +79,13 @@ export default function VerificationGate() {
         <p className="mt-5 text-[11.5px] text-g400">
           You can still update your profile under Settings while you wait.
         </p>
-        {rejected ? (
-          <button
-            className="mt-4 rounded-lg bg-p px-4 py-2 text-sm font-semibold text-white"
-            onClick={() => void resubmit()}
-            type="button"
+        {status === "MANUAL_REVIEW" ? (
+          <Link
+            className="mt-4 inline-block rounded-lg bg-p px-4 py-2 text-sm font-semibold text-white"
+            href="/verification/resubmit"
           >
-            Resubmit verification
-          </button>
-        ) : null}
-        {notice ? (
-          <p aria-live="polite" className="mt-3 text-xs text-g500">
-            {notice}
-          </p>
+            Submit a new licence after an account-type change
+          </Link>
         ) : null}
       </div>
     </div>

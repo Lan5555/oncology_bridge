@@ -3,6 +3,8 @@ export type PageId =
   | "pg-inventory"
   | "pg-medicines"
   | "pg-marketplace"
+  | "pg-orders"
+  | "pg-shipments"
   | "pg-scan"
   | "pg-transfers"
   | "pg-prescriptions"

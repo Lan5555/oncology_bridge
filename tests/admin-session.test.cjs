@@ -64,6 +64,35 @@ test("password recovery sends public requests with exact payloads", async () => 
   assert.deepEqual(app.events, []);
 });
 
+test("licence resubmission sends credentials without either stored session token", async () => {
+  const app = setup(200, { success: true, data: { status: "MANUAL_REVIEW" } }, { userToken: "facility-token" });
+  const payload = { email: "ada@example.test", password: "current-password", registry: "PCN", license_number: "NEW12345" };
+  const result = await app.auth.resubmitVerification(payload);
+  assert.equal(result.success, true);
+  assert.equal(app.requests.length, 1);
+  assert.equal(app.requests[0].url, "https://backend.test/api/me/verification/resubmit");
+  assert.equal(app.requests[0].method, "POST");
+  assert.equal(app.requests[0].headers.Authorization, undefined);
+  assert.deepEqual(JSON.parse(app.requests[0].body), payload);
+  assert.deepEqual(app.events, []);
+  assert.ok(app.storage.has("adminSession"));
+  assert.ok(app.storage.has("userSession"));
+});
+
+for (const status of [400, 401, 403, 409, 429]) {
+  test(`failed licence resubmission (${status}) never refreshes or invalidates stored sessions`, async () => {
+    const app = setup(status, { success: false, message: "Unable to submit" }, { userToken: "facility-token" });
+    const result = await app.auth.resubmitVerification({ email: "ada@example.test", password: "example", registry: "MDCN", license_number: "NEW12345" });
+    assert.equal(result.success, false);
+    assert.equal(result.status, status);
+    assert.equal(app.requests.length, 1);
+    assert.equal(app.requests[0].headers.Authorization, undefined);
+    assert.ok(app.storage.has("adminSession"));
+    assert.ok(app.storage.has("userSession"));
+    assert.deepEqual(app.events, []);
+  });
+}
+
 test("an invalid reset token never refreshes or clears an existing session", async () => {
   const app = setup(401, { success: false, message: "Invalid reset token" }, { userToken: "facility-token" });
   assert.equal((await app.auth.resetPassword({ token: "expired", password: "new-password" })).success, false);

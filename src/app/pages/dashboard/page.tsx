@@ -2,6 +2,8 @@
 import Modals from "@/app/components/Modals";
 import Sidebar from "@/app/components/Sidebar";
 import TopNav from "@/app/components/TopNav";
+import OrdersScreen from "@/app/components/OrdersScreen";
+import ShipmentMonitoringScreen from "@/app/components/ShipmentMonitoringScreen";
 import { ModalId, PageId } from "@/app/lib/types";
 import { useEffect, useState } from "react";
 import AuditPage from "./AuditPage";
@@ -51,7 +53,16 @@ const DashboardView: React.FC = () => {
       ? [...new Set([...baseAllowedPages, "pg-users" as PageId])]
       : baseAllowedPages;
   const [activePage, setActivePage] = useState<PageId>("pg-dashboard");
+  const [marketplaceScrollRequest, setMarketplaceScrollRequest] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [sidebarOpen]);
   const [openModalId, setOpenModalId] = useState<ModalId | null>(null);
 
   useEffect(() => {
@@ -60,6 +71,8 @@ const DashboardView: React.FC = () => {
     const target = window.localStorage.getItem("adminTarget");
     if (target) {
       const valid = [
+        "pg-shipments",
+        "pg-orders",
         "pg-marketplace",
         "pg-dashboard",
         "pg-inventory",
@@ -92,8 +105,10 @@ const DashboardView: React.FC = () => {
   const handleNav = (id: PageId) => {
     if (id === "pg-users" && !showFacilityTeam) return;
     if (allowedPages && !allowedPages.includes(id)) return;
+    if (id === "pg-marketplace")
+      setMarketplaceScrollRequest((value) => value + 1);
     setActivePage(id);
-    if (typeof window !== "undefined" && window.innerWidth <= 960) {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
       setSidebarOpen(false);
     }
   };
@@ -101,7 +116,19 @@ const DashboardView: React.FC = () => {
   // Dashboard no longer shows auth UI; authentication is handled on /auth route.
 
   const pageComponents: Record<PageId, React.ReactNode> = {
-    "pg-marketplace": <MarketplacePage />,
+    "pg-marketplace": (
+      <MarketplacePage
+        scrollRequest={marketplaceScrollRequest}
+        onOrders={() => handleNav("pg-orders")}
+      />
+    ),
+    "pg-orders": (
+      <OrdersScreen
+        onShop={() => handleNav("pg-marketplace")}
+        onMonitor={() => handleNav("pg-shipments")}
+      />
+    ),
+    "pg-shipments": <ShipmentMonitoringScreen />,
     "pg-dashboard": (
       <DashboardPage
         onNav={handleNav}
@@ -146,10 +173,19 @@ const DashboardView: React.FC = () => {
         onNav={handleNav}
         onOpenModal={setOpenModalId}
         onToggleSidebar={toggleSidebar}
+        sidebarOpen={sidebarOpen}
         allowedPages={allowedPages}
         onToggleTheme={toggleTheme}
       />
       <div className="flex min-h-[calc(100vh-64px)]">
+        {sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close navigation"
+            onClick={() => setSidebarOpen(false)}
+            className="portal-sidebar-scrim fixed inset-x-0 bottom-0 top-16 z-[250] bg-slate-950/40 backdrop-blur-sm lg:hidden"
+          />
+        )}
         <Sidebar
           sidebarOpen={sidebarOpen}
           activePage={activePage}
@@ -161,11 +197,13 @@ const DashboardView: React.FC = () => {
           showFacilityTeam={showFacilityTeam}
         />
 
-        <main className="min-w-0 flex-1 overflow-x-hidden bg-g50/60 px-8 py-7 max-lg:w-full max-lg:px-4 max-lg:py-5 max-md:p-4">
+        <main className="portal-workspace min-w-0 flex-1 overflow-x-hidden bg-g50/60 px-8 py-7 max-lg:w-full max-lg:px-4 max-lg:py-5 max-md:p-4">
           {!isVerified && activePage !== "pg-settings" ? (
             <VerificationGate />
           ) : (
-            pageComponents[activePage]
+            <div key={activePage} className="portal-page">
+              {pageComponents[activePage]}
+            </div>
           )}
         </main>
       </div>

@@ -1,7 +1,10 @@
 "use client";
 
+import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { AUTH_SERVICE } from "../services/auth-service/auth-service";
+import formStyles from "./AccountForm.module.css";
+import InputIcon from "./InputIcon";
 
 export default function PasswordRecovery({
   mode,
@@ -57,7 +60,7 @@ export default function PasswordRecovery({
           mode === "reset" &&
             [400, 401, 403, 404, 410, 422].includes(response.status ?? 0)
             ? "This reset link is invalid, expired, or already used. Request a new link below."
-            : "We couldn't complete your request. Please try again.",
+            : response.message,
         );
         return;
       }
@@ -77,10 +80,12 @@ export default function PasswordRecovery({
   const missingToken = mode === "reset" && ready && !token.current && !complete;
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-slate-50 px-5 py-12 text-slate-900">
+    <main
+      className={`${formStyles.page} flex min-h-svh items-center justify-center px-5 py-12`}
+    >
       <section
         aria-labelledby="recovery-title"
-        className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
+        className={`${formStyles.card} w-full max-w-md p-6 sm:p-8`}
       >
         <p className="mb-6 text-lg font-bold text-blue-900">Oncosourz</p>
         <h1 id="recovery-title" className="text-2xl font-bold">
@@ -118,16 +123,18 @@ export default function PasswordRecovery({
                 htmlFor="recovery-email"
               >
                 Email address
-                <input
-                  id="recovery-email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className={inputClass}
-                  disabled={busy}
-                />
+                <InputIcon icon={Mail}>
+                  <input
+                    id="recovery-email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className={inputClass}
+                    disabled={busy}
+                  />
+                </InputIcon>
               </label>
             ) : (
               <>
@@ -136,34 +143,38 @@ export default function PasswordRecovery({
                   htmlFor="recovery-password"
                 >
                   New password
-                  <input
-                    id="recovery-password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className={inputClass}
-                    disabled={busy}
-                  />
+                  <InputIcon icon={LockKeyhole}>
+                    <input
+                      id="recovery-password"
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      minLength={8}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      className={inputClass}
+                      disabled={busy}
+                    />
+                  </InputIcon>
                 </label>
                 <label
                   className="block text-sm font-medium"
                   htmlFor="recovery-confirmation"
                 >
                   Confirm new password
-                  <input
-                    id="recovery-confirmation"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                    value={confirmation}
-                    onChange={(event) => setConfirmation(event.target.value)}
-                    className={inputClass}
-                    disabled={busy}
-                  />
+                  <InputIcon icon={ShieldCheck}>
+                    <input
+                      id="recovery-confirmation"
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      minLength={8}
+                      value={confirmation}
+                      onChange={(event) => setConfirmation(event.target.value)}
+                      className={inputClass}
+                      disabled={busy}
+                    />
+                  </InputIcon>
                 </label>
               </>
             )}

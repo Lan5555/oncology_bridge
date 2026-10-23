@@ -1,5 +1,43 @@
+.searchForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+.searchForm > label,
+.categoryField {
+  min-width: 0;
+  margin: 0;
+}
+.categoryField > label {
+  margin-bottom: 8px;
+}
+.categoryField select {
+  min-height: 46px;
+}
+.searchForm .searchInput {
+  padding-left: 40px;
+}
+.searchButton {
+  min-height: 46px;
+  justify-content: center;
+}
+@media (min-width: 640px) {
+  .searchForm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .searchButton {
+    margin-top: 25px;
+  }
+}
+@media (min-width: 1280px) {
+  .searchForm {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.9fr) auto;
+  }
+}
 .listings {
   container: medicine-listings / inline-size;
+  scroll-margin-top: 84px;
 }
 .toolbar {
   display: grid;

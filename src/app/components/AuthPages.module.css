@@ -1,13 +1,15 @@
 .page {
-  --auth-accent: var(--p);
-  --auth-line: var(--g200);
+  --auth-accent: #315fba;
+  --auth-line: #d0dcef;
   --auth-muted: var(--g500);
-  --auth-surface: var(--w);
+  --auth-surface: #f6f9ff;
+  --auth-input: #edf3fd;
   display: grid;
   grid-template-columns: minmax(330px, 42%) minmax(0, 1fr);
   min-height: 100svh;
   width: 100%;
-  background: var(--g50);
+  background:
+    radial-gradient(ellipse at 90% 10%, #c5d9fa80, transparent 60%), #e8effb;
   color: var(--g800);
   font-family: "Inter", sans-serif;
 }
@@ -16,6 +18,7 @@
   --auth-line: var(--g200);
   --auth-muted: var(--g500);
   --auth-surface: var(--w);
+  --auth-input: #102132;
   background: var(--g50);
   color: var(--g800);
 }
@@ -226,18 +229,42 @@
   display: none;
 }
 .card {
+  position: relative;
   scroll-margin-top: 24px;
   width: 100%;
   max-width: 570px;
   margin-block: auto;
   padding: clamp(22px, 3vw, 40px);
-  border: 1px solid var(--auth-line);
-  border-radius: 22px;
-  background: var(--auth-surface);
-  box-shadow: 0 10px 45px #18324b05;
+  border: 1px solid color-mix(in srgb, var(--auth-line) 60%, transparent);
+  border-radius: 28px;
+  background: linear-gradient(
+    155deg,
+    var(--auth-surface),
+    color-mix(in srgb, var(--auth-input) 65%, var(--auth-surface))
+  );
+  box-shadow:
+    0 24px 64px -30px #24457140,
+    inset 0 1px 0 #ffffff30;
 }
 .card[data-view="login"] {
-  max-width: 460px;
+  max-width: 480px;
+  padding: clamp(24px, 4vw, 44px);
+}
+.loginMark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 22px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #315fba, #19376f);
+  color: #fff;
+  box-shadow: 0 10px 24px -12px #315fba80;
+}
+.card[data-view="login"] form > button[type="submit"] {
+  min-height: 48px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px -12px #1e40af80;
 }
 .card h2 {
   font-family: "Plus Jakarta Sans", sans-serif;
@@ -249,8 +276,14 @@
   min-width: 0;
   width: 100%;
   min-height: 46px;
-  border-radius: 10px;
+  border-radius: 12px;
+  border-color: var(--auth-line);
+  background: var(--auth-input);
   font-size: 14px;
+}
+.card :is(input, select, textarea):focus {
+  border-color: var(--auth-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--auth-accent) 12%, transparent);
 }
 .card input[type="file"] {
   max-width: 100%;
@@ -284,6 +317,35 @@
 }
 .intro {
   margin-bottom: 8px;
+}
+.loginActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 16px;
+}
+.loginActions > :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0;
+  color: var(--auth-accent);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.licenceLink {
+  display: block;
+  color: var(--auth-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+}
+.loginActions > :is(a, button):hover,
+.licenceLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .intro p {
   margin-top: 9px;

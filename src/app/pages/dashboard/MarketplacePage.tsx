@@ -83,7 +83,13 @@ function ProductImage({
   );
 }
 
-export default function MarketplacePage() {
+export default function MarketplacePage({
+  onOrders,
+  scrollRequest = 0,
+}: {
+  onOrders?: () => void;
+  scrollRequest?: number;
+}) {
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("");
@@ -105,6 +111,20 @@ export default function MarketplacePage() {
   const checkoutKey = useRef("");
   const checkoutLock = useRef(false);
   const detailDialog = useRef<HTMLDialogElement>(null);
+  const productsSection = useRef<HTMLElement>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Each Marketplace navigation requests another scroll, including when already open.
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      productsSection.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [scrollRequest]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: The refresh counter explicitly reloads the same filters after retry.
   useEffect(() => {
@@ -221,6 +241,7 @@ export default function MarketplacePage() {
             Medicine marketplace
           </h1>
         </div>
+        {onOrders && <button type="button" onClick={onOrders} className="rounded-xl border border-g200 bg-w px-4 py-2.5 text-sm font-semibold text-g800">Track your orders</button>}
       </header>
 
       <section className="relative isolate overflow-hidden rounded-3xl bg-[#102c45] px-6 py-8 text-white sm:px-9 sm:py-10">
@@ -270,14 +291,14 @@ export default function MarketplacePage() {
             setCategory(categoryDraft.trim());
             setRefresh((value) => value + 1);
           }}
-          className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]"
+          className={marketplace.searchForm}
         >
           <label className="grid gap-2 text-xs font-semibold text-g600">
             Find a medicine
             <div className="relative">
               <Search className="absolute left-3 top-3.5 size-4 text-g400" />
               <input
-                className={`${field} pl-10`}
+                className={`${field} ${marketplace.searchInput}`}
                 placeholder="Search generic name or brand"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -289,32 +310,36 @@ export default function MarketplacePage() {
             <div className="relative">
               <MapPin className="absolute left-3 top-3.5 size-4 text-g400" />
               <input
-                className={`${field} pl-10`}
+                className={`${field} ${marketplace.searchInput}`}
                 placeholder="City or pharmacy"
                 value={location}
                 onChange={(event) => setLocation(event.target.value)}
               />
             </div>
           </label>
-          <button type="submit" className={primary}>
-            Search medicines <ArrowRight className="size-4" />
-          </button>
-        </form>
-        <div className="flex flex-wrap gap-2 border-t border-g100 pt-4">
           <ApiOptionSelect
             context="marketplace"
             field="categories"
-            label="Category filter"
+            label="Category"
             emptyLabel="All categories"
+            emptyMessage="Category filtering is unavailable. Search all medicines instead."
             value={categoryDraft}
             onChange={setCategoryDraft}
             inputClassName={field}
+            className={marketplace.categoryField}
           />
-        </div>
+          <button
+            type="submit"
+            className={`${primary} ${marketplace.searchButton}`}
+          >
+            Search medicines <ArrowRight className="size-4" />
+          </button>
+        </form>
       </section>
 
       <section
         className={marketplace.listings}
+        ref={productsSection}
         aria-label="Medicine listings"
         aria-busy={loading}
       >

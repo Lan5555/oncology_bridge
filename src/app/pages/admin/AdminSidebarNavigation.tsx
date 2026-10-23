@@ -35,13 +35,13 @@ const GROUPS = [
     id: "orders",
     label: "Orders & payments",
     icon: ShoppingBag,
-    items: ["prescriptions", "invoices", "transfers"],
+    items: ["orders", "prescriptions", "invoices", "transfers"],
   },
   {
     id: "network",
     label: "Network & monitoring",
     icon: Network,
-    items: ["network", "storage", "coldchain"],
+    items: ["network", "storage", "coldchain", "shipments"],
   },
   {
     id: "administration",

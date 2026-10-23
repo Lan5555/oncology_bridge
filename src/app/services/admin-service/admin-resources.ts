@@ -94,12 +94,12 @@ export const ADMIN_RESOURCES = {
     ],
   },
   prescriptions: {
-    label: "Prescriptions & orders",
+    label: "Prescription review",
     description:
-      "Review network orders, authorization status, and fulfillment progress.",
+      "Review prescriptions and record authorization decisions.",
     icon: ClipboardList,
     permission: "prescription.read",
-    endpoint: Routes.PRESCRIPTIONS(),
+    endpoint: Routes.ADMIN_PRESCRIPTIONS(),
     columns: [
       { label: "Order", paths: ["display_id", "reference", "id"] },
       drug,

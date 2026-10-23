@@ -6,6 +6,9 @@ Generated with `node scripts/generate-api-inventory.cjs`. This inventories clien
 
 | Service and method | HTTP | Endpoint expression |
 | --- | --- | --- |
+| admin-service/admin-prescription-service.ts : list | GET | `Routes.ADMIN_PRESCRIPTIONS(params.toString())` |
+| admin-service/admin-prescription-service.ts : detail | GET | `Routes.ADMIN_PRESCRIPTION(id)` |
+| admin-service/admin-prescription-service.ts : decide | POST | `Routes.ADMIN_PRESCRIPTION_DECISION(id)` |
 | admin-service/admin-resources.ts : list | GET | `url.pathname + url.search` |
 | admin-service/admin-service.ts : session | GET | `Routes.ME` |
 | admin-service/admin-service.ts : login | POST | `Routes.ADMIN_LOGIN` |
@@ -21,6 +24,7 @@ Generated with `node scripts/generate-api-inventory.cjs`. This inventories clien
 | audit-service/audit-service.ts : list | GET | `Routes.AUDIT(params)` |
 | audit-service/audit-service.ts : verify | GET | `Routes.AUDIT_VERIFY` |
 | audit-service/audit-service.ts : exportCsv | GET | `Routes.AUDIT_EXPORT` |
+| auth-service/auth-service.ts : resubmitVerification | POST | `Routes.RESUBMIT_VERIFICATION` |
 | auth-service/auth-service.ts : signIn | POST | `Routes.SIGN_IN` |
 | auth-service/auth-service.ts : signOut | GET | `Routes.SIGN_OUT(id)` |
 | auth-service/auth-service.ts : pingServer | GET | `Routes.PING_SERVER` |
@@ -64,6 +68,9 @@ Generated with `node scripts/generate-api-inventory.cjs`. This inventories clien
 | network-service/network-service.ts : getNetwork | GET | `Routes.NETWORK` |
 | notification-service/notification-service.ts : list | GET | `Routes.NOTIFICATIONS` |
 | notification-service/notification-service.ts : markRead | PATCH | `Routes.NOTIFICATION_READ(id)` |
+| order-service/order-service.ts : list | GET | `admin ? Routes.ADMIN_ORDERS(params.toString()) : Routes.ORDERS(params.toString())` |
+| order-service/order-service.ts : detail | GET | `admin ? Routes.ADMIN_ORDER(orderId) : Routes.ORDER(orderId)` |
+| order-service/order-service.ts : updateFulfillment | PATCH | `Routes.ADMIN_ORDER_FULFILLMENT(orderId)` |
 | prescription-service/prescription-service.ts : pharmacies | GET | `Routes.PRESCRIPTION_PHARMACIES(page)` |
 | prescription-service/prescription-service.ts : checkoutOptions | GET | ``${Routes.PRESCRIPTIONS("active")}&page=${page}&limit=25`` |
 | prescription-service/prescription-service.ts : list | GET | `Routes.PRESCRIPTIONS(tab)` |
@@ -83,7 +90,11 @@ Generated with `node scripts/generate-api-inventory.cjs`. This inventories clien
 | settings-service/settings-service.ts : save | PUT | `Routes.SETTINGS` |
 | settings-service/settings-service.ts : me | GET | `Routes.ME` |
 | settings-service/settings-service.ts : updateMe | PATCH | `Routes.ME` |
-| settings-service/settings-service.ts : resubmitVerification | POST | `Routes.RESUBMIT_VERIFICATION` |
+| shipment-service/shipment-service.ts : list | GET | `Routes.SHIPMENTS(page)` |
+| shipment-service/shipment-service.ts : temperature | GET | `Routes.SHIPMENT_TEMPERATURE(id)` |
+| shipment-service/shipment-service.ts : history | GET | `Routes.SHIPMENT_HISTORY(id, page)` |
+| shipment-service/shipment-service.ts : events | GET | `Routes.SHIPMENT_EVENTS(id, page)` |
+| shipment-service/shipment-service.ts : sync | POST | `Routes.SHIPMENT_SYNC(id)` |
 | transfer-service/transfer-service.ts : dispatch | POST | `Routes.TRANSFER_DISPATCH(id)` |
 | transfer-service/transfer-service.ts : deliver | POST | `Routes.TRANSFER_DELIVER(id)` |
 | transfer-service/transfer-service.ts : list | GET | `Routes.TRANSFERS(status)` |
@@ -119,6 +130,19 @@ Function arguments correspond to the calling method above. `id()` URL-encodes pa
 
 | Symbol | Definition |
 | --- | --- |
+| `ADMIN_PRESCRIPTIONS` | `(params = "") => `/admin/api/prescriptions${params ? `?${params}` : ""}`` |
+| `ADMIN_PRESCRIPTION` | `(prescriptionId: string) => `/admin/api/prescriptions/${id(prescriptionId)}`` |
+| `ADMIN_PRESCRIPTION_DECISION` | `(prescriptionId: string) => `${Routes.ADMIN_PRESCRIPTION(prescriptionId)}/decision`` |
+| `SHIPMENTS` | `(page = 1) => `/api/shipments${query({ page, limit: 20 })}`` |
+| `SHIPMENT_TEMPERATURE` | `(shipmentId: string) => `/api/shipments/${id(shipmentId)}/temperature`` |
+| `SHIPMENT_HISTORY` | `(shipmentId: string, page = 1) => `${Routes.SHIPMENT_TEMPERATURE(shipmentId)}/history${query({ page, limit: 20 })}`` |
+| `SHIPMENT_EVENTS` | `(shipmentId: string, page = 1) => `${Routes.SHIPMENT_TEMPERATURE(shipmentId)}/events${query({ page, limit: 20 })}`` |
+| `SHIPMENT_SYNC` | `(shipmentId: string) => `/admin/api/shipments/${id(shipmentId)}/temperature/sync`` |
+| `ORDERS` | `(params = "") => `/api/orders${params ? `?${params}` : ""}`` |
+| `ORDER` | `(orderId: string) => `/api/orders/${id(orderId)}`` |
+| `ADMIN_ORDERS` | `(params = "") => `/admin/api/orders${params ? `?${params}` : ""}`` |
+| `ADMIN_ORDER` | `(orderId: string) => `/admin/api/orders/${id(orderId)}`` |
+| `ADMIN_ORDER_FULFILLMENT` | `(orderId: string) => `${Routes.ADMIN_ORDER(orderId)}/fulfillment`` |
 | `SIGN_IN` | `"/auth/api/login"` |
 | `SIGN_OUT` | `(userId: string) => `/auth/api/log-out/${id(userId)}`` |
 | `PING_SERVER` | `"/auth/api/ping-server"` |

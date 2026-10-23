@@ -13,6 +13,7 @@ import {
   RefreshCw,
   ScanLine,
   ShieldCheck,
+  Stethoscope,
   Thermometer,
   Users,
 } from "lucide-react";
@@ -116,6 +117,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const { userData } = useProvider();
   const accountType = userData.user?.account_type;
   const role = getAccountInfo(accountType)?.label ?? "Account";
+  const WorkspaceIcon =
+    accountType === "DOCTOR"
+      ? Stethoscope
+      : accountType === "PHARMACIST"
+        ? Pill
+        : Building2;
   const sections = accountType
     ? (ROLE_SECTIONS[accountType] ?? [])
     : [
@@ -171,6 +178,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [watchlistState, setWatchlistState] = useState("loading");
   const { refreshVersion, refresh } = useDashboardRefresh();
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const summarySnapshot =
+    typeof summary.asOf === "string" &&
+    Number.isFinite(Date.parse(summary.asOf))
+      ? new Date(summary.asOf)
+      : null;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Refresh reloads summaries after saves and at regular intervals.
   useEffect(() => {
@@ -230,21 +242,47 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="animate-fade-up">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-g200 bg-linear-to-br from-w via-w to-pll p-6 shadow-sm">
-        <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-p">
-            Oncosourz workspace
-          </p>
-          <h1 className="text-2xl font-bold tracking-tight text-g900">
-            {role} dashboard
-          </h1>
-          <p className="mt-1 text-sm text-g500">
-            {summary.scope?.type === "network"
-              ? "Current network indicators and operational tools."
-              : "Current facility indicators and tools for your role."}
-          </p>
+      <header className="portal-hero mb-6 flex flex-col gap-6 rounded-2xl border border-g200 p-5 sm:p-7 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-(--portal-accent)">
+              Oncosourz workspace
+            </p>
+            {summary.scope?.type === "network" ||
+            summary.scope?.type === "facility" ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-g200 bg-w px-2.5 py-1 text-[10px] font-semibold text-g600">
+                {summary.scope.type === "network" ? (
+                  <Network className="size-3" aria-hidden="true" />
+                ) : (
+                  <Building2 className="size-3" aria-hidden="true" />
+                )}
+                {summary.scope.type === "network"
+                  ? "Network overview"
+                  : "Facility overview"}
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-start gap-3 sm:gap-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-g200 bg-w text-(--portal-accent) shadow-sm sm:size-14">
+              <WorkspaceIcon
+                className="size-5 sm:size-6"
+                strokeWidth={1.7}
+                aria-hidden="true"
+              />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold leading-tight tracking-tight text-g900 sm:text-3xl">
+                {role} dashboard
+              </h1>
+              <p className="mt-2 max-w-lg text-sm leading-6 text-g600">
+                {summary.scope?.type === "network"
+                  ? "Monitor network activity and access your operational tools."
+                  : "Monitor facility activity and access the tools for your role."}
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-g200 pt-4 xl:border-t-0 xl:pt-0">
           <button
             type="button"
             disabled={summaryLoading}
@@ -266,27 +304,75 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           </button>
         </div>
       </header>
-      {lastRefreshed && (
-        <p className="mb-4 text-xs text-g500">
-          Last refreshed{" "}
-          {lastRefreshed.toLocaleTimeString("en-NG", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          })}
-          . Updates every 30 seconds while this page is visible.
+      <section
+        aria-label="Dashboard data freshness"
+        className="portal-freshness mb-6 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-xl border border-g200 bg-w px-4 py-3"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-g50 text-(--portal-accent)">
+            <RefreshCw
+              aria-hidden="true"
+              className={`size-4 ${summaryLoading ? "animate-spin" : ""}`}
+            />
+          </span>
+          <div>
+            <p className="text-xs font-semibold text-g900">
+              {summaryLoading
+                ? "Refreshing summary"
+                : summaryError
+                  ? "Refresh unsuccessful"
+                  : "Summary updated"}
+            </p>
+            <p className="mt-0.5 text-[11px] text-g500">
+              Auto-refresh every 30s while visible
+            </p>
+          </div>
+        </div>
+        <dl className="flex flex-wrap gap-x-6 gap-y-3 text-xs sm:ml-auto">
+          <div>
+            <dt className="text-[11px] text-g500">Last refreshed</dt>
+            <dd className="mt-1 font-medium tabular-nums text-g900">
+              {lastRefreshed ? (
+                <time
+                  dateTime={lastRefreshed.toISOString()}
+                  title={lastRefreshed.toLocaleString("en-NG")}
+                >
+                  {lastRefreshed.toLocaleTimeString("en-NG", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
+              ) : (
+                "Awaiting update"
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[11px] text-g500">Summary as of</dt>
+            <dd className="mt-1 font-medium tabular-nums text-g900">
+              {summarySnapshot ? (
+                <time
+                  dateTime={summarySnapshot.toISOString()}
+                  title={summarySnapshot.toLocaleString("en-NG")}
+                >
+                  {summarySnapshot.toLocaleString("en-NG", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </time>
+              ) : (
+                "Unavailable"
+              )}
+            </dd>
+          </div>
+        </dl>
+        <p className="w-full border-t border-g100 pt-2 text-[11px] text-g500">
+          Chart update times are shown on each chart.
         </p>
-      )}
-      {typeof summary.asOf === "string" &&
-        Number.isFinite(Date.parse(summary.asOf)) && (
-          <p className="mb-4 text-xs text-g500">
-            Summary snapshot:{" "}
-            <time dateTime={summary.asOf}>
-              {new Date(summary.asOf).toLocaleString("en-NG")}
-            </time>
-            . Charts show their own snapshot times.
-          </p>
-        )}
+      </section>
 
       {summaryLoading || summaryError ? (
         <output className="mb-6 block rounded-xl border border-g200 bg-w p-4 text-sm text-g600">
@@ -307,7 +393,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           .map(([label, value, Icon]) => (
             <article
               key={label}
-              className="flex items-center gap-3 rounded-xl border border-g200 bg-w p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="portal-metric flex items-center gap-3 rounded-2xl border border-g200 bg-w p-5"
             >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-pl text-p">
                 <Icon className="size-5" aria-hidden="true" />
@@ -365,7 +451,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             : "Facility overview"}
         </h2>
         <div className="grid gap-4 xl:grid-cols-2">
-          <article className="rounded-xl border border-g200 bg-w p-5">
+          <article className="portal-panel rounded-2xl border border-g200 bg-w p-5">
             <h3 className="flex items-center gap-2 text-sm font-bold text-g900">
               <Boxes className="size-4 text-p" aria-hidden="true" />
               Current available stock by intake month
@@ -378,7 +464,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               <InventoryChart refreshKey={refreshVersion} />
             </div>
           </article>
-          <article className="rounded-xl border border-g200 bg-w p-5">
+          <article className="portal-panel rounded-2xl border border-g200 bg-w p-5">
             <h3 className="text-sm font-bold text-g900">
               <Pill className="mr-2 inline size-4 text-p" aria-hidden="true" />
               Medicine availability split
@@ -391,7 +477,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               <DrugSplitChart refreshKey={refreshVersion} />
             </div>
           </article>
-          <article className="rounded-xl border border-g200 bg-w p-5 xl:col-span-2">
+          <article className="portal-panel rounded-2xl border border-g200 bg-w p-5 xl:col-span-2">
             <h3 className="text-sm font-bold text-g900">
               <ArrowRight
                 className="mr-2 inline size-4 text-p"
@@ -433,7 +519,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               type="button"
               key={item.page}
               onClick={() => onNav(item.page)}
-              className="group rounded-xl border border-g200 bg-w p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-p hover:shadow-md"
+              className="portal-tool-card group rounded-2xl border border-g200 bg-w p-5 text-left shadow-sm transition duration-200"
             >
               <span className="mb-3 flex size-9 items-center justify-center rounded-xl bg-pl text-p transition group-hover:scale-105">
                 {item.page === "pg-prescriptions" ? (
@@ -471,7 +557,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <button
               type="button"
               onClick={() => onNav("pg-users")}
-              className="group rounded-xl border border-g200 bg-w p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-p hover:shadow-md"
+              className="portal-tool-card group rounded-2xl border border-g200 bg-w p-5 text-left shadow-sm transition duration-200"
             >
               <span className="mb-3 flex size-9 items-center justify-center rounded-xl bg-pl text-p transition group-hover:scale-105">
                 <Users className="size-4" aria-hidden="true" />

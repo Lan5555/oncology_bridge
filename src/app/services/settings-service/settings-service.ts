@@ -1,5 +1,6 @@
 import { CoreService } from "@/app/hooks/service/core-service";
 import { Routes } from "../api-routes";
+
 class SettingsService extends CoreService {
   async getSettings() {
     return await this.get(Routes.SETTINGS);
@@ -12,9 +13,6 @@ class SettingsService extends CoreService {
   }
   async updateMe(payload: unknown) {
     return await super.update(Routes.ME, payload);
-  }
-  async resubmitVerification() {
-    return await this.send(Routes.RESUBMIT_VERIFICATION, {});
   }
 }
 export const SETTINGS_SERVICE = new SettingsService();
