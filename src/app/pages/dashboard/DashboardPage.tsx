@@ -90,9 +90,9 @@ const ROLE_SECTIONS: Record<
       description: "Manage stock and inventory records.",
     },
     {
-      label: "Scan GS1 Barcode",
+      label: "Scan Vial",
       page: "pg-scan",
-      description: "Validate and record product identifiers.",
+      description: "Check medicine details and authenticity evidence.",
     },
     {
       label: "Medicine Catalog",
@@ -150,9 +150,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
         description: "Add batches manually and manage facility stock.",
       },
       {
-        label: "Scan GS1 Barcode",
+        label: "Scan Vial",
         page: "pg-scan",
-        description: "Scan and decode product identifiers to record stock.",
+        description:
+          "Check packaging identifiers against official label details.",
       },
       {
         label: "Medicine Catalog",
@@ -221,7 +222,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       summary.nodes,
       Network,
     ],
-    ["GS1 Authenticated Vials", summary.gs1AuthenticatedVials, ScanLine],
+    [
+      "Historical GS1 scans (format only)",
+      summary.gs1AuthenticatedVials,
+      ScanLine,
+    ],
     [
       "Medicines out of stock (%)",
       summary.stockOutRiskPct == null

@@ -15,9 +15,19 @@ import {
 } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import CheckoutPrescriptionSelect from "@/app/components/CheckoutPrescriptionSelect";
 import ApiOptionSelect from "@/app/components/ApiOptionSelect";
+import CheckoutPrescriptionSelect from "@/app/components/CheckoutPrescriptionSelect";
 import { isPrescriptionUuid } from "@/app/lib/checkout-prescriptions";
+import {
+  CHECKOUT_ATTEMPT_STORAGE,
+  type CheckoutAttempt,
+  checkoutErrorMessage,
+  hostedPaymentUrl,
+  newCheckoutAllowed,
+  type PaymentProvider,
+  providerLabel,
+  readCheckoutAttempt,
+} from "@/app/lib/marketplace-payment";
 import { linkedMedicineUnavailable } from "@/app/lib/medicine-availability";
 import {
   type DrugListing,
@@ -108,10 +118,29 @@ export default function MarketplacePage({
   const [prescription, setPrescription] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [paying, setPaying] = useState(false);
+  const [paymentProvider, setPaymentProvider] =
+    useState<PaymentProvider>("PAYSTACK");
+  const [attempt, setAttempt] = useState<CheckoutAttempt | null>(null);
+  const [blockedCheckout, setBlockedCheckout] = useState(false);
+  const [loginRequired, setLoginRequired] = useState(false);
+  const [clock, setClock] = useState(Date.now());
   const checkoutKey = useRef("");
   const checkoutLock = useRef(false);
   const detailDialog = useRef<HTMLDialogElement>(null);
   const productsSection = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    try {
+      setAttempt(readCheckoutAttempt());
+    } catch {
+      setBlockedCheckout(true);
+      setCheckoutError(
+        "Saved checkout details could not be read. Restore browser session storage before starting another payment.",
+      );
+    }
+    const timer = window.setInterval(() => setClock(Date.now()), 15000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Each Marketplace navigation requests another scroll, including when already open.
   useEffect(() => {
@@ -164,11 +193,34 @@ export default function MarketplacePage({
   }, [search, category, sort, page, refresh]);
 
   const openProduct = (item: DrugListing) => {
+    if (checkoutLock.current) return;
     setSelected(item);
     setImageIndex(0);
     setQuantity("");
     setPrescription("");
     setCheckoutError("");
+    setPaymentProvider("PAYSTACK");
+    setLoginRequired(false);
+    setBlockedCheckout(false);
+    try {
+      const saved = readCheckoutAttempt();
+      setAttempt(saved);
+      if (saved?.body.listingId === item.id) {
+        setQuantity(String(saved.body.quantity));
+        setPrescription(saved.body.prescriptionId ?? "");
+        setPaymentProvider(saved.body.paymentProvider);
+      } else if (saved) {
+        setBlockedCheckout(true);
+        setCheckoutError(
+          "A previous checkout is still reserved or uncertain. Resolve it before purchasing another item.",
+        );
+      }
+    } catch {
+      setBlockedCheckout(true);
+      setCheckoutError(
+        "Saved checkout details could not be read. Restore browser session storage before starting another payment.",
+      );
+    }
     checkoutKey.current = crypto.randomUUID();
     detailDialog.current?.showModal();
   };
@@ -176,6 +228,11 @@ export default function MarketplacePage({
   const checkout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selected || checkoutLock.current) return;
+    if (attempt) {
+      await initializeCheckout(attempt);
+      return;
+    }
+    if (blockedCheckout) return;
     const count = Number(quantity);
     if (
       !purchasable(selected) ||
@@ -190,33 +247,94 @@ export default function MarketplacePage({
       setCheckoutError("Select an approved prescription before continuing.");
       return;
     }
+    await initializeCheckout({
+      key: checkoutKey.current,
+      body: {
+        listingId: selected.id,
+        quantity: count,
+        ...(prescription.trim() ? { prescriptionId: prescription.trim() } : {}),
+        paymentProvider,
+      },
+    });
+  };
+
+  const initializeCheckout = async (current: CheckoutAttempt) => {
+    if (checkoutLock.current || blockedCheckout) return;
+    if (current.invoiceReference) {
+      window.location.assign(
+        `/pay/${encodeURIComponent(current.invoiceReference)}`,
+      );
+      return;
+    }
+    if (newCheckoutAllowed(current)) {
+      setCheckoutError(
+        "This reservation has expired. Explicitly start a new checkout; do not pay the older link.",
+      );
+      return;
+    }
     checkoutLock.current = true;
     setPaying(true);
     setCheckoutError("");
     try {
+      // Persist before sending: a lost response must retain this exact key/body.
+      sessionStorage.setItem(CHECKOUT_ATTEMPT_STORAGE, JSON.stringify(current));
+      setAttempt(current);
       const response = await MARKETPLACE_SERVICE.checkout(
-        selected.id,
-        count,
-        prescription.trim(),
-        checkoutKey.current,
+        current.body.listingId,
+        current.body.quantity,
+        current.body.prescriptionId ?? "",
+        current.key,
+        current.body.paymentProvider,
       );
-      if (!response.success)
-        throw new Error(
-          response.message ||
-            "Checkout could not be started. Please try again.",
-        );
-      const url = new URL(response.data?.authorizationUrl);
+      if (!response.success) {
+        setLoginRequired(response.status === 401);
+        if (response.code === "STOCK_UNAVAILABLE")
+          setRefresh((value) => value + 1);
+        // These responses reject initialization; uncertain/conflicting attempts remain frozen.
+        if (
+          !attempt &&
+          !["PAYMENT_MISMATCH", "IDEMPOTENCY_CONFLICT"].includes(
+            response.code ?? "",
+          ) &&
+          ([403, 422, 503].includes(response.status ?? 0) ||
+            response.code === "STOCK_UNAVAILABLE")
+        ) {
+          sessionStorage.removeItem(CHECKOUT_ATTEMPT_STORAGE);
+          setAttempt(null);
+        }
+        if (
+          response.code === "PAYMENT_MISMATCH" ||
+          response.code === "IDEMPOTENCY_CONFLICT"
+        )
+          setBlockedCheckout(true);
+        throw new Error(checkoutErrorMessage(response.status, response.code));
+      }
+      const data = response.data;
       if (
-        url.protocol !== "https:" ||
-        url.hostname !== "checkout.paystack.com" ||
-        url.username ||
-        url.password ||
-        url.port
+        !data?.invoiceReference ||
+        !data?.orderId ||
+        data.paymentProvider !== current.body.paymentProvider
       )
         throw new Error(
-          "A valid Paystack payment link was not returned. Please try again.",
+          "Checkout details could not be confirmed. Retry this same attempt; do not start another payment.",
         );
-      window.location.assign(url.href);
+      const saved = {
+        ...current,
+        invoiceReference: data.invoiceReference,
+        orderId: data.orderId,
+        expiresAt: data.expiresAt,
+      };
+      sessionStorage.setItem(CHECKOUT_ATTEMPT_STORAGE, JSON.stringify(saved));
+      setAttempt(saved);
+      const url = hostedPaymentUrl(
+        data.authorizationUrl,
+        current.body.paymentProvider,
+      );
+      if (!url)
+        throw new Error(
+          "A valid hosted payment link was not returned. Open the saved invoice or retry this same attempt.",
+        );
+      window.location.assign(url);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Checkout could not be started.",
@@ -241,8 +359,80 @@ export default function MarketplacePage({
             Medicine marketplace
           </h1>
         </div>
-        {onOrders && <button type="button" onClick={onOrders} className="rounded-xl border border-g200 bg-w px-4 py-2.5 text-sm font-semibold text-g800">Track your orders</button>}
+        {onOrders && (
+          <button
+            type="button"
+            onClick={onOrders}
+            className="rounded-xl border border-g200 bg-w px-4 py-2.5 text-sm font-semibold text-g800"
+          >
+            Track your orders
+          </button>
+        )}
       </header>
+
+      {attempt && (
+        <section
+          className="space-y-3 rounded-2xl border border-g200 bg-w p-5"
+          aria-label="Saved marketplace checkout"
+        >
+          <p className="text-sm font-semibold">
+            Saved {providerLabel(attempt.body.paymentProvider)} checkout
+          </p>
+          <p className="text-xs leading-5 text-g500">
+            Your previous checkout is saved, including when the reserved
+            medicine no longer appears in available stock. Resolve it before
+            starting another payment.
+          </p>
+          {attempt.invoiceReference ? (
+            <a
+              className="inline-block text-sm font-semibold text-p underline"
+              href={`/pay/${encodeURIComponent(attempt.invoiceReference)}`}
+            >
+              View saved invoice
+            </a>
+          ) : (
+            <button
+              type="button"
+              className={primary}
+              disabled={
+                paying || blockedCheckout || newCheckoutAllowed(attempt, clock)
+              }
+              onClick={() => void initializeCheckout(attempt)}
+            >
+              {paying ? "Preparing checkout…" : "Retry saved checkout"}
+            </button>
+          )}
+          {newCheckoutAllowed(attempt, clock) && (
+            <button
+              type="button"
+              className={`${primary} ml-3`}
+              disabled={paying}
+              onClick={() => {
+                sessionStorage.removeItem(CHECKOUT_ATTEMPT_STORAGE);
+                setAttempt(null);
+                setBlockedCheckout(false);
+                setCheckoutError("");
+                checkoutKey.current = crypto.randomUUID();
+              }}
+            >
+              Start a new checkout
+            </button>
+          )}
+          {checkoutError && (
+            <p role="alert" className="text-xs text-err">
+              {checkoutError}
+            </p>
+          )}
+          {loginRequired && (
+            <a
+              className="block text-sm font-semibold text-p underline"
+              href="/login?returnTo=%2Fportal"
+            >
+              Sign in to continue
+            </a>
+          )}
+        </section>
+      )}
 
       <section className="relative isolate overflow-hidden rounded-3xl bg-[#102c45] px-6 py-8 text-white sm:px-9 sm:py-10">
         <div
@@ -274,7 +464,8 @@ export default function MarketplacePage({
             <Package className="size-4 text-cyan-200" /> Batch & expiry details
           </span>
           <span className="flex items-center gap-2">
-            <ShieldCheck className="size-4 text-cyan-200" /> Paystack checkout
+            <ShieldCheck className="size-4 text-cyan-200" /> Paystack &amp;
+            Flutterwave
           </span>
         </div>
       </section>
@@ -672,7 +863,7 @@ export default function MarketplacePage({
                       step="1"
                       max={selected.availableQuantity}
                       required
-                      disabled={paying}
+                      disabled={paying || !!attempt || blockedCheckout}
                       value={quantity}
                       onChange={(event) => {
                         setQuantity(event.target.value);
@@ -684,7 +875,7 @@ export default function MarketplacePage({
                     <CheckoutPrescriptionSelect
                       key={selected.id}
                       value={prescription}
-                      disabled={paying}
+                      disabled={paying || !!attempt || blockedCheckout}
                       medicineId={
                         selected.medicineId ??
                         selected.medicine_id ??
@@ -697,6 +888,63 @@ export default function MarketplacePage({
                         checkoutKey.current = crypto.randomUUID();
                       }}
                     />
+                  )}
+                  <label className="grid gap-2 text-xs font-semibold text-g600">
+                    Payment provider
+                    <select
+                      className={field}
+                      value={paymentProvider}
+                      disabled={paying || !!attempt || blockedCheckout}
+                      onChange={(event) => {
+                        setPaymentProvider(
+                          event.target.value as PaymentProvider,
+                        );
+                        checkoutKey.current = crypto.randomUUID();
+                      }}
+                    >
+                      <option value="PAYSTACK">Paystack</option>
+                      <option value="FLUTTERWAVE">Flutterwave</option>
+                    </select>
+                  </label>
+                  {attempt && (
+                    <p className="text-xs leading-5 text-g500">
+                      Your checkout details are saved. Retry this attempt with
+                      the same provider and details. To change them, wait for
+                      the reservation to expire, then start a new checkout. Do
+                      not pay an older checkout afterward.
+                    </p>
+                  )}
+                  {attempt?.invoiceReference && (
+                    <a
+                      className="block text-sm font-semibold text-p underline"
+                      href={`/pay/${encodeURIComponent(attempt.invoiceReference)}`}
+                    >
+                      View saved invoice
+                    </a>
+                  )}
+                  {attempt && newCheckoutAllowed(attempt, clock) && (
+                    <button
+                      type="button"
+                      className={primary}
+                      disabled={paying}
+                      onClick={() => {
+                        sessionStorage.removeItem(CHECKOUT_ATTEMPT_STORAGE);
+                        setAttempt(null);
+                        setBlockedCheckout(false);
+                        setCheckoutError("");
+                        checkoutKey.current = crypto.randomUUID();
+                      }}
+                    >
+                      Start a new checkout
+                    </button>
+                  )}
+                  {loginRequired && (
+                    <a
+                      className="block text-sm font-semibold text-p underline"
+                      href="/login?returnTo=%2Fportal"
+                    >
+                      Sign in to continue
+                    </a>
                   )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-g500">Estimated subtotal</span>
@@ -722,7 +970,9 @@ export default function MarketplacePage({
                     type="submit"
                     disabled={
                       paying ||
-                      !purchasable(selected) ||
+                      blockedCheckout ||
+                      (!!attempt && newCheckoutAllowed(attempt, clock)) ||
+                      (!attempt && !purchasable(selected)) ||
                       (selected.prescriptionRequired &&
                         !isPrescriptionUuid(prescription))
                     }
@@ -732,7 +982,13 @@ export default function MarketplacePage({
                     ) : (
                       <ShieldCheck className="size-4" />
                     )}
-                    {paying ? "Preparing checkout…" : "Continue to Paystack"}
+                    {paying
+                      ? "Preparing checkout…"
+                      : attempt
+                        ? attempt.invoiceReference
+                          ? "View saved invoice"
+                          : "Retry saved checkout"
+                        : `Continue to ${providerLabel(paymentProvider)}`}
                   </button>
                 </form>
               </div>

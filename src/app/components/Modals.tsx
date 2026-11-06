@@ -4,13 +4,14 @@ import { BellOff, FilePlus2 } from "lucide-react";
 
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
+import ApiOptionSelect from "@/app/components/ApiOptionSelect";
 import EmptyState from "@/app/components/EmptyState";
 import PrescriptionDescriptionField from "@/app/components/PrescriptionDescriptionField";
-import ApiOptionSelect from "@/app/components/ApiOptionSelect";
 import TransferRequestForm from "@/app/components/TransferRequestForm";
-import type { ModalId, PageId } from "@/app/lib/types";
-import { reportDownload } from "@/app/lib/report-download";
 import { medicineUnavailable } from "@/app/lib/medicine-availability";
+import { isNotificationUnread } from "@/app/lib/notification-state";
+import { reportDownload } from "@/app/lib/report-download";
+import type { ModalId, PageId } from "@/app/lib/types";
 import { useProvider } from "@/app/providers/provider";
 import { INVENTORY_SERVICE } from "@/app/services/inventory-service/inventory-service";
 import { MEDICINE_SERVICE } from "@/app/services/medicine-service/medicine-service";
@@ -68,12 +69,18 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
       setValues((current) => ({ ...current, [key]: event.target.value }));
 
   useEffect(() => {
-    if (openModalId !== "modal-notifications") return;
-    void NOTIFICATION_SERVICE.list().then((response) => {
+    if (openModalId !== "modal-notifications" || !userData.user?.id) return;
+    let active = true;
+    setNotifications([]);
+    void NOTIFICATION_SERVICE.list(userData.user.id).then((response) => {
+      if (!active) return;
       if (response.success) setNotifications(unwrapArray(response.data));
       else setMessage(response.message || "Notifications could not be loaded.");
     });
-  }, [openModalId]);
+    return () => {
+      active = false;
+    };
+  }, [openModalId, userData.user?.id]);
 
   useEffect(() => {
     if (openModalId === "modal-prescription") {
@@ -372,7 +379,7 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
                   </p>
                   <p className="mt-1 text-xs text-g500">{notification.body}</p>
                 </div>
-                {!notification.read_at ? (
+                {isNotificationUnread(notification) ? (
                   <button
                     className="text-xs font-semibold text-p"
                     onClick={() =>
@@ -389,7 +396,7 @@ export default function Modals({ openModalId, onCloseModal, onNav }: Props) {
                                 item.id === notification.id
                                   ? {
                                       ...item,
-                                      read_at: new Date().toISOString(),
+                                      read: true,
                                     }
                                   : item,
                               ),

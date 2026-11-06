@@ -154,7 +154,9 @@ export function allowedPages(
   // grants can add facility tools outside the account type's default workspace.
   // A pharmacist facility admin, for example, may also manage inventory.
   // Privileged network pages still require their separate permissions below.
-  const pages = [...new Set([...ALWAYS, ...rolePages, ...backendPages])];
+  const pages = [
+    ...new Set([...ALWAYS, ...rolePages, ...backendPages, "pg-scan" as PageId]),
+  ];
   const inventoryPages: PageId[] = permissions.includes("inventory.manage")
     ? ["pg-inventory", "pg-scan", "pg-medicines"]
     : [];

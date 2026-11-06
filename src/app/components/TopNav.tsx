@@ -1,9 +1,4 @@
 "use client";
-import BrandLogo from "./BrandLogo";
-
-import type { PageId } from "../lib/types";
-import { useProvider } from "../providers/provider";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeftRight,
   Bell,
@@ -18,7 +13,12 @@ import {
   ShoppingBag,
   Sun,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
+import type { PageId } from "../lib/types";
+import { useProvider } from "../providers/provider";
 import { AUTH_SERVICE } from "../services/auth-service/auth-service";
+import BrandLogo from "./BrandLogo";
 
 interface TopNavProps {
   activePage: PageId;
@@ -56,6 +56,7 @@ export default function TopNav({
   const { userData, theme } = useProvider();
   const router = useRouter();
   const user = userData.user;
+  const unreadCount = useUnreadNotifications(user?.id);
   const fullName = [user?.first_name, user?.last_name]
     .filter(Boolean)
     .join(" ");
@@ -140,12 +141,24 @@ export default function TopNav({
           <Moon className="size-4 dk:hidden" aria-hidden="true" />
         </button>
         <button
-          aria-label="Notifications"
-          className="portal-icon-button flex size-9 items-center justify-center rounded-xl border border-g200 text-g500 hover:border-p hover:text-p"
+          aria-label={
+            unreadCount !== null
+              ? `Notifications, ${unreadCount} unread`
+              : "Notifications"
+          }
+          className="portal-icon-button relative flex size-9 items-center justify-center rounded-xl border border-g200 text-g500 hover:border-p hover:text-p"
           onClick={() => onOpenModal("modal-notifications")}
           type="button"
         >
           <Bell className="size-4" aria-hidden="true" />
+          {unreadCount !== null && unreadCount > 0 && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-w bg-p px-1 text-[10px] font-bold leading-none text-white"
+            >
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
         </button>
         <div className="hidden items-center gap-2 border-l border-g200 pl-3 sm:flex">
           <div

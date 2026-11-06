@@ -10,6 +10,8 @@ type RequestOptions = {
   auth?: boolean;
   admin?: boolean;
   facilityOnly?: boolean;
+  timeoutMs?: number;
+  retryAuth?: boolean;
   headers?: Record<string, string>;
 };
 
@@ -95,6 +97,10 @@ export class CoreService {
           ? options.body
           : JSON.stringify(options.body);
 
+    const controller = options.timeoutMs ? new AbortController() : null;
+    const timeout = controller
+      ? setTimeout(() => controller.abort(), options.timeoutMs)
+      : null;
     try {
       const response = await fetch(
         `${this.BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`,
@@ -103,6 +109,7 @@ export class CoreService {
           headers,
           body,
           cache: "no-store",
+          ...(controller ? { signal: controller.signal } : {}),
         },
       );
       if (
@@ -110,6 +117,7 @@ export class CoreService {
         options.auth !== false &&
         token &&
         !retried &&
+        options.retryAuth !== false &&
         !options.admin &&
         !endpoint.includes("/auth/api/refresh")
       ) {
@@ -175,6 +183,14 @@ export class CoreService {
               : undefined,
       });
     } catch (error) {
+      if (controller?.signal.aborted)
+        return new NetResponse({
+          success: false,
+          message: "Request timed out.",
+          data: null,
+          status: 408,
+          code: "REQUEST_TIMEOUT",
+        });
       const message =
         error instanceof Error ? error.message : "Network request failed.";
       return new NetResponse({
@@ -183,6 +199,8 @@ export class CoreService {
         data: null,
         status: 0,
       });
+    } finally {
+      if (timeout !== null) clearTimeout(timeout);
     }
   }
 

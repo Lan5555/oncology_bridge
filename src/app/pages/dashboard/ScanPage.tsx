@@ -1,618 +1,488 @@
 "use client";
 
-import { toast } from "sonner";
-
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { MonthlyScansChart } from "../../components/Charts";
+import {
+  ArrowRight,
+  Camera as CameraIcon,
+  FileSearch,
+  Info,
+  LoaderCircle,
+  ScanLine,
+  ShieldQuestion,
+  Upload,
+  X,
+} from "lucide-react";
+import { type FormEvent, useRef, useState } from "react";
 import Camera from "@/app/components/Camera/camera";
+import MedicineVerificationResult from "@/app/components/MedicineVerificationResult";
+import {
+  COMPARISON_LABELS,
+  type ComparisonField,
+  type MedicineAssessment,
+  type VerificationFields,
+  type VerificationRequest,
+  validateVerificationImage,
+  verificationError,
+  verificationMetadata,
+  verificationRequest,
+} from "@/app/lib/medicine-verification";
 import { SCAN_SERVICE } from "@/app/services/scan-service/scan-service";
-import { unwrapArray } from "@/app/services/response-utils";
-import EmptyState from "@/app/components/EmptyState";
-import { ScanLine } from "lucide-react";
+import styles from "./ScanPage.module.css";
 
-type QueuedScan = {
-  gtin: string;
-  lot: string;
-  expiry: string;
-  serial: string;
-  facilityId: string;
-  action: string;
-  notes: string;
-  clientUuid: string;
-  clientTs: string;
-};
-
-const PENDING_SCANS_KEY = "pendingGs1Scans";
+type Attempt =
+  | { image: Blob; fields?: VerificationFields }
+  | { payload: VerificationRequest };
 
 export default function ScanPage() {
-  const [recent, setRecent] = useState<any[]>([]);
-  const [queuedScans, setQueuedScans] = useState<QueuedScan[]>([]);
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [decoding, setDecoding] = useState(false);
-  const [lookupBusy, setLookupBusy] = useState(false);
-  const [lookupNotice, setLookupNotice] = useState("");
-  const [medicine, setMedicine] = useState<any>(null);
-  const [validation, setValidation] = useState<any>(null);
-  const formRef = useRef<HTMLFormElement>(null);
-  const [form, setForm] = useState({
-    gtin: "",
-    lot: "",
-    expiry: "",
-    serial: "",
-    facilityId: "",
-    action: "NEW",
-    notes: "",
+  const [barcode, setBarcode] = useState("");
+  const [nafdacNumber, setNafdacNumber] = useState("");
+  const [fields, setFields] = useState<
+    Record<ComparisonField | "productName" | "strength", string>
+  >({
+    productName: "",
+    strength: "",
+    brandName: "",
+    genericName: "",
+    manufacturer: "",
   });
-  const [notice, setNotice] = useState("");
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const [queueStorageKey, setQueueStorageKey] = useState(
-    `${PENDING_SCANS_KEY}:anonymous`,
-  );
-  const load = async () => {
-    const response = await SCAN_SERVICE.recent(5);
-    if (response.success) setRecent(unwrapArray(response.data));
-  };
-  useEffect(() => {
-    void load();
-    setIsOnline(navigator.onLine);
-    const updateOnline = () => setIsOnline(navigator.onLine);
-    window.addEventListener("online", updateOnline);
-    window.addEventListener("offline", updateOnline);
-    try {
-      const session = JSON.parse(
-        window.localStorage.getItem("userSession") ?? "{}",
-      );
-      const user = session.user ?? {};
-      const scopeId =
-        user.id ??
-        user.user_id ??
-        user.facility_id ??
-        user.facility?.id ??
-        session.facilityId ??
-        "anonymous";
-      const storageKey = `${PENDING_SCANS_KEY}:${scopeId}`;
-      setQueueStorageKey(storageKey);
-      const pending = JSON.parse(
-        window.localStorage.getItem(storageKey) ?? "[]",
-      );
-      if (Array.isArray(pending)) setQueuedScans(pending);
-    } catch {
-      window.localStorage.removeItem(queueStorageKey);
-    }
-    return () => {
-      window.removeEventListener("online", updateOnline);
-      window.removeEventListener("offline", updateOnline);
-    };
-  }, []);
-  useEffect(() => {
-    try {
-      const session = JSON.parse(
-        window.localStorage.getItem("userSession") ?? "{}",
-      );
-      const user = session.user ?? {};
-      const facilityId =
-        user.facility_id ??
-        user.facility?.id ??
-        user.hospital?.id ??
-        session.facilityId ??
-        "";
-      if (facilityId) setForm((current) => ({ ...current, facilityId }));
-    } catch {
-      // The operator can still supply the facility ID manually if session data is unavailable.
-    }
-  }, []);
-  const lookupMedicine = async (gtin = form.gtin) => {
-    const normalizedGtin = gtin.trim();
-    if (!normalizedGtin) {
-      setLookupNotice("Enter a GTIN before looking up a medicine.");
-      return null;
-    }
-    setLookupBusy(true);
-    const response = await SCAN_SERVICE.lookup(normalizedGtin);
-    setLookupBusy(false);
-    if (!response.success) {
-      setMedicine(null);
-      setLookupNotice(response.message || "Medicine lookup failed.");
-      return null;
-    }
-    const result = (response.data as any)?.medicine ?? response.data;
-    setMedicine(result || null);
-    setLookupNotice(
-      result
-        ? "Medicine found in the catalog."
-        : "No catalog medicine matches this GTIN. You can still submit the identifiers.",
-    );
-    return result || null;
-  };
-  const saveQueue = (items: QueuedScan[]) => {
-    try {
-      window.localStorage.setItem(queueStorageKey, JSON.stringify(items));
-      setQueuedScans(items);
-      return true;
-    } catch {
-      const message =
-        "The scan queue could not be saved on this device. Keep the details and try again.";
-      setNotice(message);
-      toast.error(message);
-      return false;
-    }
-  };
-  const syncQueuedScans = async () => {
-    if (!queuedScans.length || syncing) return;
-    if (!navigator.onLine) {
-      toast.warning(
-        "You are offline. Pending scans will stay saved on this device.",
-      );
-      setNotice(
-        "You are offline. Pending scans will stay saved on this device.",
-      );
-      return;
-    }
-    setSyncing(true);
-    const response = await SCAN_SERVICE.batch(queuedScans);
-    setSyncing(false);
-    if (!response.success) {
-      toast.error(
-        response.message || "Queued scans could not be synchronized.",
-      );
-      setNotice(response.message || "Queued scans could not be synchronized.");
-      return;
-    }
-    const payload = response.data as any;
-    const results = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.results)
-        ? payload.results
-        : Array.isArray(payload?.data)
-          ? payload.data
-          : null;
-    if (!results) {
-      toast.warning(
-        "Pending scans were kept because synchronization could not be confirmed.",
-      );
-      setNotice(
-        "The server did not return item-level results. Pending scans were kept.",
-      );
-      return;
-    }
-    const resultsById = new Map(
-      results
-        .filter((result: any) => result?.clientUuid)
-        .map((result: any) => [result.clientUuid, result]),
-    );
-    const remaining = queuedScans.filter((scan) => {
-      const result = resultsById.get(scan.clientUuid) as any;
-      return (
-        !result ||
-        result.success === false ||
-        ["FAILED", "ERROR"].includes(result.status)
-      );
-    });
-    if (!saveQueue(remaining)) return;
-    if (remaining.length)
-      toast.warning(
-        "Some scans remain queued. Review the synchronization details.",
-      );
-    else toast.success("Queued scans synchronized.");
-    setNotice(
-      remaining.length
-        ? `${queuedScans.length - remaining.length} scan(s) synced; ${remaining.length} remain queued.`
-        : `${queuedScans.length} scan(s) synchronized.`,
-    );
-    await load();
-  };
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    const payload: QueuedScan = {
-      ...form,
-      clientUuid: crypto.randomUUID(),
-      clientTs: new Date().toISOString(),
-    };
-    const response = await SCAN_SERVICE.create(payload);
-    const scanResult = response.data as any;
-    const savedStatus = scanResult?.result ?? scanResult?.status;
-    setNotice(
-      response.message ||
-        (response.success && savedStatus
-          ? `Scan recorded with status ${savedStatus}.`
-          : response.success
-            ? "Scan submitted to the inventory ledger."
-            : "Scan could not be submitted."),
-    );
-    if (response.success) {
-      if (
-        ["FLAGGED", "QUARANTINED"].includes(String(savedStatus).toUpperCase())
-      )
-        toast.warning(
-          response.message || "Scan recorded and flagged for review.",
+  const [error, setError] = useState("");
+  const [assessment, setAssessment] = useState<MedicineAssessment | null>(null);
+  const [attempt, setAttempt] = useState<Attempt | null>(null);
+  const [photoResult, setPhotoResult] = useState(false);
+  const lock = useRef(false);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const upload = useRef<HTMLInputElement>(null);
+  const result = useRef<HTMLDivElement>(null);
+
+  const run = async (next: Attempt) => {
+    if (lock.current) return;
+    if ("image" in next && !next.fields) {
+      try {
+        next = {
+          ...next,
+          fields: verificationMetadata({ ...fields, nafdacNumber }),
+        };
+      } catch (problem) {
+        setError(
+          problem instanceof Error
+            ? problem.message
+            : "Check the packaging fields.",
         );
-      else toast.success(response.message || "Scan saved to the ledger.");
-      setForm({
-        ...form,
-        gtin: "",
-        lot: "",
-        expiry: "",
-        serial: "",
-        notes: "",
-      });
-      setMedicine(null);
-      setValidation(null);
-      setLookupNotice("");
-      await load();
-    } else if (
-      !navigator.onLine ||
-      /failed to fetch|network request failed|load failed/i.test(
-        response.message,
-      )
-    ) {
-      if (!saveQueue([...queuedScans, payload])) {
-        setBusy(false);
+        setCameraOpen(false);
         return;
       }
-      toast.warning(
-        "Network unavailable. Scan saved on this device for later synchronization.",
-      );
-      setNotice(
-        "Network unavailable. Scan saved on this device for later synchronization.",
-      );
-      setForm({
-        ...form,
-        gtin: "",
-        lot: "",
-        expiry: "",
-        serial: "",
-        notes: "",
+    }
+    if ("image" in next) {
+      const problem = validateVerificationImage(next.image);
+      if (problem) {
+        setAssessment(null);
+        setAttempt(null);
+        setError(problem);
+        setCameraOpen(false);
+        return;
+      }
+    }
+    lock.current = true;
+    setBusy(true);
+    setError("");
+    setAssessment(null);
+    setAttempt(next);
+    try {
+      const response =
+        "image" in next
+          ? await SCAN_SERVICE.verifyImage(next.image, next.fields)
+          : await SCAN_SERVICE.verify(next.payload);
+      if (!response.success) {
+        setError(verificationError(response.status));
+        return;
+      }
+      const data = response.data as MedicineAssessment | null;
+      if (
+        !data?.identifiers ||
+        !data.authenticity ||
+        !data.productLookup ||
+        !data.expiry ||
+        !Array.isArray(data.comparisons)
+      ) {
+        setError(
+          "The server returned an incomplete assessment. Please try again.",
+        );
+        return;
+      }
+      setAssessment(data);
+      setPhotoResult("image" in next);
+      setCameraOpen(false);
+      requestAnimationFrame(() => result.current?.focus());
+    } catch {
+      setError(verificationError());
+    } finally {
+      lock.current = false;
+      setBusy(false);
+      setCameraOpen(false);
+    }
+  };
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      void run({
+        payload: verificationRequest(barcode, { ...fields, nafdacNumber }),
       });
+    } catch (problem) {
+      setAssessment(null);
+      setAttempt(null);
+      setError(
+        problem instanceof Error
+          ? problem.message
+          : "Check the barcode and try again.",
+      );
     }
-    if (
-      !response.success &&
-      navigator.onLine &&
-      !/failed to fetch|network request failed|load failed/i.test(
-        response.message,
-      )
-    )
-      toast.error(response.message || "Scan could not be submitted.");
-    setBusy(false);
   };
-  const decodeImage = async (image: Blob) => {
-    setDecoding(true);
-    const response = await SCAN_SERVICE.decode(image, {
-      facilityId: form.facilityId,
-      action: form.action,
-      notes: form.notes,
-      clientUuid: crypto.randomUUID(),
-      clientTs: new Date().toISOString(),
+  const clear = () => {
+    setAssessment(null);
+    setError("");
+    setAttempt(null);
+    setBarcode("");
+    setNafdacNumber("");
+    setFields({
+      brandName: "",
+      genericName: "",
+      manufacturer: "",
+      productName: "",
+      strength: "",
     });
-    setDecoding(false);
-    const responseData = response.data as any;
-    const hasDecodedIdentifiers = Boolean(
-      responseData?.identifiers ?? responseData?.decoded,
-    );
-    if (!response.success && !hasDecodedIdentifiers) {
-      toast.error(
-        response.message ||
-          "Camera decoding failed. Try again or enter the details manually.",
-      );
-      setNotice(
-        response.message ||
-          "Camera decoding failed. Enter the GS1 values manually.",
-      );
-      return;
-    }
-    const decoded =
-      responseData?.identifiers ?? responseData?.decoded ?? response.data ?? {};
-    const decodeResult = responseData;
-    setValidation(decodeResult?.validation ?? null);
-    const identifiers = {
-      gtin: decoded.gtin ?? decoded.GTIN ?? "",
-      lot: decoded.lot ?? decoded.batch ?? decoded.batchNumber ?? "",
-      expiry: decoded.expiry ?? decoded.expiryDate ?? "",
-      serial: decoded.serial ?? decoded.serialNumber ?? "",
-    };
-    if (!identifiers.gtin) {
-      toast.warning(
-        "No barcode identifiers were found. Try a clearer photo or enter the details manually.",
-      );
-      setNotice(
-        "The image was received, but no GS1 identifiers were returned. Try again or enter them manually.",
-      );
-      return;
-    }
-    setForm((current) => ({ ...current, ...identifiers }));
-    if (decodeResult?.medicine) {
-      setMedicine(decodeResult.medicine);
-      setLookupNotice("Medicine matched during GS1 decode.");
-    } else {
-      await lookupMedicine(identifiers.gtin);
-    }
-    setNotice(
-      decodeResult?.validation?.valid === false
-        ? "Identifiers decoded with validation issues. Review and correct them before submitting."
-        : response.message ||
-            "Identifiers decoded. Review the values, then submit them to the ledger.",
-    );
-    if (decodeResult?.validation?.valid === false)
-      toast.warning(
-        "Barcode decoded with validation issues. Review the highlighted details.",
-      );
-    else toast.info("Barcode captured. Review the details before submitting.");
-    setCameraOpen(false);
-    window.setTimeout(
-      () =>
-        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
-      0,
-    );
+    input.current?.focus();
   };
-  const field = (key: keyof typeof form, label: string, type = "text") => (
-    <label className="text-xs font-semibold text-g600" key={key}>
-      {label}
-      <input
-        className="mt-1 w-full rounded-lg border border-g200 px-3 py-2.5 text-sm font-normal"
-        required={key !== "notes"}
-        type={type}
-        value={form[key]}
-        onChange={(event) => {
-          setForm((current) => ({ ...current, [key]: event.target.value }));
-          setValidation(null);
-          if (key === "gtin") {
-            setMedicine(null);
-            setLookupNotice("");
-          }
-        }}
-      />
-    </label>
-  );
+
   return (
-    <div className="block animate-fade-up">
-      <header className="mb-6 rounded-2xl border border-g200 bg-linear-to-br from-w via-w to-pll p-5 shadow-sm">
-        <h1 className="flex items-center gap-2 text-xl font-bold text-g900">
-          <ScanLine className="size-5 text-p" aria-hidden="true" />
-          GS1 DataMatrix Scanner
-        </h1>
-        <p className="mt-1 text-[12.5px] text-g500">
-          Validate and log product identifiers
-        </p>
+    <div className={styles.page}>
+      <header className={styles.hero}>
+        <div>
+          <span className={styles.eyebrow}>
+            <ScanLine size={15} aria-hidden="true" /> SCAN VIAL / MEDICINE
+            VERIFICATION
+          </span>
+          <h1>
+            A closer look.
+            <br />
+            <span>A more informed decision.</span>
+          </h1>
+          <p>
+            Read the pack. Check the product details. Understand what the
+            evidence can tell you.
+          </p>
+        </div>
+        <div className={styles.heroNote}>
+          <ShieldQuestion size={29} aria-hidden="true" />
+          <strong>Evidence, with clarity</strong>
+          <p>
+            Label information can support product identification. Individual
+            pack authenticity remains unverified.
+          </p>
+        </div>
       </header>
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="flex flex-col gap-4">
-          <section className="rounded-xl border border-g200 bg-w p-6">
-            <div className="mb-4">
-              <h2 className="text-[15px] font-bold text-g900">
-                Scan a product
-              </h2>
-              <p className="mt-1 text-xs text-g500">
-                Capture the GS1 DataMatrix to decode GTIN, lot, expiry date, and
-                serial number.
-              </p>
+      <div className={styles.steps}>
+        {[
+          "Capture the barcode",
+          "Check the official record",
+          "Review the evidence",
+        ].map((text, i) => (
+          <div key={text}>
+            <span>{String(i + 1).padStart(2, "0")}</span>
+            {text}
+          </div>
+        ))}
+      </div>
+      <div className={styles.workspace}>
+        <div className={styles.entry}>
+          <section className={styles.card}>
+            <div className={styles.sectionHeading}>
+              <span className={styles.icon}>
+                <CameraIcon size={20} aria-hidden="true" />
+              </span>
+              <div>
+                <h2>Start with the pack</h2>
+                <p>Capture a clear, close-up view of its GS1 DataMatrix.</p>
+              </div>
             </div>
             <button
-              className="group relative flex min-h-52 w-full flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-g300 bg-g50 px-5 py-7 text-center transition hover:border-p hover:bg-pll"
-              onClick={() => setCameraOpen(true)}
               type="button"
+              className={styles.scanTarget}
+              disabled={busy}
+              onClick={() => setCameraOpen(true)}
             >
-              <span className="pointer-events-none absolute inset-5 rounded-lg border border-p/40" />
-              <span className="pointer-events-none absolute inset-x-8 top-1/2 h-0.5 animate-pulse bg-p/70 shadow-[0_0_12px_rgba(8,145,178,0.55)]" />
-              <span className="relative mb-3 flex size-12 items-center justify-center rounded-xl bg-pl text-p">
-                <svg
-                  className="size-6 fill-none stroke-current stroke-2"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
+              <span className={styles.scanFrame}>
+                <ScanLine size={48} strokeWidth={1.3} aria-hidden="true" />
               </span>
-              <span className="relative text-sm font-semibold text-g800">
-                Tap to activate camera
-              </span>
-              <span className="relative mt-1 text-xs text-g500">
-                Aim at the DataMatrix, then capture and decode
-              </span>
+              <strong>Open camera scanner</strong>
+              <span>Position the square code inside the frame</span>
             </button>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className={styles.captureActions}>
               <button
-                className="rounded-lg bg-p px-3.5 py-2 text-xs font-semibold text-white"
-                onClick={() => setCameraOpen(true)}
                 type="button"
+                className={styles.primary}
+                disabled={busy}
+                onClick={() => setCameraOpen(true)}
               >
-                Camera scan
+                <CameraIcon size={16} aria-hidden="true" /> Use camera
               </button>
               <button
-                className="rounded-lg border border-g200 bg-w px-3.5 py-2 text-xs font-semibold text-g700 hover:border-p"
-                onClick={() =>
-                  formRef.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  })
-                }
                 type="button"
+                className={styles.secondary}
+                disabled={busy}
+                onClick={() => upload.current?.click()}
               >
-                Manual entry
+                <Upload size={16} aria-hidden="true" /> Upload photo
               </button>
             </div>
-            <p className="mt-3 text-[11px] leading-5 text-g500">
-              Scan the medicine barcode, review the captured details, then save
-              the item. You can also enter the details manually.
+            <input
+              ref={upload}
+              className={styles.fileInput}
+              type="file"
+              accept="image/jpeg,image/png"
+              aria-label="Upload a medicine barcode photo"
+              disabled={busy}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) void run({ image: file });
+              }}
+            />
+            <p className={styles.caption}>
+              JPEG or PNG · Up to 10 MB · Good lighting, no glare
             </p>
           </section>
-          <form
-            ref={formRef}
-            className="rounded-xl border border-g200 bg-w p-6"
-            onSubmit={(event) => void submit(event)}
-          >
-            <h2 className="mb-4 text-[15px] font-bold text-g900">
-              Log scanned item
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {field("gtin", "GTIN (14 digits)")}
-              {field("lot", "Lot / batch number")}
-              {field("expiry", "Expiry date", "date")}
-              {field("serial", "Serial number")}
-              {field("facilityId", "Facility ID (UUID)")}
-              <label className="text-xs font-semibold text-g600">
-                Action
-                <select
-                  className="mt-1 w-full rounded-lg border border-g200 bg-w px-3 py-2.5 text-sm font-normal"
-                  value={form.action}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      action: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="NEW">New stock</option>
-                  <option value="AVAILABLE">Available</option>
-                  <option value="NEAR_EXPIRY">Near expiry</option>
-                </select>
+          <form className={styles.card} onSubmit={submit}>
+            <div className={styles.sectionHeading}>
+              <span className={styles.icon}>
+                <ScanLine size={20} aria-hidden="true" />
+              </span>
+              <div>
+                <h2>Check a Nigerian registration</h2>
+                <p>
+                  Enter the NAFDAC number printed on the pack. A barcode is
+                  optional.
+                </p>
+              </div>
+            </div>
+            <fieldset disabled={busy} className={styles.fieldset}>
+              <label className={styles.label} htmlFor="verification-nafdac">
+                NAFDAC registration number
+                <input
+                  id="verification-nafdac"
+                  type="text"
+                  maxLength={50}
+                  value={nafdacNumber}
+                  placeholder="Enter the number printed on the pack"
+                  aria-describedby="nafdac-help"
+                  onChange={(event) => {
+                    setNafdacNumber(event.target.value);
+                    setAssessment(null);
+                    setAttempt(null);
+                    setError("");
+                  }}
+                />
               </label>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <button
-                className="rounded-lg border border-g200 bg-w px-3 py-2 text-xs font-semibold text-g700 hover:border-p disabled:opacity-50"
-                disabled={lookupBusy || !form.gtin.trim()}
-                onClick={() => void lookupMedicine()}
-                type="button"
-              >
-                {lookupBusy ? "Looking up…" : "Look up GTIN"}
-              </button>
-              {lookupNotice ? (
-                <p className="text-xs text-g600" role="status">
-                  {lookupNotice}
-                </p>
-              ) : null}
-            </div>
-            {medicine ? (
-              <div className="mt-3 rounded-lg border border-g200 bg-g50 p-3 text-sm">
-                <p className="font-semibold text-g800">
-                  {medicine.generic_name ?? medicine.name ?? "Medicine"}
-                  {medicine.brand ? ` · ${medicine.brand}` : ""}
-                </p>
-                {medicine.gtin ? (
-                  <p className="mt-1 text-xs text-g500">GTIN {medicine.gtin}</p>
-                ) : null}
-              </div>
-            ) : null}
-            {validation ? (
-              <div
-                className={`mt-3 rounded-lg border p-3 text-sm ${validation.valid ? "border-good/30 bg-okl text-good" : "border-warn/40 bg-warnl text-g800"}`}
-                role="status"
-              >
-                <p className="font-semibold">
-                  GS1 validation:{" "}
-                  {validation.status ??
-                    (validation.valid ? "VALID" : "REVIEW REQUIRED")}
-                </p>
-                {Array.isArray(validation.messages) &&
-                validation.messages.length ? (
-                  <ul className="mt-1 list-disc pl-5 text-xs">
-                    {validation.messages.map(
-                      (message: string, index: number) => (
-                        <li key={`${message}-${index}`}>{message}</li>
-                      ),
-                    )}
-                  </ul>
-                ) : null}
-              </div>
-            ) : null}
-            <label className="mt-3 block text-xs font-semibold text-g600">
-              Notes
-              <textarea
-                className="mt-1 w-full rounded-lg border border-g200 px-3 py-2.5 text-sm font-normal"
-                value={form.notes}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    notes: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <button
-              disabled={busy}
-              className="mt-4 rounded-lg bg-p px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              {busy ? "Submitting…" : "Submit to ledger"}
-            </button>
-            {notice ? (
-              <p className="mt-3 text-sm text-g600" role="status">
-                {notice}
+              <p id="nafdac-help" className={styles.caption}>
+                Checks Nigerian registration records. Registration matching does
+                not authenticate the physical pack.
               </p>
-            ) : null}
+              <label className={styles.label} htmlFor="verification-barcode">
+                Barcode or GTIN (optional with a NAFDAC number)
+              </label>
+              <textarea
+                ref={input}
+                id="verification-barcode"
+                className={styles.barcode}
+                rows={3}
+                value={barcode}
+                onChange={(event) => {
+                  setBarcode(event.target.value);
+                  setAssessment(null);
+                  setAttempt(null);
+                  setError("");
+                }}
+                placeholder="Scan or paste the full GS1 code, or type a GTIN"
+                aria-describedby="barcode-help"
+              />
+              <p id="barcode-help" className={styles.caption}>
+                Full GS1 data preserves batch, serial and expiry. A GTIN-only
+                check retrieves product information.
+              </p>
+              <details className={styles.optional}>
+                <summary>
+                  Compare the text on your packaging <span>Optional</span>
+                </summary>
+                <p className={styles.caption}>
+                  Enter exactly what is printed on the pack. Product name,
+                  manufacturer and strength are compared with the Nigerian
+                  registration record. Brand and generic name use US label data
+                  when a barcode is available.
+                </p>
+                {(
+                  Object.entries({
+                    productName: "Product name",
+                    manufacturer: "Manufacturer",
+                    strength: "Strength",
+                    brandName: COMPARISON_LABELS.brandName,
+                    genericName: COMPARISON_LABELS.genericName,
+                  }) as [keyof typeof fields, string][]
+                ).map(([field, label]) => (
+                  <label className={styles.label} key={field}>
+                    {label}
+                    <input
+                      type="text"
+                      maxLength={200}
+                      value={fields[field]}
+                      onChange={(event) => {
+                        setFields((current) => ({
+                          ...current,
+                          [field]: event.target.value,
+                        }));
+                        setAssessment(null);
+                        setAttempt(null);
+                      }}
+                    />
+                  </label>
+                ))}
+              </details>
+              <button
+                className={styles.primary}
+                disabled={busy || (!barcode.trim() && !nafdacNumber.trim())}
+                type="submit"
+              >
+                {busy ? (
+                  <LoaderCircle
+                    size={17}
+                    className={styles.spin}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <FileSearch size={17} aria-hidden="true" />
+                )}
+                {busy ? "Checking medicine…" : "Check medicine details"}
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </fieldset>
           </form>
+          <p className={styles.intakeNote}>
+            <Info size={16} aria-hidden="true" /> This check does not add stock
+            or create a scan-history record. Add stock separately in Inventory.
+          </p>
+          <p className={styles.intakeNote}>
+            <ShieldQuestion size={16} aria-hidden="true" /> Pack authenticity
+            unverified. Registration and label matches do not authenticate the
+            physical pack.
+          </p>
         </div>
-        <div className="flex flex-col gap-4">
-          {queuedScans.length ? (
-            <section className="rounded-xl border border-warn/40 bg-warnl p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-bold text-g900">
-                    Pending offline scans
-                  </h2>
-                  <p className="mt-1 text-xs text-g700">
-                    {queuedScans.length} scan(s) are saved on this device and
-                    have not been confirmed by the server.
-                  </p>
-                </div>
+        <section
+          className={styles.evidence}
+          ref={result}
+          tabIndex={-1}
+          aria-label="Medicine assessment"
+        >
+          {busy ? (
+            <output className={`${styles.card} ${styles.empty}`}>
+              <LoaderCircle
+                className={styles.spin}
+                size={34}
+                aria-hidden="true"
+              />
+              <h2>Checking the evidence</h2>
+              <p>
+                Reading identifiers and requesting official product information.
+                Nigerian registration checks can take up to 95 seconds. Please
+                keep this page open; requests are not retried automatically.
+              </p>
+            </output>
+          ) : null}
+          {error ? (
+            <section className={styles.error} role="alert">
+              <h2>We couldn’t complete this check</h2>
+              <p>{error}</p>
+              {attempt ? (
                 <button
                   type="button"
-                  disabled={syncing || !isOnline}
-                  onClick={() => void syncQueuedScans()}
-                  className="rounded-lg bg-p px-3.5 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                  className={styles.secondary}
+                  onClick={() => void run(attempt)}
                 >
-                  {syncing ? "Synchronizing…" : "Sync pending scans"}
+                  Try again
                 </button>
+              ) : null}
+            </section>
+          ) : null}
+          {assessment && !busy ? (
+            <>
+              <div className={styles.resultHeading}>
+                <span>ASSESSMENT RESULTS</span>
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  onClick={clear}
+                >
+                  <X size={14} aria-hidden="true" /> Clear & start again
+                </button>
+              </div>
+              <MedicineVerificationResult
+                assessment={assessment}
+                photoResult={photoResult}
+                onRetry={() => {
+                  if (attempt) void run(attempt);
+                }}
+              />
+            </>
+          ) : !busy && !error ? (
+            <section className={`${styles.card} ${styles.empty}`}>
+              <span className={styles.emptyIcon}>
+                <FileSearch size={38} strokeWidth={1.3} aria-hidden="true" />
+              </span>
+              <span className={styles.eyebrow}>FROM CODE TO CONTEXT</span>
+              <h2>Your evidence, in one place</h2>
+              <p>
+                Enter a NAFDAC number or scan a pack to see its identifiers,
+                available registration and label details and any differences
+                that need a closer look.
+              </p>
+              <div className={styles.previewRows}>
+                {[
+                  "Packaging identifiers",
+                  "Nigerian registration records",
+                  "Official product information",
+                  "Label comparisons",
+                  "Pack authenticity status",
+                ].map((text) => (
+                  <div key={text}>
+                    <span />
+                    {text}
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </div>
+                ))}
               </div>
             </section>
           ) : null}
-          <section className="rounded-xl border border-g200 bg-w p-5">
-            <h2 className="mb-3 text-[15px] font-bold text-g900">
-              Monthly scans
-            </h2>
-            <div className="relative h-[170px]">
-              <MonthlyScansChart />
+          <aside className={styles.scope}>
+            <Info size={18} aria-hidden="true" />
+            <div>
+              <h3>Know the scope of this check</h3>
+              <p>
+                Nigerian registration evidence comes from NAFDAC Greenbook via
+                Apify, a third-party retrieval service, not an official API. US
+                label information comes from openFDA. Coverage is not
+                guaranteed. A missing record does not mean a medicine is fake.
+              </p>
+              <p>
+                Follow the authentication instructions printed on an eligible
+                pack for manufacturer or scratch-code verification.
+              </p>
             </div>
-          </section>
-          <section className="rounded-xl border border-g200 bg-w p-5">
-            <h2 className="mb-3 text-[15px] font-bold text-g900">
-              Recent scans
-            </h2>
-            {recent.map((scan, index) => (
-              <article
-                className="border-t border-g100 py-3"
-                key={scan.id ?? index}
-              >
-                <p className="text-sm font-semibold text-g800">
-                  {scan.lot ?? scan.batchNumber ?? "Scan"} ·{" "}
-                  {scan.drug ?? scan.gtin}
-                </p>
-                <p className="mt-1 text-xs text-g500">
-                  {scan.result ?? scan.status ?? "N/A"} ·{" "}
-                  {scan.at
-                    ? new Date(scan.at).toLocaleString("en-NG")
-                    : scan.gtin}
-                </p>
-              </article>
-            ))}
-            {!recent.length ? (
-              <EmptyState
-                compact
-                icon={ScanLine}
-                title="Ready for your first scan"
-                description="Capture a GS1 DataMatrix or enter identifiers to build your scan history."
-              />
-            ) : null}
-          </section>
-        </div>
+          </aside>
+        </section>
       </div>
       {cameraOpen ? (
         <Camera
-          onCapture={decodeImage}
+          busy={busy}
+          onCapture={(image) => run({ image })}
           onClose={() => setCameraOpen(false)}
-          busy={decoding}
         />
       ) : null}
     </div>

@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import AuthPages from "@/app/components/AuthPages";
-import { useProvider } from "@/app/providers/provider";
 import type { AuthView } from "@/app/lib/types";
+import { useProvider } from "@/app/providers/provider";
 import { AUTH_SERVICE } from "@/app/services/auth-service/auth-service";
 
 export default function AuthPage({
@@ -33,7 +33,12 @@ export default function AuthPage({
   const handleDoLogin = () => {
     // A fresh sign-in starts on the dashboard, without a stale admin shortcut.
     window.localStorage.removeItem("adminTarget");
-    router.push("/portal");
+    const returnTo = new URL(window.location.href).searchParams.get("returnTo");
+    router.push(
+      returnTo && /^\/pay\/[A-Za-z0-9-]{3,64}$/.test(returnTo)
+        ? returnTo
+        : "/portal",
+    );
   };
 
   const handleToggleTheme = () =>

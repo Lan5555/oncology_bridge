@@ -11,14 +11,22 @@ const id = (value: string) => encodeURIComponent(value);
 
 /** API paths and query builders are kept here so service classes stay route agnostic. */
 export class Routes {
-  static ADMIN_PRESCRIPTIONS = (params = "") => `/admin/api/prescriptions${params ? `?${params}` : ""}`;
-  static ADMIN_PRESCRIPTION = (prescriptionId: string) => `/admin/api/prescriptions/${id(prescriptionId)}`;
-  static ADMIN_PRESCRIPTION_DECISION = (prescriptionId: string) => `${Routes.ADMIN_PRESCRIPTION(prescriptionId)}/decision`;
-  static SHIPMENTS = (page = 1) => `/api/shipments${query({ page, limit: 20 })}`;
-  static SHIPMENT_TEMPERATURE = (shipmentId: string) => `/api/shipments/${id(shipmentId)}/temperature`;
-  static SHIPMENT_HISTORY = (shipmentId: string, page = 1) => `${Routes.SHIPMENT_TEMPERATURE(shipmentId)}/history${query({ page, limit: 20 })}`;
-  static SHIPMENT_EVENTS = (shipmentId: string, page = 1) => `${Routes.SHIPMENT_TEMPERATURE(shipmentId)}/events${query({ page, limit: 20 })}`;
-  static SHIPMENT_SYNC = (shipmentId: string) => `/admin/api/shipments/${id(shipmentId)}/temperature/sync`;
+  static ADMIN_PRESCRIPTIONS = (params = "") =>
+    `/admin/api/prescriptions${params ? `?${params}` : ""}`;
+  static ADMIN_PRESCRIPTION = (prescriptionId: string) =>
+    `/admin/api/prescriptions/${id(prescriptionId)}`;
+  static ADMIN_PRESCRIPTION_DECISION = (prescriptionId: string) =>
+    `${Routes.ADMIN_PRESCRIPTION(prescriptionId)}/decision`;
+  static SHIPMENTS = (page = 1) =>
+    `/api/shipments${query({ page, limit: 20 })}`;
+  static SHIPMENT_TEMPERATURE = (shipmentId: string) =>
+    `/api/shipments/${id(shipmentId)}/temperature`;
+  static SHIPMENT_HISTORY = (shipmentId: string, page = 1) =>
+    `${Routes.SHIPMENT_TEMPERATURE(shipmentId)}/history${query({ page, limit: 20 })}`;
+  static SHIPMENT_EVENTS = (shipmentId: string, page = 1) =>
+    `${Routes.SHIPMENT_TEMPERATURE(shipmentId)}/events${query({ page, limit: 20 })}`;
+  static SHIPMENT_SYNC = (shipmentId: string) =>
+    `/admin/api/shipments/${id(shipmentId)}/temperature/sync`;
   static ORDERS = (params = "") => `/api/orders${params ? `?${params}` : ""}`;
   static ORDER = (orderId: string) => `/api/orders/${id(orderId)}`;
   static ADMIN_ORDERS = (params = "") =>
@@ -73,11 +81,14 @@ export class Routes {
 
   static SCANS = "/api/scans";
   static SCANS_DECODE = "/api/scans/decode";
+  static SCANS_VERIFY = "/api/scans/verify";
+  static SCANS_VERIFY_IMAGE = "/api/scans/verify-image";
   static SCANS_BATCH = "/api/scans/batch";
   static SCANS_RECENT = (limit = 5) => `/api/scans/recent${query({ limit })}`;
   static SCANS_MONTHLY = "/api/scans/monthly";
   static GS1_LOOKUP = (gtin: string) => `/api/gs1/lookup${query({ gtin })}`;
   static MEDICINES = "/api/medicines";
+  static MEDICINES_BULK = "/api/medicines/bulk";
   static MEDICINE_ITEM = (medicineId: string) =>
     `/api/medicines/${id(medicineId)}`;
   static MEDICINE_BY_GTIN = (gtin: string) => `/api/medicines/gtin/${id(gtin)}`;
@@ -134,6 +145,8 @@ export class Routes {
 
   static SETTINGS = "/api/settings";
   static NOTIFICATIONS = "/api/notifications";
+  static NOTIFICATIONS_FOR_USER = (userId: string) =>
+    `${Routes.NOTIFICATIONS}${query({ userId })}`;
   static NOTIFICATION_READ = (notificationId: string) =>
     `/api/notifications/${id(notificationId)}/read`;
 

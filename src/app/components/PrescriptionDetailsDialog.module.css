@@ -1,0 +1,372 @@
+.dialog {
+  --rx-accent: var(--portal-accent, #315fba);
+  --rx-surface: var(--portal-raised, var(--w));
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(740px, calc(100% - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 1px solid var(--g200);
+  border-radius: 18px;
+  background: var(--rx-surface);
+  color: var(--g900);
+  box-shadow: 0 24px 100px -20px #06132966;
+  overscroll-behavior: contain;
+}
+.dialog::backdrop {
+  background: #07172c99;
+  backdrop-filter: blur(4px);
+}
+.dialog[open] {
+  animation: rxDialogEnter 180ms ease-out;
+}
+.dialog :is(button, textarea):focus-visible {
+  outline: 2px solid var(--rx-accent);
+  outline-offset: 3px;
+}
+.dialog button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 23px 26px;
+  border-bottom: 1px solid var(--g200);
+}
+.headerIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid color-mix(in srgb, var(--rx-accent) 18%, transparent);
+  border-radius: 14px;
+  color: var(--rx-accent);
+  background: color-mix(in srgb, var(--rx-accent) 7%, var(--w));
+}
+.header h2 {
+  font-size: 20px;
+  line-height: 1.4;
+  letter-spacing: -0.4px;
+  font-weight: 700;
+}
+.eyebrow {
+  color: var(--g500);
+  font-size: 10px;
+  margin-bottom: 3px;
+}
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--g200);
+  border-radius: 8px;
+  padding: 7px;
+  margin-left: auto;
+  color: var(--g500);
+  cursor: pointer;
+}
+.close:hover {
+  background: var(--g50);
+}
+.body {
+  padding: 24px 26px;
+}
+.patient {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--g200);
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: color-mix(in srgb, var(--rx-accent) 4%, var(--rx-surface));
+}
+.patient > div {
+  min-width: 0;
+}
+.patientIcon {
+  color: var(--rx-accent);
+  display: flex;
+  flex-shrink: 0;
+}
+.patient p {
+  font-size: 10px;
+  color: var(--g500);
+  margin-bottom: 4px;
+}
+.patient h3 {
+  font-size: 17px;
+  line-height: 1.5;
+  letter-spacing: -0.3px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.recordTag {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--rx-accent);
+  border: 1px solid color-mix(in srgb, var(--rx-accent) 15%, transparent);
+  border-radius: 5px;
+  padding: 4px 7px;
+  font-size: 9px;
+  background: var(--rx-surface);
+}
+.statuses {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-block: 1px solid var(--g100);
+  margin-top: 22px;
+  padding-block: 18px;
+  gap: 20px;
+}
+.statuses > div + div {
+  border-left: 1px solid var(--g200);
+  padding-left: 22px;
+}
+.statuses p {
+  color: var(--g500);
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+.information {
+  margin-top: 23px;
+}
+.information h3,
+.description h3 {
+  font-size: 13px;
+  font-weight: 650;
+}
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px 28px;
+  margin-top: 17px;
+}
+.fields dt {
+  font-size: 10px;
+  color: var(--g500);
+  margin-bottom: 6px;
+}
+.fields dd {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--g800);
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.description {
+  margin-top: 25px;
+  padding-top: 22px;
+  border-top: 1px solid var(--g200);
+}
+.descriptionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.descriptionHeading h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.descriptionHeading :where(h3) svg {
+  color: var(--rx-accent);
+}
+.descriptionText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.9;
+  border: 1px solid var(--g200);
+  border-radius: 10px;
+  padding: 16px;
+  color: var(--g700);
+  background: var(--w);
+}
+.descriptionForm {
+  padding: 15px;
+  border: 1px solid var(--g200);
+  border-radius: 10px;
+  background: var(--w);
+}
+.editActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  border: 1px solid var(--g200);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--g700);
+  background: var(--rx-surface);
+  cursor: pointer;
+}
+.button:hover {
+  background: var(--g50);
+}
+.primary {
+  background: var(--p);
+  color: var(--on-primary);
+  border-color: transparent;
+}
+.primary:hover {
+  background: var(--pd);
+}
+.editHint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--g500);
+  font-size: 10px;
+  line-height: 1.8;
+}
+.editHint svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.error,
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.8;
+  padding: 12px 14px;
+  border-radius: 9px;
+  margin-top: 16px;
+}
+.error {
+  color: var(--status-error);
+  border: 1px solid color-mix(in srgb, var(--status-error) 22%, transparent);
+  background: color-mix(in srgb, var(--status-error) 4%, var(--rx-surface));
+}
+.notice {
+  color: var(--rx-accent);
+  border: 1px solid var(--g200);
+  background: color-mix(in srgb, var(--rx-accent) 5%, var(--rx-surface));
+}
+.error svg,
+.notice svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.workflowNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--g500);
+  font-size: 10px;
+  line-height: 1.8;
+  margin-top: 24px;
+}
+.workflowNote svg {
+  flex-shrink: 0;
+  color: var(--rx-accent);
+  margin-top: 2px;
+}
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 17px 26px;
+  border-top: 1px solid var(--g200);
+  background: color-mix(in srgb, var(--g50) 48%, var(--rx-surface));
+}
+.footer > span {
+  font-size: 10px;
+  color: var(--g500);
+}
+.spin {
+  animation: rxSpin 1s linear infinite;
+}
+@keyframes rxSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes rxDialogEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 540px) {
+  .dialog {
+    width: calc(100% - 20px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 14px;
+  }
+  .header {
+    padding: 18px;
+    gap: 10px;
+  }
+  .header h2 {
+    font-size: 18px;
+  }
+  .headerIcon {
+    width: 39px;
+    height: 39px;
+  }
+  .body {
+    padding: 18px;
+  }
+  .patient {
+    padding: 14px;
+  }
+  .recordTag {
+    display: none;
+  }
+  .fields {
+    grid-template-columns: 1fr;
+    gap: 17px;
+  }
+  .statuses {
+    gap: 14px;
+  }
+  .statuses > div + div {
+    padding-left: 14px;
+  }
+  .footer {
+    padding: 16px 18px;
+    flex-wrap: wrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open],
+  .spin {
+    animation: none;
+  }
+}
+@media (forced-colors: active) {
+  .headerIcon,
+  .patient {
+    background: Canvas;
+    color: CanvasText;
+    border: 1px solid CanvasText;
+  }
+  .primary {
+    border: 1px solid ButtonText;
+  }
+}

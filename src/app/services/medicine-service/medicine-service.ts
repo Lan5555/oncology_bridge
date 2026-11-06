@@ -1,4 +1,5 @@
 import { CoreService } from "@/app/hooks/service/core-service";
+import type { BulkMedicine } from "@/app/lib/bulk-medicines";
 import { MEDICINE_CATALOGUE_CHANGED } from "@/app/lib/medicine-availability";
 import { Routes } from "../api-routes";
 
@@ -21,6 +22,9 @@ class MedicineService extends CoreService {
   }
   async create(payload: MedicinePayload) {
     return await this.send(Routes.MEDICINES, payload);
+  }
+  async createBulk(medicines: BulkMedicine[]) {
+    return await this.send(Routes.MEDICINES_BULK, { medicines });
   }
   async update(id: string, payload: MedicinePayload) {
     return await super.update(Routes.MEDICINE_ITEM(id), payload);

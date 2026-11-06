@@ -1,15 +1,23 @@
 "use client";
 
-import { X } from "lucide-react";
+import {
+  Check,
+  ClipboardList,
+  Edit2,
+  FileText,
+  Info,
+  Loader2,
+  X,
+} from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
   type PrescriptionDisplayRow,
   prescriptionLocalTime,
 } from "../lib/prescription-display";
 import { PRESCRIPTION_SERVICE } from "../services/prescription-service/prescription-service";
-import management from "./Management.module.css";
-import styles from "./OrdersScreen.module.css";
 import PrescriptionDescriptionField from "./PrescriptionDescriptionField";
+import styles from "./PrescriptionDetailsDialog.module.css";
+import PrescriptionStatusBadge from "./PrescriptionStatusBadge";
 
 export default function PrescriptionDetailsDialog({
   record,
@@ -35,6 +43,11 @@ export default function PrescriptionDetailsDialog({
     record.order.trim().toUpperCase() === "WAITING";
   useEffect(() => {
     if (!dialog.current?.open) dialog.current?.showModal();
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = overflow;
+    };
   }, []);
 
   async function save(event: FormEvent) {
@@ -79,50 +92,82 @@ export default function PrescriptionDetailsDialog({
   return (
     <dialog
       ref={dialog}
-      className={management.recordDialog}
+      className={styles.dialog}
       aria-labelledby="prescription-details-title"
       onClose={onClose}
       onCancel={(event) => {
         if (savingLock.current) event.preventDefault();
       }}
     >
-      <header className={management.dialogHeader}>
+      <header className={styles.header}>
+        <span className={styles.headerIcon}>
+          <ClipboardList size={23} strokeWidth={1.6} />
+        </span>
         <div>
           <p className={styles.eyebrow}>Saved prescription</p>
           <h2 id="prescription-details-title">Prescription details</h2>
-          <p className={styles.muted}>Patient reference: {record.patientRef}</p>
         </div>
         <button
           type="button"
           aria-label="Close prescription details"
-          className={styles.button}
+          className={styles.close}
           disabled={saving}
           onClick={() => dialog.current?.close()}
         >
           <X size={18} />
         </button>
       </header>
-      <div className={management.dialogBody}>
-        <dl className="mb-6 grid gap-4 sm:grid-cols-2">
-          {[
-            ["Created by", record.createdBy],
-            ["Created at", prescriptionLocalTime(record.createdAt)],
-            ["Diagnosis", record.code],
-            ["Medicine", record.drug],
-            ["Insurer / payment", record.insurer],
-            ["Pharmacy", record.pharmacy],
-            ["Authorization", record.status],
-            ["Dispensing stage", record.order],
-          ].map(([label, value]) => (
-            <div className={management.recordField} key={label}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-        <section aria-label="Prescription description">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="font-semibold text-g800">Description</h3>
+      <div className={styles.body}>
+        <section className={styles.patient} aria-label="Patient reference">
+          <span className={styles.patientIcon}>
+            <FileText size={21} strokeWidth={1.6} />
+          </span>
+          <div>
+            <p>Patient reference</p>
+            <h3>{record.patientRef}</h3>
+          </div>
+          <span className={styles.recordTag}>Clinical record</span>
+        </section>
+        <section className={styles.statuses} aria-label="Prescription workflow">
+          <div>
+            <p>Authorization</p>
+            <PrescriptionStatusBadge status={record.status} />
+          </div>
+          <div>
+            <p>Dispensing stage</p>
+            <PrescriptionStatusBadge status={record.order} kind="dispensing" />
+          </div>
+        </section>
+        <section
+          className={styles.information}
+          aria-labelledby="prescription-information-title"
+        >
+          <h3 id="prescription-information-title">Prescription information</h3>
+          <dl className={styles.fields}>
+            {[
+              ["Medicine", record.drug],
+              ["Diagnosis / ICD-10", record.code],
+              ["Selected pharmacy", record.pharmacy],
+              ["Insurer / payment", record.insurer],
+              ["Created by", record.createdBy],
+              ["Created at", prescriptionLocalTime(record.createdAt)],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+        <section
+          className={styles.description}
+          aria-label="Prescription description"
+        >
+          <div className={styles.descriptionHeading}>
+            <h3>
+              <FileText size={16} />
+              Description
+            </h3>
             {eligible && !editing && (
               <button
                 type="button"
@@ -134,18 +179,22 @@ export default function PrescriptionDetailsDialog({
                   setNotice("");
                 }}
               >
+                <Edit2 size={13} />
                 Edit description
               </button>
             )}
           </div>
           {editing && eligible ? (
-            <form onSubmit={(event) => void save(event)}>
+            <form
+              className={styles.descriptionForm}
+              onSubmit={(event) => void save(event)}
+            >
               <PrescriptionDescriptionField
                 value={draft}
                 onChange={setDraft}
                 disabled={saving}
               />
-              <div className="flex justify-end gap-2">
+              <div className={styles.editActions}>
                 <button
                   type="button"
                   className={styles.button}
@@ -159,33 +208,50 @@ export default function PrescriptionDetailsDialog({
                   className={`${styles.button} ${styles.primary}`}
                   disabled={saving || draft.length > 2000}
                 >
+                  {saving ? (
+                    <Loader2 size={14} className={styles.spin} />
+                  ) : (
+                    <Check size={14} />
+                  )}
                   {saving ? "Saving…" : "Save description"}
                 </button>
               </div>
             </form>
           ) : (
-            <p className="whitespace-pre-wrap break-words rounded-xl border border-g200 bg-g50 p-4 text-sm text-g800">
+            <p className={styles.descriptionText}>
               {record.description ?? "No description provided"}
             </p>
           )}
           {!eligible && (
-            <p className="mt-3 text-xs text-g500">
+            <p className={styles.editHint}>
+              <Info size={13} />
               The prescribing doctor can edit the description while
               authorization is Pending and dispensing is Waiting.
             </p>
           )}
         </section>
         {error && (
-          <p role="alert" className={`${styles.error} mt-4`}>
+          <p role="alert" className={styles.error}>
+            <Info size={15} />
             {error}
           </p>
         )}
         {notice && (
-          <output className={`${styles.notice} mt-4 block`}>{notice}</output>
+          <output className={styles.notice}>
+            <Check size={15} />
+            {notice}
+          </output>
         )}
+        <aside className={styles.workflowNote}>
+          <Info size={15} />
+          <p>
+            Authorization and dispensing are separate stages. This record does
+            not confirm marketplace payment or delivery.
+          </p>
+        </aside>
       </div>
-      <footer className={management.dialogFooter}>
-        <span className={styles.muted}>Saved clinical record</span>
+      <footer className={styles.footer}>
+        <span>Times shown in your local timezone</span>
         <button
           type="button"
           className={styles.button}

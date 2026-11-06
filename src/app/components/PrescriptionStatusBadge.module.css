@@ -1,0 +1,47 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.badge svg {
+  flex-shrink: 0;
+  margin-block: 1px;
+}
+.neutral {
+  color: var(--g600);
+  background: var(--g50);
+  border-color: var(--g200);
+}
+.positive {
+  color: var(--portal-accent, var(--p));
+  background: color-mix(in srgb, var(--portal-accent, var(--p)) 8%, var(--w));
+  border-color: color-mix(
+    in srgb,
+    var(--portal-accent, var(--p)) 19%,
+    transparent
+  );
+}
+.pending {
+  color: var(--status-warn);
+  background: color-mix(in srgb, var(--status-warn) 7%, var(--w));
+  border-color: color-mix(in srgb, var(--status-warn) 20%, transparent);
+}
+.negative {
+  color: var(--status-error);
+  background: color-mix(in srgb, var(--status-error) 6%, var(--w));
+  border-color: color-mix(in srgb, var(--status-error) 19%, transparent);
+}
+@media (forced-colors: active) {
+  .badge {
+    border-color: CanvasText;
+  }
+}

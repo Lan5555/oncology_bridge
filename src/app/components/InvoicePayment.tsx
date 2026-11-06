@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import type { InvoiceStatus } from "@/app/lib/marketplace-payment";
 import { INVOICE_SERVICE } from "@/app/services/invoice-service/invoice-service";
 
 interface InvoicePaymentProps {
   paymentMethods: string[];
   reference: string;
-  status: "AWAITING_PAYMENT" | "PAID";
-  paystackUrl?: string;
+  status: InvoiceStatus;
+  paystackUrl?: string | null;
 }
 
-function safePaymentUrl(value?: string) {
+function safePaymentUrl(value?: string | null) {
   try {
     const url = new URL(value || "");
     return url.protocol === "https:" &&

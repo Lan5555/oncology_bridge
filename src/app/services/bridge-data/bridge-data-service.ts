@@ -1,4 +1,8 @@
 import type { AccountType, VerificationStatus } from "@/app/lib/accounts";
+import type {
+  InvoiceStatus,
+  PaymentProvider,
+} from "@/app/lib/marketplace-payment";
 import { INVOICE_SERVICE } from "@/app/services/invoice-service/invoice-service";
 import { PRESCRIPTION_SERVICE } from "@/app/services/prescription-service/prescription-service";
 import { RESEARCH_SERVICE } from "@/app/services/research-service/research-service";
@@ -7,15 +11,20 @@ import { unwrapArray } from "@/app/services/response-utils";
 export type RegistryResult = "MATCH" | "NO_MATCH" | "UNAVAILABLE";
 export interface InvoiceData {
   reference: string;
-  pharmacy: string;
-  status: "AWAITING_PAYMENT" | "PAID";
+  pharmacy?: string;
+  status: InvoiceStatus;
+  totalNaira?: number;
+  paymentProvider?: PaymentProvider;
+  authorizationUrl?: string | null;
+  expiresAt?: string | null;
+  fulfillmentState?: string;
   items: Array<{
     description: string;
     quantity: number;
     unitPriceNaira: number;
   }>;
   paymentMethods: string[];
-  paystackUrl?: string;
+  paystackUrl?: string | null;
   isDemo?: boolean;
 }
 export interface StockItem {

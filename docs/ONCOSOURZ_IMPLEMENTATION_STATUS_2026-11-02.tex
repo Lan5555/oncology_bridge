@@ -1,0 +1,425 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=24mm,headheight=15pt]{geometry}
+\usepackage{lmodern,microtype}
+\usepackage[table]{xcolor}
+\usepackage{booktabs,longtable,tabularx,array}
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\definecolor{navy}{HTML}{183B66}
+\definecolor{lightblue}{HTML}{EDF3FB}
+\definecolor{muted}{HTML}{52657B}
+\hypersetup{colorlinks=true,linkcolor=navy,urlcolor=navy,pdftitle={Oncosourz Implementation and Operational Readiness},pdfauthor={Oncosourz project audit}}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{navy}{Oncosourz / Oncology Bridge}}
+\fancyhead[R]{\small Implementation status}
+\fancyfoot[L]{\footnotesize Source audit: 2 November 2026}
+\fancyfoot[R]{\thepage}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlength{\emergencystretch}{2em}
+\setlist[itemize]{leftmargin=*,itemsep=3pt,topsep=4pt}
+\setlist[enumerate]{leftmargin=*,itemsep=4pt,topsep=4pt}
+\renewcommand{\arraystretch}{1.2}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\source}[1]{{\small\path{#1}}}
+\newcommand{\evidence}[1]{\textcolor{muted}{[E#1]}}
+\lstset{basicstyle=\ttfamily\small,backgroundcolor=\color{lightblue},frame=single,rulecolor=\color{lightblue},breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,tabsize=2}
+
+\begin{document}
+\begin{titlepage}
+\vspace*{18mm}
+{\large\textcolor{navy}{ONCOSOURZ / ONCOLOGY BRIDGE}\par}
+\vspace{14mm}
+{\Huge\bfseries Implementation and\par Operational Readiness\par}
+\vspace{8mm}
+{\Large Current functions, verified checks, incomplete work, and deployment requirements\par}
+\vspace{12mm}
+{\large Snapshot date: 2 November 2026\par}
+{\large Time context: Africa/Lagos\par}
+\vfill
+\colorbox{lightblue}{\parbox{0.92\textwidth}{\vspace{4mm}\textbf{Reading this report}\par
+This is a source-code and local-check assessment of the frontend workspace and the available sibling backend checkout. It distinguishes implemented code from live operational proof. No claim that a production service, payment provider, database migration, email channel, or physical sensor is currently functioning is made without corresponding evidence.\vspace{4mm}}}
+\vspace{10mm}
+\textcolor{muted}{Prepared from the current working files, including uncommitted changes. This is a technical implementation report, not a clinical validation, security certification, or production acceptance certificate.}
+\end{titlepage}
+\tableofcontents
+\newpage
+
+\section{Executive assessment}
+The application has a substantial frontend and backend implementation for a healthcare supply network. The frontend includes public pages, registration and login, a facility workspace, medicine catalogue and bulk creation, inventory, redistribution, marketplace checkout, orders, prescriptions, temperature monitoring, notifications, and an administration console. The sibling backend contains corresponding NestJS modules and persistence logic for most of those domains. \evidence{1--8}
+
+The strongest fresh verification in this audit is local frontend verification: \textbf{158 tests passed, zero failed, zero skipped}, and the TypeScript no-emit check completed successfully. These tests include pure domain logic, service contract checks, and controlled component/hook harnesses. They do not replace browser automation against deployed services. \evidence{18}
+
+The whole-source Biome check is \textbf{not clean}: it checked 176 files and reported \textbf{91 errors and 181 warnings}. Some violations involve accessibility, hook dependencies, import organization, and formatting. This is an open engineering quality gate, even though TypeScript and the local tests pass. \evidence{18}
+
+There are confirmed unfinished or inconsistent areas. Shipment temperature synchronization is wired to a provider that explicitly reports itself as pending. Insurer authorization requests record a mocked response. Audit records do not support cryptographic chain verification. Doctor registration now asks for a fellowship number, but still submits it under the existing licence contract. Single-medicine create/edit forms have contract inconsistencies with the backend. Notification ownership enforcement and counting completeness need backend improvements. These are detailed in Section~\ref{sec:gaps}.
+
+\textbf{Operational conclusion:} a large set of functions is implemented and locally testable. The inspected checkout cannot, by itself, establish which services are currently running or which integrations have been configured successfully in a live deployment. No live server health probe, authenticated production workflow, payment, database migration, email delivery, or sensor transmission was performed in this audit.
+
+\section{Scope, terminology, and evidence limits}
+\subsection{Repositories and snapshot}
+The frontend root is \source{oncology_bridge}; the inspected backend is the sibling \source{oncology_bridge_backend}. Frontend evidence paths in this report are relative to the frontend root. Backend evidence paths explicitly begin with the backend repository name.
+
+The frontend package declares Next.js 16.2.10, React 19.2.4, TypeScript, Tailwind CSS 4, Lucide icons, Chart.js, and Sonner. The backend package declares NestJS 11, TypeORM, PostgreSQL support, class-validator, JWT support, PDFKit, ExcelJS, and related adapters. Package declarations establish intended dependencies, not a complete installed-version or vulnerability audit. \evidence{1}
+
+The working tree contains modified and untracked implementation files. Accordingly, this report describes the working checkout and does not assert that all described changes are committed, merged, released, or deployed.
+
+\subsection{Status vocabulary}
+\begin{description}[leftmargin=0pt,labelsep=8pt]
+\item[Implemented] Relevant UI, service, controller, or domain code exists in the inspected checkout.
+\item[Locally verified] A stated local command or test was run in this audit and produced the recorded result.
+\item[Integration-dependent] The code requires external configuration, provider access, database state, devices, or permissions before an operational result can be demonstrated.
+\item[Incomplete / inconsistent] Source explicitly contains a pending/mock path, or inspected frontend and backend contracts disagree.
+\item[Live unverified] No current authenticated deployment evidence was obtained for that workflow. This is an evidence limit, not a finding that the deployed service is down.
+\end{description}
+
+\subsection{Audit boundaries}
+No environment files or process secret values were read, copied, or loaded. The audit did not start application servers or run database migrations. Backend startup imports configuration, so running the application merely to produce a reassuring status would not have respected the secret-handling boundary. Frontend tests and TypeScript checks were used without starting Next.js. A fresh production build and a fresh backend test run were not performed.
+
+This is a targeted implementation assessment, not an exhaustive review of every route, every authorization path, every supported browser, or every production record. Existing handoff documents were treated as contract and deployment context; current source was checked for important claims. Historical test claims are not presented as fresh results.
+
+\section{Architecture and main data flow}
+\begin{center}
+\begin{tabularx}{0.96\textwidth}{>{\centering\arraybackslash}X}
+\toprule
+\textbf{Public pages / facility workspace / administration console}\\
+Next.js routes and React components; forms, records, graphs, dialogs and status views\\
+$\downarrow$\\
+\textbf{Domain services and shared REST client}\\
+Route builders, request payloads, authentication selection, response envelopes\\
+$\downarrow$\\
+\textbf{NestJS API and domain services}\\
+Guards, validation, scope resolution, business rules and transactions\\
+$\downarrow$\\
+\textbf{PostgreSQL persistence and external adapters}\\
+Operational records, audit events, outbox, payment gateways, registry and sensors\\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Frontend service layer}
+Domain services exist separately for medicines, inventory, marketplace, orders, prescriptions, shipments, cold chain, facilities, users, notifications, reports, research, verification, audit, settings, and administration. \source{src/app/services/api-routes.ts} centralizes many endpoint paths and query builders; some domain services also contain direct endpoint strings. \evidence{2}
+
+The shared \source{src/app/hooks/service/core-service.ts} sends JSON or multipart requests, selects stored sessions, supplies bearer authentication, normalizes responses, and supports a user-session refresh attempt after qualifying 401 responses. It returns failures as a response object rather than treating access errors as successful empty data.
+
+Shared calls may fall back from a user session to an admin session unless a call explicitly chooses admin mode or facility-only mode. Important buyer checkout, buyer order, and buyer invoice methods explicitly use facility-only mode. This distinction must be retained; the existence of a general shared client does not prove every individual service has the right session policy. \evidence{2,7}
+
+\subsection{Backend scope and persistence}
+The backend registers domain modules in \source{oncology_bridge_backend/src/app.module.ts}. Global validation rejects non-whitelisted fields and transforms DTO inputs. Authentication reloads the current user and facility state, and selected operational domains have additional permission and scope guards. Database configuration sets \source{synchronize: false}; shipping entity code does not apply schema changes automatically. \evidence{1,3}
+
+\section{Feature status at a glance}
+\small
+\begin{longtable}{L{0.22\textwidth}L{0.35\textwidth}L{0.34\textwidth}}
+\toprule
+\textbf{Area} & \textbf{Implemented behaviour} & \textbf{Qualification / remaining work}\\
+\midrule\endhead
+Registration and access & Create/join facility, professional number collection, login, review states, recovery and resubmission & Fellowship semantics still use licence API; delivery, registry and deployment unverified.\\
+Medicine catalogue & Listing/search/filter/sort, single forms, delete, bulk graph/rows and review & Bulk contract aligned in source; single create/edit contracts have defects.\\
+Inventory and scanning & Catalogue-linked intake, batches, quantity/expiry, GS1 scanning, stock actions & Needs migrated schema, permitted records and device/browser proof.\\
+Redistribution & Recipient suggestions, transfer lifecycle and optional graph builder & Physical movement and live lifecycle not demonstrated.\\
+Marketplace & Listings, stock-linked publication, image handling, checkout and reservation logic & Image/payment provider configuration and real gateway flows unverified.\\
+Payments & Paystack and Flutterwave hosted checkout, saved retries, backend verification and webhooks & Payment confirmation is separate from payout and delivery.\\
+Orders & Buyer/admin list/detail, timeline and versioned admin fulfillment changes & Carrier integration and actual delivery are not established.\\
+Prescriptions & Creation, description editing, pharmacy selection and protected admin review & Manual authorization is separate from insurer coverage, payment and dispensing.\\
+Cold chain & Storage-unit history/events and signed IoT ingestion & Real devices, signatures and production stream connectivity unverified.\\
+Shipment monitoring & Monitoring screens, summaries, history/events and sync endpoints & Production reading adapter is explicitly pending.\\
+Notifications & Bell badge, unread detection, polling and mark-read refresh & Server ownership enforcement and complete unread totals need work.\\
+Administration & Review, users/account types, roles, operational records and integration controls & Permission/schema/provider configuration required; no live admin acceptance.\\
+Reports and audit & CSV/XLSX/PDF report generation; audit list/export & Audit hash-chain verification unavailable.\\
+Insurance & Provider/request persistence and request statuses & Insurer authorization response is explicitly mocked.\\
+Public/research pages & Stock/invoice entry points, partnership inquiry and research service calls & Legacy invoice branch is demo-labelled; research is not a validated analytics pipeline.\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{Registration, authentication, and facility access}
+\subsection{Account types and registration flow}
+The registration UI supports Doctor, Pharmacist, and Pharmacy Store accounts. It walks through account selection, facility creation or selection, personal/administrator details, and verification. Join-facility requests use an API-backed facility selector. The frontend submits either a new-facility registration or a request to join a selected facility. \evidence{4}
+
+\textbf{Current requested changes are present:} doctor sign-up displays \emph{Fellowship number}; pharmacists and pharmacy stores retain their applicable registration/licence number labels. Document upload has been removed from all sign-up types, including its file state. This does not remove marketplace product-image uploads, which serve a separate function.
+
+For doctors, the entered number still occupies \source{license.number}; verification still calls the existing licence-number endpoint using the account registry mapping. The shared account metadata maps Doctor to MDCN, Pharmacist to PCN, and Pharmacy Store to PCN premises. No fellowship-specific backend field, awarding-body model, or verification adapter was found by the targeted source search. A UI label change must not be represented as completed fellowship credential verification.
+
+The frontend retains a number-format check of 4--24 characters from letters, digits, slash, and hyphen. The correct fellowship format and authoritative verification method still need to be specified and aligned with the backend. The report does not invent a fellowship format or council.
+
+\subsection{Approval and activation}
+Registration is a review workflow. UI completion indicates submission, not authenticated activation. Facility membership and professional review are separate decisions. Access and verification statuses govern available pages, with limited overview/settings states used for accounts awaiting review. Backend authentication also checks current user/facility state. \evidence{3,4}
+
+\subsection{Login, sessions, recovery, and reclassification}
+There are user and admin sign-in flows, stored session handling, sign-out actions, recovery/reset endpoints, and a credential-based verification resubmission flow. The admin service uses the shared login endpoint and admin-authorized APIs for management. Network administration includes additional permissions and a conditional MFA requirement in backend guard code; this does not establish that an MFA enrollment/challenge experience is complete or enabled in deployment. \evidence{2,3}
+
+Professional account-type changes are represented in admin UI and backend user-management code. They require concurrency-aware handling and affect active/review/session state. Such changes should be accepted only after a fresh authenticated test confirms that the stored account type, permissions, revoked sessions, and latest evidence behave together correctly.
+
+Recent admin login styling reserves space for email/password icons and the password visibility control. The latest correction increases selector specificity above the shared form input rule. These are source changes; the current layout has not been visually confirmed in a real browser during this audit.
+
+\section{Medicine catalogue and inventory}
+\subsection{Catalogue browsing and identity}
+The catalogue page implements record loading, search over medicine details, dosage-form and GTIN filters, sorting, notices, errors, and add/edit/delete dialogs. Records include generic name, brand, manufacturer, dosage form, strength, storage wording and GTIN. Deleted/unavailable medicine handling is shared with inventory-related views. A catalogue medicine is an identity record, not a stock batch. \evidence{5}
+
+\subsection{Bulk creation}
+\source{BulkMedicineEditor.tsx} implements an empty-start batch editor with Graph and Rows modes. Each medicine node is included in one batch. Users enter seven required nonblank strings, review the batch, and explicitly confirm one request. The payload is picked from the contract fields rather than serializing node layout or inventory data.
+
+\begin{lstlisting}
+POST /api/medicines/bulk
+{
+  "medicines": [{
+    "gtin": "01234567890128",
+    "generic_name": "<generic name>",
+    "brand_name": "<brand name>",
+    "manufacturer": "<manufacturer>",
+    "strength": "<strength>",
+    "dosage_form": "<dosage form>",
+    "storage_temperature": "<approved storage wording>"
+  }]
+}
+\end{lstlisting}
+The batch size is 1--100. GTIN is kept as text to preserve leading zeros and is checked for a valid GTIN-14 check digit. Duplicate draft GTINs are rejected locally. There are no facility IDs, quantities, batch numbers, or expiry dates in this request.
+
+The backend controller applies existing catalogue guards. Its service validates rows, derives catalogue ownership from the authenticated actor, checks for GTIN conflicts including deleted records, and saves the batch within a transaction. A concurrent unique-constraint conflict becomes a conflict response. The UI expects HTTP 201 with \source{data.count} and \source{data.medicines}, shows the created count, and refreshes the catalogue. \evidence{5}
+
+Failures preserve entries and support message-only errors as well as indexed field errors. Zero-based API indexes are displayed as one-based row numbers. Saving disables confirmation and editing, with an in-flight guard against repeated confirmation. Browser-side drafts survive closing/reopening the editor on the same page, but are not a durable server draft.
+
+Nodes can be moved with pointer capture on their title bars and by keyboard arrows, selected nodes are highlighted, and an arrange action restores a grid. Field errors wrap within a scrollable node body. Phones initially choose full-width Rows mode; Graph remains available, with larger controls and a swipe/drag hint. Local harness tests exercise important interactions, but touch devices and actual browser geometry remain unverified.
+
+\subsection{Confirmed single-medicine contract mismatch}
+The single-create UI treats strength and GTIN as optional and sends \source{undefined} when blank. The backend \source{CreateMedicineDto} marks both as required strings. Thus, a form that appears valid locally can be rejected by backend validation.
+
+The edit UI sends \source{brand_name}, manufacturer, dosage form, and storage temperature along with other fields. The controller actually uses \source{PatchMedicineCatalogDto}, whose supported patch fields are generic name, \source{brand}, strength, and GTIN. With the global whitelist policy, unsupported fields can reject the request; blank-to-null GTIN handling is also inconsistent with the patch DTO. This defect exists in inspected source and was not corrected as part of this documentation task. \evidence{6}
+
+\subsection{Inventory and GS1 scanner}
+Inventory intake is a separate operation linking an existing catalogue medicine ID to a batch, expiry and stock quantity. The frontend includes named catalogue selection and an optional inventory graph; it does not require users to type an internal medicine ID or match stock by medicine name. Backend code contains manual-intake and stock-access logic, stock update, quarantine, disposal, export and near-expiry endpoints. \evidence{9}
+
+The GS1 scanner has decode, scan/intake, batch, recent and monthly endpoints and frontend camera/scanner code. GS1 handling and catalogue linkage are implemented domains; real camera permissions, sample barcodes, deployed decoding, race conditions, and actual stock persistence still require integration acceptance. Barcode identification alone does not prove authenticity, suitability, or clinical release.
+
+\section{Redistribution and transfer workflow}
+The transfer module exposes creation, suggestions, statistics, active-order read, approval/rejection, dispatch and delivery actions. Frontend conventional forms and an optional graph builder produce the established transfer request payload and require preview/confirmation before sending. Recipient suggestions are API-backed. Eligibility is not intended to impose an invented 80 km filter. \evidence{10}
+
+The workflow coordinates donor stock, recipient facility and quantity. Source-level lifecycle handling is distinct from physical dispatch and arrival. To demonstrate functioning operation, a permitted donor/recipient pair must complete a real test lifecycle, with stock and audit effects checked at each step. Missing eligible facilities must remain an explicit unavailable/empty state rather than an unrestricted fallback.
+
+\section{Marketplace, payments, invoices, and orders}
+\subsection{Listings and stock-backed checkout}
+Marketplace services support listing browse, multipart listing creation with images, and authenticated checkout. Listing publication is linked to inventory records. The backend contains batch validation, stock/reservation logic, image attachment, payment initialization, reconciliation and maintenance methods. \evidence{7}
+
+Cloudinary-related image code and payment adapter code require configured provider accounts and credentials. Their existence does not prove current image uploads, hosted checkout creation, webhook delivery or live settlement.
+
+\subsection{Payment initialization and uncertainty}
+Paystack is the default provider, and Flutterwave is an explicit supported selection. Checkout sends listing ID, quantity, optional prescription ID, provider selection and an \source{Idempotency-Key}; the server derives payment totals and payment identity fields.
+
+The frontend preserves an uncertain checkout attempt in session storage, including the same UUID and request body. Network ambiguity must not silently create a second attempt or switch gateway. Hosted URLs are checked against the expected HTTPS checkout host. Browser storage and reservation-expiry behaviour are part of the implemented recovery flow.
+
+\subsection{Payment confirmation}
+After redirect, the marketplace invoice page performs a buyer-authenticated backend read. Redirect query parameters do not establish payment success. Pending invoice states poll while visible. \source{PAID} is distinguished from \source{PAID_REVIEW}; the latter is manual review rather than permission to charge again. Failed/expired states permit recovery according to the backend outcome. Payment confirmation does not confirm dispensing, insurance coverage or delivery. \evidence{7}
+
+The backend has Paystack and Flutterwave webhook/reconciliation code. The Flutterwave handoff specifies the implemented v3 hash contract. Real verification still needs applied payment-provider schema changes, matching callback origins, registered webhook URLs, provider test transactions, duplicate event tests and late-payment reconciliation.
+
+\subsection{Legacy public invoices and settlement limits}
+The invoice service first checks the marketplace branch. Its legacy non-marketplace branch returns payment metadata with \source{isDemo: true}. That branch should not be described as a completed live prescription payment flow. Settlement summaries aggregate stored settlement rows, but no automatic seller/doctor disbursement engine or completed live payout was established by this audit. Checkout, recorded settlement summaries and actual disbursement are separate capabilities. \evidence{11}
+
+\subsection{Order management}
+Buyer and admin order screens support list/detail views, payment/order status, items, delivery details, timelines and available transitions. Admin fulfillment updates include an expected version and explanatory note. Buyer methods prohibit admin-token fallback. Backend buyer and admin controllers are separate; admin mutation uses network administration guards. \evidence{8}
+
+Recorded carrier or tracking fields do not establish a working carrier API. An operator updating a fulfillment status is distinct from an independently verified shipment event. Live acceptance must verify ownership isolation, invalid transition rejection and stale-version conflicts.
+
+\section{Prescriptions and clinical boundaries}
+Prescription creation, pharmacy-directory lookup, clinical field normalization, list/detail displays and description editing are implemented. Description editing is limited according to the current creator/status contract. The administration area includes a dedicated prescription review UI and backend decision endpoints. Review provenance, version freshness and explicit decisions are meaningful parts of the workflow. \evidence{12}
+
+The system must preserve these distinctions:
+\begin{itemize}
+\item A prescription record is not proof of insurer approval.
+\item An admin authorization decision is not a payment or dispensing action.
+\item A payment is not proof that medicine has been released or delivered.
+\item Storage history or a latest in-range reading is not a clinical suitability determination.
+\end{itemize}
+The insurer request backend currently saves a mocked response. No live insurer authorization connection was established. Application fields and stored manual statuses must not be presented as a completed external coverage decision. \evidence{14}
+
+\section{Cold chain and shipment monitoring}
+\subsection{Storage-unit monitoring}
+The storage-unit cold-chain domain has frontend unit management, historical readings/events and a monitoring hook. Backend signed IoT ingestion uses device identity, timestamp, nonce, raw-body signature verification and replay-related persistence. This is a real implementation path, separate from the shipment-provider adapter. \evidence{13}
+
+Physical device provisioning, key rotation procedures, deployed stream connectivity, a signed real reading, time synchronization, sample retention and alert delivery were not operationally demonstrated. Device secrets must remain outside browser code. Frontend graphs need actual records; they should not generate sample temperatures to look active.
+
+\subsection{Shipment-specific monitoring}
+Buyer and admin shipment screens display persisted monitor status, the latest actual sample, recorded thresholds, history and excursion events. They distinguish pending, stale and ended states and support paginated data. Privileged synchronization has a separate admin endpoint. \evidence{13}
+
+\textbf{Confirmed incomplete adapter:} the module binds \source{SHIPMENT_TEMPERATURE_PROVIDER} to \source{PendingShipmentProvider}. Its \source{configured()} returns false and readings reject with a service-unavailable error. This is a deliberate pending integration, not a functioning production sensor feed. Reading screens may display stored data, but cannot make that adapter operational.
+
+The current shipment screen does not provide all operator monitor-configuration pickers. A future configuration UI needs eligible order/courier/assignment options from the backend, rather than exposing raw IDs.
+
+\section{Notifications, reporting, and public functions}
+\subsection{Unread badge and notification dialog}
+The top-bar bell loads notification data for the current user and displays a count only when unread items exist. Display is capped at \source{99+}. A shared predicate recognizes \source{readAt}, \source{read_at} and a true \source{read} boolean. Successful mark-read calls emit a change event, triggering a badge refresh. The hook polls every 30 seconds while visible and refreshes on focus/visibility changes; stale responses are ignored. \evidence{15}
+
+There are two important limits. First, the backend list returns at most 200 recent records, so counting that list is not a complete unread-total endpoint. Older unread records can be omitted even when the visible badge is below 99. Second, the inspected notification controller accepts a client-supplied optional user ID, and individual read/update/delete actions do not visibly enforce recipient ownership in the inspected service. General authentication alone is insufficient proof of notification ownership. Section~\ref{sec:gaps} records the required backend change.
+
+\subsection{Reports and audit}
+Inventory report generation supports CSV, XLSX and PDF in backend code, with date validation, facility-scoped querying and a 10,000-record size limit. The frontend requests the export and handles the returned downloadable content. CSV generation includes formula-prefix escaping. Report generation has not been accepted against a live data set during this audit. \evidence{16}
+
+Audit listing and CSV export exist, and audit mutations are rejected as append-only. However, \source{verifyChain()} explicitly returns \source{verifiable: false}, because the schema has no stored hash and previous-hash fields. The audit feature must not be described as cryptographically tamper-evident. The inspected audit CSV method obtains at most 200 records; users should not assume it exports all historical activity.
+
+\subsection{Public pages, research and settings}
+Public routes and service code provide stock search, invoice reference entry and research/partnership inquiry submission. Research statistics have API calls; the public research page is not evidence of a deployed anonymized research warehouse, consent workflow, approved data release, or validated analytical model. Settings, near-expiry, network-map and dashboard views are part of the workspace. Each still depends on permitted backend data and deployment state. \evidence{2,17}
+
+\section{Administration and operational management}
+The admin console includes network navigation, facility and licence review, user/account-type management, roles/permissions, operational record views, orders, prescription review, shipment monitoring, audit, and integration configuration. Resource-driven admin pages reuse field mappings and permission keys. \evidence{3,8,12,17}
+
+Integration screens expose configuration, health/test and synchronization operations backed by admin services. Some actions depend on a server-side secret manager and configured external URLs. A saved configuration record is not equivalent to a passing provider transaction. Source status labels such as configured, healthy or unavailable must be interpreted in the context of the operation that produced them.
+
+The admin login also contains static operational/encryption copy. That text is not a dynamic health check and was not treated as operational evidence. A health banner should be backed by real health data before being used to claim that all systems are operational.
+
+\section{Confirmed gaps and unfinished work}\label{sec:gaps}
+\begin{longtable}{L{0.07\textwidth}L{0.24\textwidth}L{0.58\textwidth}}
+\toprule \textbf{ID} & \textbf{Finding} & \textbf{Required completion / acceptance}\\
+\midrule\endhead
+G1 & Notification authorization & Derive recipient scope from the authenticated principal. Enforce ownership or an explicit admin permission on read/update/delete. Test cross-user requests and omitted/forged user IDs. Authentication alone is not ownership enforcement.\\
+G2 & Single medicine create & Align optional/required GTIN and strength across UI, service and DTO. Verify blank values and a valid seven-field record against the deployed API.\\
+G3 & Medicine edit contract & Agree on supported fields and brand naming. Align null/clear behaviour. Test a complete edit request with global whitelist validation enabled.\\
+G4 & Fellowship semantics & Add or explicitly define the backend fellowship credential contract, awarding-body/registry handling and validation. Preserve pending review for unavailable evidence; do not treat an MDCN licence result as fellowship proof.\\
+G5 & Shipment reading provider & Replace the pending adapter with an authenticated provider implementation. Demonstrate actual device data, timeouts, duplicates, unit normalization and source identity binding.\\
+G6 & Insurer integration & Replace the mocked request response with the intended insurer/manual business process. Demonstrate decision provenance, coverage response handling and failure states.\\
+G7 & Audit integrity & Either implement a verifiable hash-chain scheme with schema and tests, or keep verification explicitly unavailable. Expand export if full historical export is required.\\
+G8 & Complete unread total & Add an authenticated unread-total or properly paginated contract; avoid treating a 200-record recent list as the total unread population.\\
+G9 & Legacy invoice payments & Resolve the demo-labelled legacy invoice branch before advertising it as live checkout. Keep buyer marketplace verification separate.\\
+G10 & Disbursements & Define required seller/platform/doctor settlement rules and implement provider-backed disbursement if in scope. A summary table or completed buyer charge is insufficient.\\
+G11 & Production configuration & Verify migrations, permissions, origins, callback URLs, provider configuration, secret-manager access and background workers in the intended environment.\\
+G12 & Whole-project lint & Resolve the current 91 errors and 181 warnings, prioritizing correctness and accessibility findings over cosmetic formatting. Re-run the exact quality gate.\\
+G13 & Browser acceptance & Verify desktop/mobile layout, admin input spacing, keyboard navigation, real drag/touch behaviour and error recovery in browsers. Local hook harnesses are not screenshot evidence.\\
+\bottomrule
+\end{longtable}
+
+These findings are documented rather than silently fixed by this report task. They identify implementation or evidence gaps; they do not claim that a particular production incident has occurred.
+
+\section{Database and deployment dependencies}
+Because automatic schema synchronization is disabled, the presence of SQL files or TypeORM entities cannot prove that the database is ready. Relevant scripts in the backend database directory include:
+\begin{itemize}
+\item Facility registration, frontend contract and administrative operational reads.
+\item Dashboard access, inventory access, medicine deletion and GS1 scanner support.
+\item Marketplace, purchase orders and marketplace payment providers.
+\item Prescription review and prescription description.
+\item Shipment temperature, cold-chain hardening and email outbox support.
+\item Redistribution selection and business-value/form-option support.
+\end{itemize}
+This is a dependency inventory, not an instruction to blindly execute every script. The target database needs an applied-schema inventory, backups and an order derived from each migration's documentation. For example, prescription-description additions depend on review infrastructure, and provider changes depend on marketplace/order infrastructure. Bulk medicine creation reuses the existing medicine schema in the supplied contract; this does not imply all earlier schema prerequisites are already applied. \evidence{19}
+
+The frontend needs a configured backend origin. The backend requires appropriate database access, signing/encryption configuration, allowed origins and permission data. Optional external operations additionally need registry, payment, image, email and sensor integrations. This audit records no secret values and does not assert which provider switches are enabled.
+
+\section{Fresh verification results}
+\begin{tabularx}{\textwidth}{L{0.30\textwidth}X}
+\toprule \textbf{Check} & \textbf{Observed result in this audit}\\
+\midrule
+Frontend automated tests & 158 passed; 0 failed; 0 skipped; 0 cancelled. TAP summary collected from the current checkout.\\
+Frontend TypeScript & No-emit check completed successfully.\\
+Whole frontend source Biome & Failed: 176 files checked; 91 errors; 181 warnings. No fixes applied by this audit command.\\
+Fresh production build & Not run. No new production bundle claim.\\
+Fresh backend tests/build & Not run. Test files and implementation inspected, including bulk persistence specs.\\
+Live database/provider checks & Not run. No migration or external provider verification claim.\\
+Browser/mobile visual checks & Not run. No screenshot or authenticated end-to-end acceptance claim.\\
+LaTeX compilation & No local LaTeX engine was discovered. Source file supplied; a compiled PDF is not claimed.\\
+\bottomrule
+\end{tabularx}
+
+The supplied earlier backend handoff reported 27 bulk-related tests, including rollback. This audit confirms that bulk validation and persistence test files exist, but does not re-label that historical report as a fresh backend run. Likewise, prior build results from earlier sessions do not establish the current dirty working tree as production-build verified.
+
+\subsection{Reproduction commands}
+Run from the frontend root, in a suitable development environment:
+\begin{lstlisting}
+node --test --test-reporter=tap tests/*.test.cjs
+node node_modules/typescript/bin/tsc --noEmit
+node node_modules/@biomejs/biome/bin/biome check src --reporter=summary
+\end{lstlisting}
+The Windows workspace uses direct Node entry points where needed. These checks are different from starting the application. Do not infer current server status from a successful typecheck.
+
+\section{Recommended completion and acceptance sequence}
+\begin{enumerate}
+\item \textbf{Resolve contract and ownership defects.} Fix G1--G4 first: notification recipient scope, single medicine create/edit parity, and the fellowship contract. Demonstrate invalid input, cross-user denial and successful authorized writes.
+\item \textbf{Establish schema and permission readiness.} Identify the exact deployed revision and database schema, then apply only the reviewed outstanding changes. Verify required permission grants without inventing broad roles.
+\item \textbf{Complete provider adapters.} Implement the pending shipment provider and resolve insurer behaviour. Validate email, registry, image and payment connections with controlled provider test data.
+\item \textbf{Pass engineering checks.} Run frontend/backend tests and builds in the approved environment; clear the full-source lint gate; perform accessibility and mobile interaction acceptance.
+\item \textbf{Run a complete business scenario.} Register/review an account; create catalogue medicines; intake stock; publish a listing; create a prescription where applicable; checkout; verify payment; process the order; inspect stored monitoring/events; reconcile stock, invoice, order and audit records.
+\item \textbf{Test failure and concurrency paths.} Include bulk rollback, duplicate GTINs, expired sessions, stale review versions, repeated confirmation, uncertain checkout retry, duplicate webhooks, late payment, empty data and unavailable providers.
+\item \textbf{Record operational proof.} Capture environment/release identity, timestamps, sanitized request/response outcomes, database effects and relevant browser evidence. Mark a feature live-verified only after its own acceptance criteria pass.
+\end{enumerate}
+
+\section{Representative endpoint map}
+This table records important source contracts. It is not a guarantee of deployed route availability, a complete OpenAPI specification, or proof of authorization correctness on every route.
+\small
+\begin{longtable}{L{0.13\textwidth}L{0.45\textwidth}L{0.32\textwidth}}
+\toprule\textbf{HTTP} & \textbf{Path / family} & \textbf{Purpose}\\\midrule\endhead
+POST & \path{/auth/api/login} & User/admin credentials.\\
+POST & \path{/auth/api/refresh} & User-session token refresh.\\
+POST & \path{/auth/api/forgot-password}, \path{/auth/api/reset-password} & Recovery and reset.\\
+POST & \path{/hospital/api/register-facility} & Create facility registration.\\
+POST & \path{/hospital/api/register-user-to-facility} & Facility membership request.\\
+GET & \path{/hospital/api/public-facilities} & Named facility selection.\\
+GET / POST & \path{/api/medicines} & Catalogue read/create.\\
+POST & \path{/api/medicines/bulk} & Atomic 1--100 medicine batch.\\
+PATCH / DELETE & \path{/api/medicines/:id} & Catalogue edit/remove.\\
+GET / POST & \path{/api/inventory} & Stock records and intake.\\
+POST & \path{/api/inventory/:id/quarantine}, \path{/api/inventory/:id/dispose} & Stock lifecycle actions.\\
+POST & \path{/api/scans/decode}, \path{/api/scans}, \path{/api/scans/batch} & Barcode/scanner operations.\\
+GET & \path{/api/transfers/suggest} & Recipient suggestions.\\
+POST & \path{/api/transfers}, action suffixes approve/reject/dispatch/deliver & Transfer lifecycle.\\
+GET / POST & \path{/api/marketplace/listings} & Browse or publish listings.\\
+POST & \path{/api/marketplace/checkout} & Idempotent buyer checkout.\\
+GET & \path{/api/invoices/:reference} & Marketplace buyer verification or legacy branch.\\
+GET & \path{/api/orders}, \path{/api/orders/:orderId} & Buyer orders.\\
+PATCH & \path{/admin/api/orders/:orderId/fulfillment} & Versioned admin fulfillment.\\
+GET / POST & \path{/api/prescriptions} & Prescription read/create.\\
+GET / POST & \path{/admin/api/prescriptions} and decision routes & Privileged review.\\
+GET & \path{/api/shipments/:id/temperature} and history/events suffixes & Shipment monitoring data.\\
+POST & \path{/admin/api/shipments/:id/temperature/sync} & Privileged provider sync; adapter pending.\\
+POST & \path{/iot/readings} & Signed device ingestion.\\
+GET & \path{/api/storage-units}, \path{/api/cold-chain-events} & Storage monitoring records.\\
+GET / PATCH & \path{/api/notifications}, \path{/api/notifications/:id/read} & Notification list / mark read.\\
+POST & \path{/api/reports/export} & Generate an inventory export.\\
+GET & \path{/api/audit}, \path{/api/audit/export.csv}, \path{/api/audit/verify} & Audit read/export; chain unavailable.\\
+GET / POST & \path{/admin/api/integrations} route family & Configuration, diagnostics and sync.\\
+POST & \path{/api/research/inquiries} & Partnership/research inquiry.\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\appendix
+\section{Source evidence index}
+Paths identify the inspected implementation so findings can be checked against later changes. Backend names refer to the sibling checkout, not to files copied into the frontend repository.
+\footnotesize
+\begin{longtable}{L{0.06\textwidth}L{0.85\textwidth}}
+\toprule\textbf{Ref.} & \textbf{Evidence location and use}\\\midrule\endhead
+E1 & \source{package.json}; \source{oncology_bridge_backend/package.json}; \source{oncology_bridge_backend/src/app.module.ts}; dependency declarations and registered modules.\\
+E2 & \source{src/app/services/api-routes.ts}; \source{src/app/hooks/service/core-service.ts}; \source{src/app/services/}; frontend routing, session policy and service organization.\\
+E3 & \source{oncology_bridge_backend/src/main.ts}; \source{oncology_bridge_backend/src/guards/auth.guard.ts}; \source{oncology_bridge_backend/src/guards/network-admin.guard.ts}; validation and authentication/administration controls.\\
+E4 & \source{src/app/components/AuthPages.tsx}; \source{src/app/lib/accounts.ts}; \source{src/app/services/verification-service/verification-service.ts}; current sign-up fields, removed uploads and licence-based payload.\\
+E5 & \source{src/app/pages/dashboard/MedicinesPage.tsx}; \source{src/app/components/BulkMedicineEditor.tsx}; \source{src/app/lib/bulk-medicines.ts}; \source{oncology_bridge_backend/src/medicine/medicine.controller.ts}; \source{oncology_bridge_backend/src/medicine/medicine.service.ts}; bulk workflow and transaction.\\
+E6 & \source{oncology_bridge_backend/src/medicine/dto/create-medicine.dto.ts}; \source{oncology_bridge_backend/src/medicine/dto/patch-medicine-catalog.dto.ts}; compared with single create/update handlers in \source{src/app/pages/dashboard/MedicinesPage.tsx}.\\
+E7 & \source{src/app/services/marketplace-service/marketplace-service.ts}; \source{src/app/components/InvoiceCheckout.tsx}; \source{src/app/lib/marketplace-payment.ts}; \source{oncology_bridge_backend/src/marketplace/marketplace.service.ts}; \source{FLUTTERWAVE_CHECKOUT_HANDOFF.md}.\\
+E8 & \source{src/app/services/order-service/order-service.ts}; \source{src/app/components/OrdersScreen.tsx}; \source{oncology_bridge_backend/src/orders/orders.controller.ts}; order ownership/mode and fulfillment contract.\\
+E9 & \source{src/app/pages/dashboard/InventoryPage.tsx}; \source{src/app/components/RecordGraph.tsx}; \source{oncology_bridge_backend/src/inventory/inventory.controller.ts}; \source{oncology_bridge_backend/src/scan_log/scan_log.controller.ts}; inventory/scanner operations.\\
+E10 & \source{src/app/components/TransferGraph.tsx}; \source{src/app/components/TransferRequestForm.tsx}; \source{oncology_bridge_backend/src/transfer_requests/transfer_requests.controller.ts}; \source{oncology_bridge_backend/src/transfer_requests/transfer_requests.service.ts}.\\
+E11 & \source{oncology_bridge_backend/src/invoices/invoices.service.ts}; \source{oncology_bridge_backend/src/invoices/invoices.controller.ts}; legacy demo flag and stored settlement summary.\\
+E12 & \source{src/app/pages/dashboard/PrescriptionsPage.tsx}; \source{src/app/pages/admin/AdminPrescriptionsPage.tsx}; \source{src/app/services/prescription-service/prescription-service.ts}; \source{oncology_bridge_backend/src/prescriptions/prescriptions.controller.ts}; \source{ADMIN_PRESCRIPTION_REVIEW_BACKEND_HANDOFF.md}.\\
+E13 & \source{src/app/hooks/useColdChainMonitor.ts}; \source{src/app/components/ShipmentMonitoringScreen.tsx}; \source{oncology_bridge_backend/src/iot_devices/iot-readings.service.ts}; \source{oncology_bridge_backend/src/shipments/shipment-provider.ts}; \source{oncology_bridge_backend/src/shipments/shipments.module.ts}; \source{SHIPMENT_MONITORING_FRONTEND.md}.\\
+E14 & \source{oncology_bridge_backend/src/insurance_request/insurance_request.service.ts}; create method persists a mocked insurer response.\\
+E15 & \source{src/app/hooks/useUnreadNotifications.ts}; \source{src/app/lib/notification-state.ts}; \source{src/app/components/TopNav.tsx}; \source{src/app/components/Modals.tsx}; \source{oncology_bridge_backend/src/notification/notification.controller.ts}; \source{oncology_bridge_backend/src/notification/notification.service.ts}.\\
+E16 & \source{oncology_bridge_backend/src/dashboard/reports.service.ts}; \source{src/app/services/report-service/report-service.ts}; \source{oncology_bridge_backend/src/audit_log/audit_log.service.ts}; report formats, export limits and unavailable hash chain.\\
+E17 & \source{src/app/pages/admin/page.tsx}; \source{src/app/services/admin-service/admin-resources.ts}; \source{src/app/services/research-service/research-service.ts}; \source{src/app/pages/research/page.tsx}; \source{oncology_bridge_backend/src/admin/admin-integrations.service.ts}.\\
+E18 & Fresh audit command output: Node frontend TAP test summary (158 passed); TypeScript no-emit exit success; Biome source summary (176 files, 91 errors, 181 warnings). These results refer to the current working files on the audit date.\\
+E19 & \source{oncology_bridge_backend/database/}; \source{oncology_bridge_backend/src/app.module.ts}; SQL dependency inventory and disabled automatic schema synchronization.\\
+\bottomrule
+\end{longtable}
+\normalsize
+
+\section{How to maintain this report}
+Update the snapshot date, repository/release identifiers, feature matrix, known gaps and fresh command results together. Record an exact environment and evidence for every promotion from implemented to live-verified. Do not remove a limitation merely because its screen exists, a provider URL was saved, a redirect returned, or a historical test passed.
+
+To compile this self-contained source with a suitable TeX distribution:
+\begin{lstlisting}
+pdflatex -interaction=nonstopmode -halt-on-error ONCOSOURZ_IMPLEMENTATION_STATUS_2026-11-02.tex
+pdflatex -interaction=nonstopmode -halt-on-error ONCOSOURZ_IMPLEMENTATION_STATUS_2026-11-02.tex
+\end{lstlisting}
+Two passes resolve the table of contents and internal references. Standard packages listed in the preamble are required. Inspect the compiled PDF for table breaks, long paths and contents pagination before publishing it.
+\end{document}

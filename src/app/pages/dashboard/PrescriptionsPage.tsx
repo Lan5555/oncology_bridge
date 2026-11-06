@@ -1,42 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { ModalId, PageId } from "@/app/lib/types";
 import {
   Activity,
+  ArrowDownWideNarrow,
   ArrowRight,
+  ArrowUpRight,
+  Building2,
+  ChevronRight,
   ClipboardList,
   Clock3,
   FilePlus2,
+  Info,
+  Loader2,
   RefreshCw,
+  Search,
   ShieldCheck,
+  SlidersHorizontal,
+  UserRound,
+  X,
 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import EmptyState from "@/app/components/EmptyState";
 import PrescriptionDetailsDialog from "@/app/components/PrescriptionDetailsDialog";
-import { useProvider } from "@/app/providers/provider";
+import PrescriptionStatusBadge from "@/app/components/PrescriptionStatusBadge";
 import {
+  type PrescriptionDisplayRow,
   prescriptionDisplayRow,
   prescriptionLocalTime,
-  type PrescriptionDisplayRow,
 } from "@/app/lib/prescription-display";
+import type { ModalId, PageId } from "@/app/lib/types";
+import { useProvider } from "@/app/providers/provider";
 import { PRESCRIPTION_SERVICE } from "@/app/services/prescription-service/prescription-service";
 import { unwrapArray } from "@/app/services/response-utils";
+import styles from "./PrescriptionsPage.module.css";
 
 interface PrescriptionsPageProps {
   onNav: (id: PageId) => void;
   onOpenModal: (id: ModalId) => void;
 }
-
 type PrescriptionTab = "active" | "awaiting" | "completed";
-const TAB_CONFIG: {
-  id: PrescriptionTab;
-  label: string;
-  icon: typeof Activity;
-}[] = [
-  { id: "active", label: "Active prescriptions", icon: Activity },
-  { id: "awaiting", label: "Awaiting authorization", icon: Clock3 },
-  { id: "completed", label: "Completed", icon: ShieldCheck },
-];
+const TAB_CONFIG = [
+  {
+    id: "active",
+    label: "Active prescriptions",
+    icon: Activity,
+    help: "Track current prescription activity.",
+  },
+  {
+    id: "awaiting",
+    label: "Awaiting authorization",
+    icon: Clock3,
+    help: "Follow records awaiting authorization.",
+  },
+  {
+    id: "completed",
+    label: "Completed",
+    icon: ShieldCheck,
+    help: "Refer back to completed prescriptions.",
+  },
+] as const;
+const validCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0;
 
 export default function PrescriptionsPage({
   onOpenModal,
@@ -52,230 +76,421 @@ export default function PrescriptionsPage({
   >({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const loadPrescriptions = async () => {
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sort, setSort] = useState("newest");
+  const requestId = useRef(0);
+  const loadPrescriptions = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setLoadError("");
     setCounts({});
     const response = await PRESCRIPTION_SERVICE.list(activeTab);
+    if (currentRequest !== requestId.current) return;
     if (!response.success) {
       setRows([]);
       setLoadError(response.message || "Prescriptions could not be loaded.");
       setLoading(false);
       return;
     }
-    const data = response.data as any;
+    const data = response.data as {
+      counts?: Partial<Record<PrescriptionTab, unknown>>;
+    } | null;
     setRows(unwrapArray(data).map(prescriptionDisplayRow));
     if (data?.counts)
       setCounts({
-        active: data.counts.active ?? undefined,
-        awaiting: data.counts.awaiting ?? undefined,
-        completed: data.counts.completed ?? undefined,
+        active: validCount(data.counts.active) ? data.counts.active : undefined,
+        awaiting: validCount(data.counts.awaiting)
+          ? data.counts.awaiting
+          : undefined,
+        completed: validCount(data.counts.completed)
+          ? data.counts.completed
+          : undefined,
       });
     setLoading(false);
-  };
-
+  }, [activeTab]);
   useEffect(() => {
     void loadPrescriptions();
-  }, [activeTab]);
-
-  useEffect(() => {
     const refresh = () => void loadPrescriptions();
     window.addEventListener("prescriptions:updated", refresh);
-    return () => window.removeEventListener("prescriptions:updated", refresh);
-  }, [activeTab]);
+    return () => {
+      requestId.current += 1;
+      window.removeEventListener("prescriptions:updated", refresh);
+    };
+  }, [loadPrescriptions]);
 
-  const metrics = [
-    { label: "Active prescriptions", value: counts.active, icon: Activity },
-    { label: "Awaiting authorization", value: counts.awaiting, icon: Clock3 },
-    {
-      label: "Completed prescriptions",
-      value: counts.completed,
-      icon: ShieldCheck,
-    },
-  ];
+  const statuses = [...new Set(rows.map((row) => row.status))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const search = query.trim().toLocaleLowerCase();
+  const visibleRows = rows
+    .filter(
+      (row) =>
+        (!statusFilter || row.status === statusFilter) &&
+        (!search ||
+          [
+            row.patientRef,
+            row.drug,
+            row.pharmacy,
+            row.insurer,
+            row.code,
+            row.createdBy,
+          ].some((value) => value.toLocaleLowerCase().includes(search))),
+    )
+    .sort((a, b) => {
+      const aTime = a.createdAt ? Date.parse(a.createdAt) : Number.NaN;
+      const bTime = b.createdAt ? Date.parse(b.createdAt) : Number.NaN;
+      if (!Number.isFinite(aTime)) return Number.isFinite(bTime) ? 1 : 0;
+      if (!Number.isFinite(bTime)) return -1;
+      return sort === "oldest" ? aTime - bTime : bTime - aTime;
+    });
+  const hasFilters = Boolean(query || statusFilter);
+  const clearFilters = () => {
+    setQuery("");
+    setStatusFilter("");
+  };
 
   return (
-    <div className="animate-fade-up space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-g200 bg-linear-to-br from-w via-w to-pll p-6 shadow-sm">
-        <div className="flex items-start gap-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-pl text-p shadow-sm">
-            <ClipboardList className="size-6" aria-hidden="true" />
-          </span>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-g900">
-              Prescriptions
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-g500">
-              Review patient prescriptions, authorization and dispensing
-              progress. Creating a prescription does not approve authorization
-              or place a marketplace purchase.
-            </p>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div>
+          <div className={styles.eyebrow}>
+            <span>Clinical workspace</span>
+            <ChevronRight size={12} />
+            <span>Prescriptions</span>
           </div>
+          <div className={styles.titleLine}>
+            <span className={styles.titleIcon}>
+              <ClipboardList size={23} strokeWidth={1.6} />
+            </span>
+            <h1>Prescriptions</h1>
+          </div>
+          <p className={styles.subtitle}>
+            A clear view of prescription records, authorization, and dispensing.
+          </p>
         </div>
         {canPrescribe && (
           <button
-            className="inline-flex items-center gap-2 rounded-xl bg-p px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-pd hover:shadow-md"
+            className={styles.primary}
             onClick={() => onOpenModal("modal-prescription")}
             type="button"
           >
-            <FilePlus2 className="size-4" aria-hidden="true" />
+            <FilePlus2 size={16} />
             New prescription
           </button>
         )}
       </header>
 
-      <section
-        className="grid gap-3 sm:grid-cols-3"
-        aria-label="Prescription summary"
-      >
-        {metrics
-          .filter(
-            ({ value }) => typeof value === "number" && Number.isFinite(value),
-          )
-          .map(({ label, value, icon: Icon }) => (
-            <article
-              className="flex items-center gap-4 rounded-xl border border-g200 bg-w p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              key={label}
-            >
-              <span className="flex size-10 items-center justify-center rounded-xl bg-g50 text-p">
-                <Icon className="size-5" aria-hidden="true" />
+      <section className={styles.metrics} aria-label="Prescription summary">
+        {TAB_CONFIG.map(({ id, label, icon: Icon, help }) => (
+          <article className={styles.metric} key={id}>
+            <div className={styles.metricTop}>
+              <span>{label}</span>
+              <span className={styles.metricIcon}>
+                <Icon size={17} strokeWidth={1.7} />
               </span>
-              <div>
-                <p className="text-2xl font-bold tabular-nums text-g900">
-                  {value}
-                </p>
-                <p className="text-xs font-medium text-g500">{label}</p>
-              </div>
-            </article>
-          ))}
+            </div>
+            <div className={styles.metricValue}>
+              {loading ? (
+                <span className={styles.metricSkeleton} aria-hidden="true" />
+              ) : validCount(counts[id]) ? (
+                counts[id]
+              ) : (
+                <span title="Count unavailable">—</span>
+              )}
+            </div>
+            <p>
+              {loading
+                ? "Retrieving summary…"
+                : validCount(counts[id])
+                  ? help
+                  : "Summary count not provided"}
+            </p>
+          </article>
+        ))}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-g200 bg-w shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-g100 p-5">
+      <section
+        className={styles.pipeline}
+        aria-labelledby="prescription-pipeline-heading"
+        aria-busy={loading}
+      >
+        <div className={styles.sectionHeading}>
           <div>
-            <h2 className="text-base font-bold text-g900">
-              Prescription pipeline
-            </h2>
-            <p className="mt-1 text-xs text-g500">
-              Live prescriptions and authorization status from your account.
-            </p>
+            <div className={styles.sectionTitle}>
+              <h2 id="prescription-pipeline-heading">Prescription register</h2>
+              <span className={styles.count}>
+                {loading
+                  ? "Loading…"
+                  : loadError
+                    ? "Unavailable"
+                    : `${rows.length} loaded`}
+              </span>
+            </div>
+            <p>Review saved records and follow each stage of care.</p>
           </div>
           <button
-            className="inline-flex items-center gap-2 rounded-lg border border-g200 px-3 py-2 text-xs font-semibold text-g600 transition hover:border-p hover:text-p"
+            className={styles.refresh}
+            disabled={loading}
             onClick={() => void loadPrescriptions()}
             type="button"
           >
-            <RefreshCw className="size-4" aria-hidden="true" />
+            <RefreshCw
+              size={14}
+              className={loading ? styles.spin : undefined}
+            />
             Refresh
           </button>
         </div>
-        <div className="flex gap-1 overflow-x-auto border-b border-g100 px-4 pt-3">
+        <nav className={styles.tabs} aria-label="Prescription views">
           {TAB_CONFIG.map(({ id, label, icon: Icon }) => (
             <button
               aria-pressed={activeTab === id}
-              className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold transition ${activeTab === id ? "border-p text-p" : "border-transparent text-g500 hover:text-g800"}`}
+              className={`${styles.tab} ${activeTab === id ? styles.activeTab : ""}`}
               key={id}
-              onClick={() => setActiveTab(id)}
+              onClick={() => {
+                if (activeTab !== id) {
+                  setActiveTab(id);
+                  setStatusFilter("");
+                  setRows([]);
+                  setLoading(true);
+                  setCounts({});
+                }
+              }}
               type="button"
             >
-              <Icon className="size-4" aria-hidden="true" />
+              <Icon size={15} />
               {label}
+              {validCount(counts[id]) && <span>{counts[id]}</span>}
             </button>
           ))}
+        </nav>
+        <div className={styles.toolbar}>
+          <label className={styles.search}>
+            <Search size={17} aria-hidden="true" />
+            <span className={styles.srOnly}>Search loaded prescriptions</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search patient reference, medicine or pharmacy"
+            />
+          </label>
+          <label className={styles.filter}>
+            <SlidersHorizontal size={15} aria-hidden="true" />
+            <span className={styles.srOnly}>
+              Filter by authorization status
+            </span>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="">All authorization statuses</option>
+              {statuses.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className={styles.resultsBar}>
+          <p aria-live="polite">
+            {loading ? (
+              "Retrieving prescription records…"
+            ) : loadError ? (
+              "Prescriptions unavailable"
+            ) : (
+              <>
+                <strong>{visibleRows.length}</strong>{" "}
+                {visibleRows.length === 1 ? "prescription" : "prescriptions"}
+                {hasFilters ? " matching your filters" : " in this view"}
+              </>
+            )}
+            {hasFilters && (
+              <button
+                type="button"
+                className={styles.clear}
+                onClick={clearFilters}
+              >
+                Clear filters
+                <X size={12} />
+              </button>
+            )}
+          </p>
+          <label className={styles.sort}>
+            <ArrowDownWideNarrow size={14} />
+            <span className={styles.srOnly}>Sort prescriptions</span>
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value)}
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </label>
         </div>
         {loadError ? (
-          <div
-            className="m-5 rounded-xl border border-err/20 bg-errl p-4 text-sm text-err"
-            role="alert"
-          >
-            {loadError}
+          <div className={styles.error} role="alert">
+            <Info size={20} />
+            <div>
+              <h3>Unable to load prescriptions</h3>
+              <p>{loadError}</p>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={() => void loadPrescriptions()}
+              >
+                <RefreshCw size={14} />
+                Try again
+              </button>
+            </div>
           </div>
         ) : loading ? (
-          <div className="space-y-3 p-5" aria-label="Loading prescriptions">
-            {[1, 2, 3].map((item) => (
-              <div
-                className="h-12 animate-pulse rounded-lg bg-g50"
-                key={item}
-              />
-            ))}
+          <div className={styles.loading}>
+            <Loader2 size={24} className={styles.spin} />
+            <output>Loading prescription records…</output>
           </div>
-        ) : rows.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-g50 text-[11px] uppercase tracking-wide text-g500">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Patient reference</th>
-                  <th className="px-4 py-3 font-semibold">Created by</th>
-                  <th className="px-4 py-3 font-semibold">Created at</th>
-                  <th className="px-4 py-3 font-semibold">ICD-10</th>
-                  <th className="px-4 py-3 font-semibold">Medicine</th>
-                  <th className="px-4 py-3 font-semibold">Insurer</th>
-                  <th className="px-4 py-3 font-semibold">Pharmacy</th>
-                  <th className="px-4 py-3 font-semibold">Authorization</th>
-                  <th className="px-5 py-3 font-semibold">Dispensing stage</th>
-                  <th className="px-4 py-3 font-semibold">Details</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-g100">
-                {rows.map((row) => (
-                  <tr className="transition hover:bg-g50/70" key={row.id}>
-                    <td className="px-5 py-3.5 font-semibold text-g800">
-                      {row.patientRef}
-                    </td>
-                    <td className="px-4 py-3.5 text-g600">{row.createdBy}</td>
-                    <td className="whitespace-nowrap px-4 py-3.5 text-g600">
-                      {prescriptionLocalTime(row.createdAt)}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="rounded-full bg-pl px-2.5 py-1 text-xs font-semibold text-pdd">
-                        {row.code}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-g700">{row.drug}</td>
-                    <td className="px-4 py-3.5 text-g600">{row.insurer}</td>
-                    <td className="px-4 py-3.5 text-g600">{row.pharmacy}</td>
-                    <td className="px-4 py-3.5">
-                      <span className="rounded-full bg-pl px-2.5 py-1 text-xs font-semibold text-pdd">
-                        {row.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-g600">{row.order}</td>
-                    <td className="px-4 py-3.5">
+        ) : visibleRows.length ? (
+          <>
+            <div className={styles.columnHead} aria-hidden="true">
+              <span>Patient / diagnosis</span>
+              <span>Medicine / pharmacy</span>
+              <span>Authorization / insurer</span>
+              <span>Dispensing</span>
+              <span>Created</span>
+              <span>Details</span>
+            </div>
+            <div>
+              {visibleRows.map((row) => (
+                <article
+                  className={styles.record}
+                  key={row.id}
+                  aria-label={`Prescription for ${row.patientRef}`}
+                >
+                  <div className={styles.identity}>
+                    <span className={styles.recordIcon}>
+                      <ClipboardList size={19} strokeWidth={1.6} />
+                    </span>
+                    <div>
                       <button
                         type="button"
-                        className="rounded-lg border border-g200 px-3 py-2 text-xs font-semibold text-p"
+                        className={styles.patientLink}
                         onClick={() => setSelected(row)}
+                        aria-label={`View prescription for ${row.patientRef}`}
                       >
-                        View details
+                        {row.patientRef}
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="p-5">
-            <EmptyState
-              icon={ClipboardList}
-              title={`No ${activeTab} prescriptions`}
-              description="Prescriptions submitted through your verified account will appear here."
-              action={
-                canPrescribe ? (
+                      <p>
+                        <span className={styles.code}>ICD-10</span>
+                        {row.code}
+                      </p>
+                    </div>
+                  </div>
+                  <dl className={styles.detail}>
+                    <dt>Medicine / pharmacy</dt>
+                    <dd className={styles.medicineName}>{row.drug}</dd>
+                    <dd className={styles.muted}>
+                      <Building2 size={12} />
+                      {row.pharmacy}
+                    </dd>
+                  </dl>
+                  <dl className={styles.detail}>
+                    <dt>Authorization / insurer</dt>
+                    <dd>
+                      <PrescriptionStatusBadge status={row.status} />
+                    </dd>
+                    <dd className={styles.muted}>{row.insurer}</dd>
+                  </dl>
+                  <dl className={styles.detail}>
+                    <dt>Dispensing stage</dt>
+                    <dd>
+                      <PrescriptionStatusBadge
+                        status={row.order}
+                        kind="dispensing"
+                      />
+                    </dd>
+                  </dl>
+                  <dl className={styles.detail}>
+                    <dt>Created</dt>
+                    <dd>
+                      <UserRound size={12} />
+                      {row.createdBy}
+                    </dd>
+                    <dd className={styles.muted}>
+                      {prescriptionLocalTime(row.createdAt)}
+                    </dd>
+                  </dl>
                   <button
-                    className="inline-flex items-center gap-2 rounded-lg bg-p px-4 py-2 text-sm font-semibold text-white transition hover:bg-pd"
+                    type="button"
+                    className={styles.viewButton}
+                    onClick={() => setSelected(row)}
+                    aria-label={`View details for ${row.patientRef}`}
+                    title="View prescription details"
+                  >
+                    <ArrowUpRight size={17} />
+                    <span>View details</span>
+                  </button>
+                </article>
+              ))}
+            </div>
+            <footer className={styles.registerFooter}>
+              <span>
+                Showing {visibleRows.length} of {rows.length} loaded
+                prescriptions
+              </span>
+              <span>
+                <Info size={13} />
+                Times shown in your local timezone
+              </span>
+            </footer>
+          </>
+        ) : (
+          <div className={styles.empty}>
+            <EmptyState
+              icon={hasFilters ? Search : ClipboardList}
+              title={
+                hasFilters
+                  ? "No matching prescriptions"
+                  : `No ${activeTab === "awaiting" ? "prescriptions awaiting authorization" : `${activeTab} prescriptions`}`
+              }
+              description={
+                hasFilters
+                  ? "Try another reference, medicine, pharmacy or authorization status."
+                  : "Prescriptions available to your account will appear here. Switch views to explore other stages."
+              }
+              action={
+                hasFilters ? (
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    onClick={clearFilters}
+                  >
+                    <X size={14} />
+                    Clear filters
+                  </button>
+                ) : canPrescribe ? (
+                  <button
+                    className={styles.primary}
                     onClick={() => onOpenModal("modal-prescription")}
                     type="button"
                   >
-                    Create prescription <ArrowRight className="size-4" />
+                    <FilePlus2 size={15} />
+                    New prescription
                   </button>
                 ) : undefined
               }
             />
           </div>
         )}
+        <aside className={styles.workflowNote}>
+          <ShieldCheck size={16} />
+          <p>
+            Authorization and dispensing are tracked separately. Creating a
+            prescription does not confirm coverage or place a marketplace order.
+          </p>
+        </aside>
       </section>
-
       {selected && (
         <PrescriptionDetailsDialog
           key={selected.id}
@@ -293,22 +508,23 @@ export default function PrescriptionsPage({
           }
         />
       )}
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-g200 bg-w p-6 shadow-sm">
+      <section className={styles.marketplace}>
+        <span className={styles.marketplaceIcon}>
+          <Building2 size={21} strokeWidth={1.5} />
+        </span>
         <div>
-          <h2 className="text-base font-bold text-g900">
-            Find medicines for your patients
-          </h2>
-          <p className="mt-1 text-sm text-g500">
-            Browse medicine images, compare prices, and purchase from network
-            pharmacies.
+          <h2>Find medicines in the network</h2>
+          <p>
+            Compare available medicines and prices from pharmacy facilities.
           </p>
         </div>
         <button
           type="button"
           onClick={() => onNav("pg-marketplace")}
-          className="inline-flex items-center gap-2 rounded-xl bg-p px-5 py-3 text-sm font-semibold text-white dk:text-navy"
+          className={styles.marketplaceLink}
         >
-          Explore marketplace <ArrowRight className="size-4" />
+          Explore marketplace
+          <ArrowRight size={15} />
         </button>
       </section>
     </div>

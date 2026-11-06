@@ -41,7 +41,7 @@ const TAB_OPTIONS = [
   { id: "redistributed", label: "Redistributed" },
 ];
 
-const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
+const InventoryPage: React.FC<InventoryPageProps> = () => {
   const [entryView, setEntryView] = useState<"standard" | "graph">("standard");
   const [graphOpened, setGraphOpened] = useState(false);
   const { userData } = useProvider();
@@ -327,7 +327,12 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
           <button
             type="button"
             className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition duration-150 whitespace-nowrap [&_svg]:size-[14px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 max-md:w-full max-md:justify-center bg-p text-white hover:bg-pd"
-            onClick={() => onNav("pg-scan")}
+            onClick={() => {
+              setEntryView("standard");
+              requestAnimationFrame(() =>
+                document.getElementById("intake-drug")?.focus(),
+              );
+            }}
           >
             <svg viewBox="0 0 24 24" role="img" aria-label="Log New Stock">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -589,9 +594,9 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
         {[
           ["Total vials", inventoryStats.totalVials, "Recorded inventory"],
           [
-            "Verified GS1",
+            "GS1 format checks",
             inventoryStats.gs1VerifiedPct,
-            "Barcode verification share",
+            "Barcode format only; pack authenticity unverified",
           ],
           [
             "Near expiry",
@@ -611,7 +616,7 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onNav }) => {
               <h2 className="text-xs font-semibold text-g500">{label}</h2>
               <p className="my-2 text-2xl font-bold text-g900">
                 {Number(value).toLocaleString()}
-                {label === "Verified GS1" ? "%" : ""}
+                {label === "GS1 format checks" ? "%" : ""}
               </p>
               <p className="text-xs text-g500">{description}</p>
             </article>

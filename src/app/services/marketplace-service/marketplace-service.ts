@@ -1,4 +1,5 @@
 import { CoreService } from "@/app/hooks/service/core-service";
+import type { PaymentProvider } from "@/app/lib/marketplace-payment";
 import type { MedicineState } from "@/app/lib/medicine-availability";
 
 export interface DrugListing {
@@ -38,6 +39,7 @@ class MarketplaceService extends CoreService {
     quantity: number,
     prescriptionId: string,
     key: string,
+    paymentProvider: PaymentProvider = "PAYSTACK",
   ) {
     return this.send(
       "/api/marketplace/checkout",
@@ -45,8 +47,9 @@ class MarketplaceService extends CoreService {
         listingId,
         quantity,
         prescriptionId: prescriptionId || undefined,
+        paymentProvider,
       },
-      { headers: { "Idempotency-Key": key } },
+      { facilityOnly: true, headers: { "Idempotency-Key": key } },
     );
   }
 }

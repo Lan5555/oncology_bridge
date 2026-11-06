@@ -1,5 +1,4 @@
 "use client";
-import BrandLogo from "./BrandLogo";
 
 import {
   ArrowLeft,
@@ -30,7 +29,6 @@ import {
   UserPlus,
 } from "lucide-react";
 import Link from "next/link";
-import InputIcon from "./InputIcon";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -47,6 +45,8 @@ import { FACILITY_SERVICE } from "../services/facility-service/facility-service"
 import { unwrapArray } from "../services/response-utils";
 import { VERIFICATION_SERVICE } from "../services/verification-service/verification-service";
 import auth from "./AuthPages.module.css";
+import BrandLogo from "./BrandLogo";
+import InputIcon from "./InputIcon";
 
 interface AuthPagesProps {
   view: AuthView;
@@ -102,7 +102,6 @@ export default function AuthPages({
   const [registerStep, setRegisterStep] = useState<1 | 2 | 3 | 4>(1);
   const [accountType, setAccountType] = useState<AccountType | null>(null);
   const [licenseNumber, setLicenseNumber] = useState<string>("");
-  const [licenseDocument, setLicenseDocument] = useState<File | null>(null);
   const [facilityName, setFacilityName] = useState<string>("");
   const [facilityType, setFacilityType] = useState<string>("");
   const [facilityEmail, setFacilityEmail] = useState<string>("");
@@ -320,6 +319,7 @@ export default function AuthPages({
   };
 
   const isStore = accountType === "PHARMACY_STORE";
+  const isDoctor = accountType === "DOCTOR";
   const accountInfo = getAccountInfo(accountType ?? undefined);
   const selectedFacility = publicFacilities.find(
     (facility) => String(facility.id) === selectedFacilityId,
@@ -1402,11 +1402,13 @@ export default function AuthPages({
                         className={`mt-0.5 h-4 w-4 shrink-0 ${mutedText}`}
                       />
                       <p className={`text-xs leading-relaxed ${mutedText}`}>
-                        {registrationMode === "JOIN_FACILITY"
-                          ? "Your request will be linked to the selected facility. Use the name exactly as it appears on your professional licence."
-                          : isStore
-                            ? "The first administrator will manage your pharmacy account and can later invite staff."
-                            : "Use the name exactly as it appears on your professional licence; it is matched against the registry."}
+                        {isDoctor
+                          ? "Use your professional name as recorded against your fellowship number."
+                          : registrationMode === "JOIN_FACILITY"
+                            ? "Your request will be linked to the selected facility. Use the name exactly as it appears on your professional licence."
+                            : isStore
+                              ? "The first administrator will manage your pharmacy account and can later invite staff."
+                              : "Use the name exactly as it appears on your professional licence; it is matched against the registry."}
                       </p>
                     </div>
                   </div>
@@ -1431,47 +1433,27 @@ export default function AuthPages({
                         htmlFor="auth-input-16"
                         className={`mb-1.5 block text-sm font-medium ${labelText}`}
                       >
-                        {accountInfo?.licenseLabel}
+                        {isDoctor
+                          ? "Fellowship number"
+                          : accountInfo?.licenseLabel}
                       </label>
                       <input
                         id="auth-input-16"
                         type="text"
                         value={licenseNumber}
                         onChange={(e) => setLicenseNumber(e.target.value)}
-                        placeholder={accountInfo?.licensePlaceholder}
+                        placeholder={
+                          isDoctor
+                            ? "Enter your fellowship number"
+                            : accountInfo?.licensePlaceholder
+                        }
                         className={inputClasses}
                         autoComplete="off"
                       />
                       <p className={`mt-1.5 text-xs ${mutedText}`}>
-                        Your licence will be reviewed using the registry
-                        configured for your professional account.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label
-                        className={`mb-1.5 block text-sm font-medium ${labelText}`}
-                        htmlFor="license-document"
-                      >
-                        {isStore
-                          ? "Pharmacy store licence document"
-                          : "Professional licence certificate"}
-                      </label>
-                      <input
-                        accept="application/pdf,image/jpeg,image/png"
-                        className={inputClasses}
-                        id="license-document"
-                        onChange={(event) =>
-                          setLicenseDocument(event.target.files?.[0] ?? null)
-                        }
-                        type="file"
-                      />
-                      <p className={`mt-1.5 text-xs ${mutedText}`}>
-                        {licenseDocument
-                          ? `${licenseDocument.name} selected. `
-                          : ""}
-                        This registration service checks licence numbers only;
-                        selected files are not uploaded or stored.
+                        {isDoctor
+                          ? "Enter your fellowship number for review. No document upload is required."
+                          : "Your licence will be reviewed using the registry configured for your professional account."}
                       </p>
                     </div>
 
@@ -1502,8 +1484,9 @@ export default function AuthPages({
                             className="mt-1.5 h-1 w-1 shrink-0 rounded-full"
                             style={{ backgroundColor: accent }}
                           />
-                          Your licence is checked against the public registry,
-                          then reviewed by{" "}
+                          {isDoctor
+                            ? "Your fellowship number is submitted for review by "
+                            : "Your licence is checked against the public registry, then reviewed by "}
                           {registrationMode === "JOIN_FACILITY"
                             ? "the facility administrator and "
                             : ""}

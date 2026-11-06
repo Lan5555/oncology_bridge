@@ -1,6 +1,37 @@
 import { CoreService } from "@/app/hooks/service/core-service";
+import {
+  VERIFICATION_TIMEOUT_MS,
+  type VerificationFields,
+  type VerificationRequest,
+} from "@/app/lib/medicine-verification";
 import { Routes } from "../api-routes";
+
 class ScanService extends CoreService {
+  async verify(payload: VerificationRequest) {
+    return await this.send(Routes.SCANS_VERIFY, payload, {
+      facilityOnly: true,
+      timeoutMs: VERIFICATION_TIMEOUT_MS,
+      retryAuth: false,
+    });
+  }
+
+  async verifyImage(image: Blob, fields: VerificationFields = {}) {
+    const body = new FormData();
+    body.append(
+      "image",
+      image,
+      image.type === "image/png" ? "medicine.png" : "medicine.jpg",
+    );
+    for (const [field, value] of Object.entries(fields)) {
+      if (value) body.append(field, value);
+    }
+    return await this.send(Routes.SCANS_VERIFY_IMAGE, body, {
+      facilityOnly: true,
+      timeoutMs: VERIFICATION_TIMEOUT_MS,
+      retryAuth: false,
+    });
+  }
+
   async decode(
     image: Blob,
     metadata: {

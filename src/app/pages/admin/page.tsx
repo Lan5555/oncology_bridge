@@ -1527,10 +1527,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                   >
                     Email
                   </label>
-                  <div className="relative">
-                    <User
-                      className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`}
-                    />
+                  <div className={management.loginField}>
+                    <span className={`${management.loginFieldIcon} ${mutedText}`} aria-hidden="true">
+                      <Mail className="size-4" />
+                    </span>
                     <input
                       id="admin-login-email"
                       type="email"
@@ -1548,7 +1548,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                 </div>
 
                 <div>
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                     <label
                       htmlFor="admin-login-password"
                       className={`block text-xs font-medium uppercase tracking-wide ${isDark ? "text-[#8CA0BE]" : "text-[#5B6B85]"}`}
@@ -1559,10 +1559,10 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                       Contact your administrator to reset access
                     </span>
                   </div>
-                  <div className="relative">
-                    <Lock
-                      className={`absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mutedText}`}
-                    />
+                  <div className={`${management.loginField} ${management.loginPasswordField}`}>
+                    <span className={`${management.loginFieldIcon} ${mutedText}`} aria-hidden="true">
+                      <Lock className="size-4" />
+                    </span>
                     <input
                       id="admin-login-password"
                       autoComplete="current-password"
@@ -1582,12 +1582,12 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                         showPassword ? "Hide password" : "Show password"
                       }
                       onClick={() => setShowPassword((s) => !s)}
-                      className={`absolute right-3.5 top-1/2 -translate-y-1/2 ${mutedText} hover:text-[#1B3A6B]`}
+                      className={`${management.loginPasswordToggle} ${mutedText} hover:text-[#1B3A6B]`}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
+                        <EyeOff className="h-4 w-4" aria-hidden="true" />
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4" aria-hidden="true" />
                       )}
                     </button>
                   </div>

@@ -87,10 +87,10 @@ const ITEMS: Item[] = [
   },
   {
     id: "pg-scan",
-    label: "GS1 scanner",
+    label: "Scan Vial",
     icon: ScanLine,
     section: "Pharmacy tools",
-    description: "Scan product GS1 codes.",
+    description: "Check medicine details and pack evidence.",
   },
   {
     id: "pg-inventory",
