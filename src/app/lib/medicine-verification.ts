@@ -9,7 +9,7 @@ export type VerificationRequest = (
 export type VerificationFields = Partial<
   Record<ComparisonField | "productName" | "strength" | "nafdacNumber", string>
 >;
-export const VERIFICATION_TIMEOUT_MS = 95_000;
+export const VERIFICATION_TIMEOUT_MS = 110_000;
 export const REGISTRATION_COMPARISON_LABELS = {
   productName: "Product name",
   manufacturer: "Manufacturer",
@@ -38,6 +38,13 @@ export interface RegistrationLookup {
   retrievedAt: string | null;
   completeness: "NOT_GUARANTEED";
   barcodeLink: "NOT_ESTABLISHED";
+  recordLink?: "PRODUCT_AND_MANUFACTURER_MATCH" | "NOT_ESTABLISHED";
+  crossSourceComparisons?: {
+    field: "productName" | "manufacturer";
+    observed: string | null;
+    expected: string[];
+    status: "MATCH" | "MISMATCH" | "UNAVAILABLE";
+  }[];
   records: {
     productId: number;
     registrationNumber: string;
@@ -64,6 +71,12 @@ export interface RegistrationLookup {
 }
 
 export interface MedicineAssessment {
+  validation: {
+    status: "VALID" | "WARNING";
+    scope: "PRODUCT_RECORD_CHECK";
+    reason: string;
+    reasons: { code: string; message: string }[];
+  };
   identifiers: {
     gtin: string | null;
     lot: string | null;
@@ -181,7 +194,7 @@ export function verificationError(status?: number): string {
     case 400:
       return "Check the registration number, barcode and packaging fields, or try a clearer JPEG or PNG photo.";
     case 408:
-      return "The check did not finish within 95 seconds. It has not been retried automatically. You can try again when ready.";
+      return "The check did not finish within 110 seconds. It has not been retried automatically. You can try again when ready.";
     case 401:
       return "Your session has expired. Sign in again to check this medicine.";
     case 403:

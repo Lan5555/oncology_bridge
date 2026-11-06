@@ -17,7 +17,10 @@ function load(file, mocks = {}, globals = {}) {
     require: (name) => {
       if (name in mocks) return mocks[name];
       if (name.endsWith(".module.css"))
-        return { default: new Proxy({}, { get: (_, key) => String(key) }) };
+        return {
+          __esModule: true,
+          default: new Proxy({}, { get: (_, key) => String(key) }),
+        };
       return require(name);
     },
   };
@@ -161,14 +164,19 @@ test("verification service uses user authentication and multipart image only", a
   assert.equal(calls[0][0], "/api/scans/verify");
   assert.equal(calls[0][1], body);
   assert.equal(calls[0][2].facilityOnly, true);
-  assert.equal(calls[0][2].timeoutMs, 95000);
+  assert.equal(calls[0][2].timeoutMs, 110000);
   assert.equal(calls[0][2].retryAuth, false);
   assert.equal(calls[1][0], "/api/scans/verify-image");
   assert.deepEqual([...calls[1][1].keys()], ["image"]);
   assert.equal(calls[1][1].get("image").name, "medicine.png");
   assert.equal(calls[1][2].facilityOnly, true);
-  assert.equal(calls[1][2].timeoutMs, 95000);
+  assert.equal(calls[1][2].timeoutMs, 110000);
   assert.equal(calls[1][2].retryAuth, false);
+  await SCAN_SERVICE.verifyImage(new Blob(["photo"], { type: "image/jpeg" }), {
+    nafdacNumber: "A4-1234",
+  });
+  assert.equal(calls[2][1].get("nafdacNumber"), "A4-1234");
+  assert.deepEqual([...calls[2][1].keys()], ["image", "nafdacNumber"]);
 });
 test("error states cover authentication, restrictions, decoding, throttling and outages", () => {
   for (const status of [400, 401, 403, 413, 422, 429, 0, 503])
@@ -210,6 +218,12 @@ function assessment(overrides = {}) {
       expiry: null,
     },
     checkedAt: "2026-11-06T12:00:00Z",
+    validation: {
+      status: "WARNING",
+      scope: "PRODUCT_RECORD_CHECK",
+      reason: "Review the evidence.",
+      reasons: [],
+    },
     authenticity: {
       status: "UNVERIFIED",
       provider: null,
@@ -243,6 +257,121 @@ const render = (data, photoResult = false) =>
       onRetry() {},
     }),
   );
+test("only the backend VALID status produces the green product record badge", () => {
+  const html = render(
+    assessment({
+      validation: {
+        status: "VALID",
+        scope: "PRODUCT_RECORD_CHECK",
+        reason: "Both source records match.",
+        reasons: [],
+      },
+      comparisons: [],
+    }),
+  );
+  assert.match(html, /Product record check/);
+  assert.match(html, /class="validBadge">Product records match/);
+  assert.match(html, /Both source records match/);
+  assert.match(html, /Physical-pack authenticity unverified/);
+  assert.doesNotMatch(html, /Verification needs review/);
+
+  const warning = render(
+    assessment({
+      comparisons: Object.keys(empty).map((field) => ({
+        field,
+        observed: "Label",
+        expected: ["Label"],
+        status: "MATCH",
+      })),
+    }),
+  );
+  assert.match(warning, /class="reviewBadge">Verification needs review/);
+  assert.doesNotMatch(warning, /Product records match/);
+});
+test("every backend reason is displayed with its code and pack expiry is prominent", () => {
+  const reasons = [
+    {
+      code: "NAFDAC_UNAVAILABLE",
+      message: "Registration service unavailable.",
+    },
+    { code: "CROSS_SOURCE_PRODUCT_MISMATCH", message: "Product names differ." },
+    { code: "NAFDAC_DATA_QUALITY", message: "Review source quality." },
+    {
+      code: "PACK_EXPIRED",
+      message: "The encoded pack expiry date has passed.",
+    },
+  ];
+  const html = render(
+    assessment({
+      validation: {
+        status: "WARNING",
+        reason: "Review all evidence.",
+        reasons,
+      },
+    }),
+  );
+  assert.match(html, /Review all evidence/);
+  for (const { code, message } of reasons) {
+    assert.ok(html.includes(message));
+    assert.ok(html.includes(`data-reason-code="${code}"`));
+  }
+  assert.match(html, /class="expiredWarning" role="alert"/);
+  assert.match(html, /Pack expired — do not use/);
+  assert.doesNotMatch(html, /Product records match/);
+});
+test("missing combined validation never implies a passed check", () => {
+  const html = render(assessment({ validation: undefined }));
+  assert.match(html, /No pass can be established/);
+  assert.doesNotMatch(html, /Product records match/);
+});
+test("cross-source comparisons use backend Greenbook and openFDA values and source links", () => {
+  const html = render(
+    assessment({
+      productLookup: {
+        ...assessment().productLookup,
+        sourceUrl: "https://api.fda.gov/drug/label.json?search=example",
+        official: {
+          brandNames: ["US tablets"],
+          manufacturers: ["US manufacturer"],
+        },
+      },
+      registrationLookup: registration({
+        crossSourceComparisons: [
+          {
+            field: "productName",
+            observed: "Example tablets",
+            expected: ["US tablets"],
+            status: "MISMATCH",
+          },
+          {
+            field: "manufacturer",
+            observed: "Example manufacturer",
+            expected: ["US manufacturer"],
+            status: "MATCH",
+          },
+        ],
+      }),
+    }),
+  );
+  for (const text of [
+    "Source record comparisons",
+    "NAFDAC Greenbook: Example tablets",
+    "openFDA: US tablets",
+    "NAFDAC Greenbook: Example manufacturer",
+    "openFDA: US manufacturer",
+    "Mismatch",
+    "Match",
+  ])
+    assert.ok(html.includes(text), text);
+  assert.match(
+    html,
+    /href="https:\/\/greenbook.nafdac.gov.ng\/products\/details\/1"/,
+  );
+  assert.match(
+    html,
+    /href="https:\/\/api.fda.gov\/drug\/label.json\?search=example"/,
+  );
+});
 test("complete text match still says pack authenticity unverified", () => {
   const html = render(
     assessment({
@@ -254,7 +383,7 @@ test("complete text match still says pack authenticity unverified", () => {
       })),
     }),
   );
-  assert.match(html, /Product details match; pack authenticity unverified/);
+  assert.match(html, /Physical-pack authenticity unverified/);
   assert.match(html, /Recall status: not checked/);
   assert.doesNotMatch(html, /Original|Genuine|FDA approved/);
 });
@@ -272,7 +401,7 @@ test("expired dates and packaging mismatches require visible review warnings", (
       ],
     }),
   );
-  assert.match(html, /Expired barcode date/);
+  assert.match(html, /Pack expired — do not use/);
   assert.match(html, /Packaging mismatch/);
   assert.match(html, /role="alert"/);
   assert.match(html, /Mismatch/);
@@ -483,7 +612,7 @@ function timedClient(fetch) {
     cleared: () => cleared,
   };
 }
-test("95-second request timeout aborts exactly once and never retries", async () => {
+test("110-second request timeout aborts exactly once and never retries", async () => {
   let count = 0,
     settled = false;
   const harness = timedClient((_url, options) => {
@@ -505,7 +634,7 @@ test("95-second request timeout aborts exactly once and never retries", async ()
       return result;
     });
   await Promise.resolve();
-  assert.equal(harness.delay(), 95000);
+  assert.equal(harness.delay(), 110000);
   assert.equal(settled, false);
   harness.fire();
   const response = await pending;

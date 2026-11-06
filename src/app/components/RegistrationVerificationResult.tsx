@@ -155,6 +155,46 @@ export default function RegistrationVerificationResult({
           </article>
         );
       })}
+      <h3>Source record comparisons</h3>
+      <p className={styles.caption}>
+        Greenbook product and manufacturer compared with the barcode-linked
+        openFDA label by the backend. These matches do not authenticate the
+        pack.
+      </p>
+      {lookup?.crossSourceComparisons?.length ? (
+        <div className={styles.comparisons}>
+          {lookup.crossSourceComparisons.map((comparison) => (
+            <div key={comparison.field}>
+              <div className={styles.resultTitle}>
+                <strong>
+                  {REGISTRATION_COMPARISON_LABELS[comparison.field] ??
+                    comparison.field}
+                </strong>
+                <span
+                  className={
+                    comparison.status === "MISMATCH"
+                      ? styles.mismatch
+                      : styles.badge
+                  }
+                >
+                  {COMPARISON_STATUS_LABELS[comparison.status] ?? "Unavailable"}
+                </span>
+              </div>
+              <p>NAFDAC Greenbook: {comparison.observed || "Unavailable"}</p>
+              <p>
+                openFDA:{" "}
+                {comparison.expected?.length
+                  ? comparison.expected.join(" · ")
+                  : "Unavailable"}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className={styles.caption}>
+          No source record comparisons available. No match is inferred.
+        </p>
+      )}
       <h3>Registration text comparisons</h3>
       {lookup?.comparisons?.length ? (
         <div className={styles.comparisons}>

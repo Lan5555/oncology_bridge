@@ -454,6 +454,51 @@
   background: #fff1d9;
   color: #8b510b;
 }
+.validBadge,
+.reviewBadge {
+  display: inline-block;
+  border: 1px solid;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.validBadge {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #86cda0;
+}
+.reviewBadge {
+  color: #854d0e;
+  background: #fffbeb;
+  border-color: #e8c778;
+}
+.validationReasons {
+  list-style: disc;
+  padding-left: 20px;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.validationReasons li + li {
+  margin-top: 6px;
+}
+.expiredWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 22px;
+  border: 2px solid #dc2626;
+  border-radius: 14px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.expiredWarning > svg {
+  flex-shrink: 0;
+}
 .identifiers {
   display: grid;
   grid-template-columns: 1fr 1fr;

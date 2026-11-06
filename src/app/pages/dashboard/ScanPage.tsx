@@ -100,6 +100,9 @@ export default function ScanPage() {
       const data = response.data as MedicineAssessment | null;
       if (
         !data?.identifiers ||
+        !["VALID", "WARNING"].includes(data.validation?.status) ||
+        typeof data.validation?.reason !== "string" ||
+        !Array.isArray(data.validation?.reasons) ||
         !data.authenticity ||
         !data.productLookup ||
         !data.expiry ||
@@ -284,8 +287,8 @@ export default function ScanPage() {
                 />
               </label>
               <p id="nafdac-help" className={styles.caption}>
-                Checks Nigerian registration records. Registration matching does
-                not authenticate the physical pack.
+                Copy this number from the pack; it is never derived from the
+                barcode. Include both identifiers for the combined record check.
               </p>
               <label className={styles.label} htmlFor="verification-barcode">
                 Barcode or GTIN (optional with a NAFDAC number)
@@ -391,8 +394,9 @@ export default function ScanPage() {
               <h2>Checking the evidence</h2>
               <p>
                 Reading identifiers and requesting official product information.
-                Nigerian registration checks can take up to 95 seconds. Please
-                keep this page open; requests are not retried automatically.
+                Nigerian registration checks can take approximately 110 seconds.
+                Please keep this page open; requests are not retried
+                automatically.
               </p>
             </output>
           ) : null}
@@ -463,16 +467,17 @@ export default function ScanPage() {
           <aside className={styles.scope}>
             <Info size={18} aria-hidden="true" />
             <div>
-              <h3>Know the scope of this check</h3>
+              <h3>Review before use</h3>
               <p>
-                Nigerian registration evidence comes from NAFDAC Greenbook via
-                Apify, a third-party retrieval service, not an official API. US
-                label information comes from openFDA. Coverage is not
-                guaranteed. A missing record does not mean a medicine is fake.
+                Compare the results with the product name, manufacturer and
+                NAFDAC number printed on your pack. Missing records or
+                differences need further review; they do not prove a medicine is
+                counterfeit.
               </p>
               <p>
-                Follow the authentication instructions printed on an eligible
-                pack for manufacturer or scratch-code verification.
+                Matching records do not confirm physical-pack authenticity. If
+                anything is unclear, ask a pharmacist or the manufacturer for
+                help. Do not use an expired pack.
               </p>
             </div>
           </aside>

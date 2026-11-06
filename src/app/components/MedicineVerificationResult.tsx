@@ -49,14 +49,10 @@ export default function MedicineVerificationResult({
     ...data.comparisons,
     ...(data.registrationLookup?.comparisons ?? []),
   ].some((item) => item.status === "MISMATCH");
-  const completeMatch =
-    !mismatch &&
-    data.productLookup.status === "FOUND" &&
-    Object.keys(COMPARISON_LABELS).every((field) =>
-      data.comparisons.some(
-        (item) => item.field === field && item.status === "MATCH",
-      ),
-    );
+  const valid = data.validation?.status === "VALID";
+  const packExpired =
+    data.expiry.status === "EXPIRED" ||
+    data.validation?.reasons.some((item) => item.code === "PACK_EXPIRED");
   const official =
     data.productLookup.status === "FOUND" ? data.productLookup.official : null;
   const source = officialSourceUrl(data.productLookup.sourceUrl);
@@ -67,6 +63,44 @@ export default function MedicineVerificationResult({
   const checked = new Date(data.checkedAt);
   return (
     <div className={styles.results}>
+      <section className={styles.card} aria-label="Product record check">
+        <div className={styles.resultTitle}>
+          <h2>Product record check</h2>
+          <span className={valid ? styles.validBadge : styles.reviewBadge}>
+            {valid ? "Product records match" : "Verification needs review"}
+          </span>
+        </div>
+        <p className={styles.caption}>
+          {data.validation?.reason ||
+            "The server did not return a combined verification result. No pass can be established."}
+        </p>
+        {data.validation?.reasons.length ? (
+          <ul className={styles.validationReasons}>
+            {data.validation.reasons.map((item, index) => (
+              <li key={`${item.code}-${index}`} data-reason-code={item.code}>
+                {item.message}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <p className={styles.caption}>
+          <strong>Physical-pack authenticity unverified</strong>
+        </p>
+        <p className={styles.caption}>
+          A missing record does not prove a counterfeit.
+        </p>
+      </section>
+      {packExpired ? (
+        <section className={styles.expiredWarning} role="alert">
+          <AlertTriangle size={24} aria-hidden="true" />
+          <div>
+            <h2>Pack expired — do not use</h2>
+            <p>
+              The encoded pack expiry date has passed. Consult a pharmacist.
+            </p>
+          </div>
+        </section>
+      ) : null}
       <section className={styles.authenticity}>
         <ShieldQuestion size={27} aria-hidden="true" />
         <div>
@@ -76,23 +110,15 @@ export default function MedicineVerificationResult({
             <strong>Pack authenticity unverified</strong>
           </p>
           <p>
-            {completeMatch
-              ? "Product details match; pack authenticity unverified"
-              : "An official label match does not authenticate an individual pack."}
+            An official label match does not authenticate an individual pack.
           </p>
           {data.authenticity.reason ? <p>{data.authenticity.reason}</p> : null}
         </div>
       </section>
-      {data.expiry.status === "EXPIRED" || mismatch ? (
+      {mismatch ? (
         <section className={styles.warning} role="alert">
           <AlertTriangle size={20} aria-hidden="true" />
           <div>
-            {data.expiry.status === "EXPIRED" ? (
-              <p>
-                <strong>Expired barcode date.</strong> The expiry printed in
-                this barcode has passed. Seek pharmacist review before use.
-              </p>
-            ) : null}
             {mismatch ? (
               <p>
                 <strong>Packaging mismatch.</strong> Ask a pharmacist or the
