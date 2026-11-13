@@ -14,6 +14,7 @@ import {
 import { type FormEvent, useRef, useState } from "react";
 import Camera from "@/app/components/Camera/camera";
 import MedicineVerificationResult from "@/app/components/MedicineVerificationResult";
+import PharmacyDispensing from "@/app/components/pharmacy/PharmacyDispensing";
 import {
   COMPARISON_LABELS,
   type ComparisonField,
@@ -33,6 +34,36 @@ type Attempt =
   | { payload: VerificationRequest };
 
 export default function ScanPage() {
+  const [mode, setMode] = useState<"dispensing" | "records">("dispensing");
+  return (
+    <div className={styles.page}>
+      <nav className={styles.modeSwitch} aria-label="Scan workflow">
+        <button
+          type="button"
+          className={mode === "dispensing" ? styles.primary : styles.secondary}
+          aria-pressed={mode === "dispensing"}
+          onClick={() => setMode("dispensing")}
+        >
+          Deliveries & dispensing
+        </button>
+        <button
+          type="button"
+          className={mode === "records" ? styles.primary : styles.secondary}
+          aria-pressed={mode === "records"}
+          onClick={() => setMode("records")}
+        >
+          Product records
+        </button>
+      </nav>
+      <div hidden={mode !== "dispensing"}>
+        <PharmacyDispensing />
+      </div>
+      {mode === "records" ? <ProductRecordScan /> : null}
+    </div>
+  );
+}
+
+function ProductRecordScan() {
   const [barcode, setBarcode] = useState("");
   const [nafdacNumber, setNafdacNumber] = useState("");
   const [fields, setFields] = useState<

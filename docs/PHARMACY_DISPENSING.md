@@ -1,0 +1,17 @@
+# Pharmacy manifest and dispensing frontend
+
+Scan Vial now opens the **Deliveries & dispensing** workflow. The **Product records** button keeps the existing registration and label checks available. Manifest checks use the pharmacy's data and do not invoke openFDA or NAFDAC.
+
+The delivery panel provides a delivery-reference field and editable pack cards with barcode number, batch number, serial number and an expiry date picker. Users can add/remove packs or import CSV (1 MiB maximum) using a downloadable blank template. The browser preserves identifiers as text, checks for invalid rows and duplicates, and loads the rows into the form for review. It sends the reviewed data as JSON to the existing `POST /api/manifests`; users never author JSON. The backend still performs authoritative validation and atomic import. Direct Excel/PDF uploads are not enabled; Excel users can save sheets as CSV. Proposed native spreadsheet endpoints are documented in `PHARMACY_MANIFEST_IMPORT_BACKEND_HANDOFF.md`.
+
+Saved deliveries come from `GET /api/manifests` (latest 100); pack details come from `GET /api/manifests/:id`. Users choose delivery references, not IDs. The legacy JSON multipart endpoint remains available in the service but is no longer shown in the UI. Save failures retain entered data; uncertain outcomes instruct the user to check Saved deliveries before retrying.
+
+Manual/hardware input preserves the complete decoded GS1 string, including ASCII group separators and letter case. Photo/camera input sends JPEG/PNG to `POST /api/scans/decode` with session facility, `clientUuid`, `clientTs` and `action=NEW`, then previews `data.rawBarcode` using `POST /api/scans/manifest-check`. Only decoding supplies a facility ID; manifest and dispensing scope comes from the authenticated backend session.
+
+Confirmation posts `{ rawBarcode, clientUuid }` to `POST /api/scans/dispense`. Before sending, the frontend persists the exact body in browser local storage scoped by user and facility. Storage failure prevents sending. An uncertain response freezes pack entry and offers a manual retry of the same operation, including after reload. There is no automatic retry. Requests time out after 30 seconds; a timeout does not establish whether the server committed.
+
+HTTP success only means that an assessment was recorded. The UI uses `data.canDispense === true`; incomplete or contradictory responses cannot authorize dispensing. Replay responses explicitly prohibit another physical handoff. A completed operation remains saved until the user starts another pack or assessment. Resolving a blocked operation and starting again creates a fresh UUID. Do not manually clear unresolved browser storage; reconcile the operation with the pharmacist first.
+
+The backend requires active, verified facility membership and `inventory.manage`; the UI also checks the facility user session and permission. Authorization errors remain visible. Pack authenticity is always unverified. Duplicate messages do not identify a fake vial. This workflow does not decrement stock, issue a prescription, reverse dispensing or import scan history.
+
+Before deployment, apply the backend's `database/pharmacy-manifests.sql`. This frontend change applies no migration. Verify authenticated endpoint access, physical camera decoding, lost-response replay and PostgreSQL concurrent dispensing against the deployed backend. Local tests use simulated endpoint responses and do not establish live database or camera behavior.

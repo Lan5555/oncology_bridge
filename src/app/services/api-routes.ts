@@ -81,6 +81,11 @@ export class Routes {
 
   static SCANS = "/api/scans";
   static SCANS_DECODE = "/api/scans/decode";
+  static MANIFESTS = "/api/manifests";
+  static MANIFESTS_UPLOAD = "/api/manifests/upload";
+  static MANIFEST = (manifestId: string) => `/api/manifests/${id(manifestId)}`;
+  static SCANS_MANIFEST_CHECK = "/api/scans/manifest-check";
+  static SCANS_DISPENSE = "/api/scans/dispense";
   static SCANS_VERIFY = "/api/scans/verify";
   static SCANS_VERIFY_IMAGE = "/api/scans/verify-image";
   static SCANS_BATCH = "/api/scans/batch";

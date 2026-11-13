@@ -3,6 +3,72 @@
   max-width: 1440px;
   margin: 0 auto;
 }
+.modeSwitch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.assessmentTitle {
+  margin: 18px 0 10px;
+}
+.importPanel {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px dashed #a9bfdc;
+  border-radius: 12px;
+  background: var(--color-g50, #f4f7fc);
+  font-size: 13px;
+}
+.packEditor {
+  max-height: 560px;
+  overflow: auto;
+  padding: 4px;
+}
+.packEntry {
+  border: 1px solid var(--color-g200, #dde4ee);
+  border-radius: 12px;
+  padding: 12px 14px 16px;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+.packEntry legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.packFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+  margin-bottom: 12px;
+}
+@media (max-width: 480px) {
+  .packFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.tableScroll {
+  overflow: auto;
+  max-height: 360px;
+  margin-top: 16px;
+}
+.packTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+.packTable th,
+.packTable td {
+  padding: 10px;
+  border-bottom: 1px solid #dce4ef;
+  overflow-wrap: anywhere;
+}
+.packTable caption {
+  text-align: left;
+  padding: 10px;
+}
 .hero {
   display: flex;
   justify-content: space-between;

@@ -49,7 +49,11 @@ class ScanService extends CoreService {
     body.append("notes", metadata.notes ?? "");
     body.append("clientUuid", metadata.clientUuid);
     body.append("clientTs", metadata.clientTs);
-    return await this.send(Routes.SCANS_DECODE, body);
+    return await this.send(Routes.SCANS_DECODE, body, {
+      facilityOnly: true,
+      retryAuth: false,
+      timeoutMs: 30000,
+    });
   }
 
   async create(payload: unknown) {
