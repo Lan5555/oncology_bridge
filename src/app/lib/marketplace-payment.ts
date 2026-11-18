@@ -1,4 +1,5 @@
 export type PaymentProvider = "PAYSTACK" | "FLUTTERWAVE";
+export const DEFAULT_PAYMENT_PROVIDER: PaymentProvider = "FLUTTERWAVE";
 export type InvoiceStatus =
   | "INITIALIZING"
   | "INITIALIZATION_UNKNOWN"
@@ -40,14 +41,15 @@ export function hostedPaymentUrl(
   if (typeof value !== "string") return null;
   try {
     const url = new URL(value);
-    const host =
+    const allowedHost =
       provider === "FLUTTERWAVE"
-        ? "checkout.flutterwave.com"
-        : provider === "PAYSTACK"
-          ? "checkout.paystack.com"
-          : "";
+        ? [
+            "checkout.flutterwave.com",
+            "checkout-v2.dev-flutterwave.com",
+          ].includes(url.hostname)
+        : provider === "PAYSTACK" && url.hostname === "checkout.paystack.com";
     return url.protocol === "https:" &&
-      url.hostname === host &&
+      allowedHost &&
       !url.username &&
       !url.password &&
       !url.port
@@ -75,7 +77,11 @@ export function readCheckoutAttempt(): CheckoutAttempt | null {
   return value;
 }
 
-export function checkoutErrorMessage(status?: number, code?: string): string {
+export function checkoutErrorMessage(
+  status?: number,
+  code?: string,
+  detail?: string,
+): string {
   if (status === 401)
     return "Sign in to your buyer account again, then retry this same checkout.";
   if (status === 403)
@@ -86,11 +92,24 @@ export function checkoutErrorMessage(status?: number, code?: string): string {
     return "This checkout attempt has different saved details. Contact support before paying again.";
   if (code === "STOCK_UNAVAILABLE")
     return "Stock is no longer available for this checkout. Refresh availability before starting again.";
-  if (status === 422)
+  if (status === 422) {
+    if (
+      (code === "PRESCRIPTION_REQUIRED" ||
+        code === "PRESCRIPTION_NOT_APPROVED" ||
+        code === "INVALID_QUANTITY" ||
+        code === "INVALID_PAYMENT_PROVIDER") &&
+      detail?.trim()
+    )
+      return detail.trim();
     return "Check the quantity, approved prescription and checkout details before retrying.";
+  }
   if (status === 503)
     return "This payment provider is unavailable. Your input has been preserved.";
-  if (status === 502 || status === 0)
-    return "Checkout confirmation is uncertain. Retry the same attempt; keep the same provider and details.";
+  if (status === 0)
+    return "We could not reach the checkout server. Your details are saved. Use Retry saved checkout when the connection is back.";
+  if (status === 408)
+    return "Checkout took too long to respond. Use Retry saved checkout.";
+  if (status === 502)
+    return "We could not confirm a payment link. Use Retry saved checkout to keep the same payment attempt.";
   return "Checkout could not be confirmed. Retry this same attempt or contact support.";
 }

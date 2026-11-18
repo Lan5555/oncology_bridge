@@ -53,6 +53,7 @@ function setup({
         const files = {
           "@/app/hooks/service/core-service":
             "src/app/hooks/service/core-service.ts",
+          "@/app/lib/marketplace-payment": "src/app/lib/marketplace-payment.ts",
           "@/app/services/api-routes": "src/app/services/api-routes.ts",
           "../api-routes": "src/app/services/api-routes.ts",
           "./net-response": "src/app/hooks/service/net-response.ts",
@@ -68,7 +69,7 @@ function setup({
   return { load, requests, session };
 }
 
-test("checkout defaults to Paystack and submits only allowed fields with the buyer token", async () => {
+test("checkout defaults to Flutterwave and submits only allowed fields with the buyer token", async () => {
   const { load, requests } = setup();
   await load(
     "src/app/services/marketplace-service/marketplace-service.ts",
@@ -76,7 +77,7 @@ test("checkout defaults to Paystack and submits only allowed fields with the buy
   assert.deepEqual(JSON.parse(requests[0].body), {
     listingId: "listing",
     quantity: 2,
-    paymentProvider: "PAYSTACK",
+    paymentProvider: "FLUTTERWAVE",
   });
   assert.equal(requests[0].headers.Authorization, "Bearer buyer-token");
   assert.equal(requests[0].headers["Idempotency-Key"], "attempt-key");
@@ -141,6 +142,13 @@ test("hosted URLs are HTTPS, credential-free, and matched to their exact provide
     ),
     "https://checkout.flutterwave.com/v3/hosted/pay/example",
   );
+  const flutterwaveTestLink =
+    "https://checkout-v2.dev-flutterwave.com/v3/hosted/pay/example";
+  assert.equal(
+    hostedPaymentUrl(flutterwaveTestLink, "FLUTTERWAVE"),
+    flutterwaveTestLink,
+  );
+  assert.equal(hostedPaymentUrl(flutterwaveTestLink, "PAYSTACK"), null);
   assert.equal(
     hostedPaymentUrl("https://checkout.paystack.com/example", "PAYSTACK"),
     "https://checkout.paystack.com/example",
@@ -148,6 +156,7 @@ test("hosted URLs are HTTPS, credential-free, and matched to their exact provide
   for (const url of [
     "http://checkout.flutterwave.com/pay",
     "https://checkout.flutterwave.com.evil.test/pay",
+    "https://checkout-v2.dev-flutterwave.com.evil.test/pay",
     "https://checkout.flutterwave.com@evil.test/pay",
     "https://user@checkout.flutterwave.com/pay",
     "https://checkout.flutterwave.com:8443/pay",
@@ -230,12 +239,32 @@ test("saved attempts recover their exact key and body and reject corrupt state",
   assert.throws(() => readCheckoutAttempt());
 });
 
+test("checkout shows the specific cause of a recognized validation error", () => {
+  const { checkoutErrorMessage } = setup().load(
+    "src/app/lib/marketplace-payment.ts",
+  );
+  const detail =
+    "The requested quantity exceeds the prescription remaining quantity.";
+  assert.equal(
+    checkoutErrorMessage(422, "PRESCRIPTION_NOT_APPROVED", detail),
+    detail,
+  );
+  assert.match(
+    checkoutErrorMessage(422, "UNKNOWN", "Unexpected response"),
+    /Check the quantity/,
+  );
+});
+
 test("provider uncertainty and payment mismatch never recommend a new payment", () => {
   const { checkoutErrorMessage } = setup().load(
     "src/app/lib/marketplace-payment.ts",
   );
-  assert.match(checkoutErrorMessage(502), /same attempt/);
-  assert.match(checkoutErrorMessage(0), /same provider/);
+  assert.match(checkoutErrorMessage(502), /could not confirm a payment link/);
+  assert.match(checkoutErrorMessage(0), /could not reach the checkout server/);
+  assert.match(checkoutErrorMessage(408), /took too long to respond/);
+  for (const status of [0, 408, 502]) {
+    assert.match(checkoutErrorMessage(status), /Retry saved checkout/);
+  }
   assert.match(
     checkoutErrorMessage(409, "PAYMENT_MISMATCH"),
     /Do not make another payment/,

@@ -22,6 +22,7 @@ import {
   CHECKOUT_ATTEMPT_STORAGE,
   type CheckoutAttempt,
   checkoutErrorMessage,
+  DEFAULT_PAYMENT_PROVIDER,
   hostedPaymentUrl,
   newCheckoutAllowed,
   type PaymentProvider,
@@ -118,8 +119,9 @@ export default function MarketplacePage({
   const [prescription, setPrescription] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [paying, setPaying] = useState(false);
-  const [paymentProvider, setPaymentProvider] =
-    useState<PaymentProvider>("PAYSTACK");
+  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>(
+    DEFAULT_PAYMENT_PROVIDER,
+  );
   const [attempt, setAttempt] = useState<CheckoutAttempt | null>(null);
   const [blockedCheckout, setBlockedCheckout] = useState(false);
   const [loginRequired, setLoginRequired] = useState(false);
@@ -199,7 +201,7 @@ export default function MarketplacePage({
     setQuantity("");
     setPrescription("");
     setCheckoutError("");
-    setPaymentProvider("PAYSTACK");
+    setPaymentProvider(DEFAULT_PAYMENT_PROVIDER);
     setLoginRequired(false);
     setBlockedCheckout(false);
     try {
@@ -307,7 +309,13 @@ export default function MarketplacePage({
           response.code === "IDEMPOTENCY_CONFLICT"
         )
           setBlockedCheckout(true);
-        throw new Error(checkoutErrorMessage(response.status, response.code));
+        throw new Error(
+          checkoutErrorMessage(
+            response.status,
+            response.code,
+            response.message,
+          ),
+        );
       }
       const data = response.data;
       if (
@@ -902,8 +910,8 @@ export default function MarketplacePage({
                         checkoutKey.current = crypto.randomUUID();
                       }}
                     >
-                      <option value="PAYSTACK">Paystack</option>
                       <option value="FLUTTERWAVE">Flutterwave</option>
+                      <option value="PAYSTACK">Paystack</option>
                     </select>
                   </label>
                   {attempt && (

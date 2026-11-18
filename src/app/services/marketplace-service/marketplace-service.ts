@@ -1,5 +1,8 @@
 import { CoreService } from "@/app/hooks/service/core-service";
-import type { PaymentProvider } from "@/app/lib/marketplace-payment";
+import {
+  DEFAULT_PAYMENT_PROVIDER,
+  type PaymentProvider,
+} from "@/app/lib/marketplace-payment";
 import type { MedicineState } from "@/app/lib/medicine-availability";
 
 export interface DrugListing {
@@ -39,7 +42,7 @@ class MarketplaceService extends CoreService {
     quantity: number,
     prescriptionId: string,
     key: string,
-    paymentProvider: PaymentProvider = "PAYSTACK",
+    paymentProvider: PaymentProvider = DEFAULT_PAYMENT_PROVIDER,
   ) {
     return this.send(
       "/api/marketplace/checkout",

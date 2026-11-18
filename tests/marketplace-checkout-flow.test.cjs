@@ -177,9 +177,12 @@ test("checkout blocks duplicates, freezes uncertain input, and recovers the same
   page
     .find((node) => node.type === "input" && node.props.type === "number")
     .props.onChange({ target: { value: "2" } });
-  page
-    .find((node) => node.type === "select" && node.props.value === "PAYSTACK")
-    .props.onChange({ target: { value: "FLUTTERWAVE" } });
+  const provider = page.find(
+    (node) =>
+      node.type === "select" &&
+      node.props.children.some((option) => option.props.value === "PAYSTACK"),
+  );
+  assert.equal(provider.props.value, "FLUTTERWAVE");
   await page.settle();
   const form = page.find(
     (node) => node.type === "form" && node.props.className === "mt-5 space-y-4",
@@ -209,7 +212,8 @@ test("checkout blocks duplicates, freezes uncertain input, and recovers the same
         paymentProvider: "FLUTTERWAVE",
         invoiceReference: "OB-test",
         orderId: "order",
-        authorizationUrl: "https://checkout.flutterwave.com/v3/hosted/pay/test",
+        authorizationUrl:
+          "https://checkout-v2.dev-flutterwave.com/v3/hosted/pay/test",
         expiresAt: "2099-01-01",
       },
     }),

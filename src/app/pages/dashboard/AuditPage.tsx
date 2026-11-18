@@ -1,12 +1,14 @@
 "use client";
 
-import { toast } from "sonner";
-
-import { notifyResult } from "@/app/lib/notifications";
-
-import { useEffect, useState } from "react";
 import { ClipboardList } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import EmptyState from "@/app/components/EmptyState";
+import {
+  type AuditEntry,
+  adminAuditDisplay,
+} from "@/app/lib/admin-audit-display";
+import { notifyResult } from "@/app/lib/notifications";
 import { AUDIT_SERVICE } from "@/app/services/audit-service/audit-service";
 import { unwrapArray } from "@/app/services/response-utils";
 
@@ -15,15 +17,20 @@ export default function AuditPage({
 }: {
   adminMode?: boolean;
 }) {
-  const [entries, setEntries] = useState<any[]>([]);
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [message, setMessage] = useState("");
-  const load = async () => {
-    const response = await AUDIT_SERVICE.list("page=1&limit=100", adminMode);
-    if (response.success) setEntries(unwrapArray(response.data));
-    else setMessage(response.message || "Audit history could not be loaded.");
-  };
   useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const response = await AUDIT_SERVICE.list("page=1&limit=100", adminMode);
+      if (!active) return;
+      if (response.success) setEntries(unwrapArray(response.data));
+      else setMessage(response.message || "Audit history could not be loaded.");
+    };
     void load();
+    return () => {
+      active = false;
+    };
   }, [adminMode]);
   const verify = async () => {
     const response = await AUDIT_SERVICE.verify(adminMode);
@@ -40,7 +47,8 @@ export default function AuditPage({
   };
   const exportCsv = async () => {
     const response = await AUDIT_SERVICE.exportCsv(adminMode);
-    const value = (response.data as any)?.csv ?? response.data;
+    const value =
+      (response.data as { csv?: unknown } | null)?.csv ?? response.data;
     if (!response.success || !value) {
       toast.error(response.message || "Audit export failed.");
       setMessage(response.message || "Audit export failed.");
@@ -71,12 +79,14 @@ export default function AuditPage({
         </div>
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={() => void verify()}
             className="rounded-lg border border-g200 bg-w px-3 py-2 text-xs font-semibold text-g700"
           >
             Verify hash chain
           </button>
           <button
+            type="button"
             onClick={() => void exportCsv()}
             className="rounded-lg bg-p px-3 py-2 text-xs font-semibold text-white"
           >
@@ -85,34 +95,50 @@ export default function AuditPage({
         </div>
       </header>
       {message ? (
-        <p role="status" className="mb-4 text-sm text-g600">
-          {message}
-        </p>
+        <output className="mb-4 block text-sm text-g600">{message}</output>
       ) : null}
       <section className="rounded-xl border border-g200 bg-w p-5">
-        {entries.map((entry, index) => (
-          <article
-            className="border-b border-g100 py-4 last:border-0"
-            key={entry.id ?? index}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-g800">
-                {entry.type ?? entry.action ?? "Activity"}
-                {entry.object_type ? ` · ${entry.object_type}` : ""}
-              </h2>
-              <time className="text-xs text-g500">
-                {entry.at ? new Date(entry.at).toLocaleString("en-NG") : "N/A"}
-              </time>
-            </div>
-            <p className="mt-1 text-xs text-g500">
-              {entry.detail ?? entry.message ?? "N/A"}
-            </p>
-            <p className="mt-1 text-[11px] text-g400">
-              {entry.actor?.name ?? entry.actor ?? "Actor not provided"}
-              {entry.severity ? ` · ${entry.severity}` : ""}
-            </p>
-          </article>
-        ))}
+        {entries.map((entry, index) => {
+          const display = adminMode ? adminAuditDisplay(entry) : null;
+          const legacyDetail = entry.detail ?? entry.message;
+          const detail = display
+            ? display.detail
+            : typeof legacyDetail === "string"
+              ? legacyDetail
+              : "N/A";
+          const actor =
+            typeof entry.actor === "string" ? entry.actor : entry.actor?.name;
+          return (
+            <article
+              className="border-b border-g100 py-4 last:border-0"
+              key={entry.id ?? index}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-g800">
+                  {display?.title ?? entry.type ?? entry.action ?? "Activity"}
+                  {!display && entry.object_type
+                    ? ` · ${entry.object_type}`
+                    : ""}
+                </h2>
+                <time className="text-xs text-g500">
+                  {display?.time ??
+                    (entry.at
+                      ? new Date(entry.at).toLocaleString("en-NG")
+                      : "N/A")}
+                </time>
+              </div>
+              {detail && (
+                <p className="mt-1 wrap-break-word text-xs text-g600">
+                  {detail}
+                </p>
+              )}
+              <p className="mt-1 wrap-break-word text-xs text-g500">
+                {display?.actor ?? actor ?? "Actor not provided"}
+                {entry.severity ? ` · ${entry.severity}` : ""}
+              </p>
+            </article>
+          );
+        })}
         {!entries.length ? (
           <EmptyState
             icon={ClipboardList}

@@ -51,6 +51,10 @@ import { useEffect, useState } from "react";
 import BrandLogo from "@/app/components/BrandLogo";
 import OrdersScreen from "@/app/components/OrdersScreen";
 import { adminMetric } from "@/app/lib/admin-metric";
+import {
+  type AuditEntry,
+  adminAuditDisplay,
+} from "@/app/lib/admin-audit-display";
 import AdminPrescriptionsPage from "./AdminPrescriptionsPage";
 import ShipmentMonitoringScreen from "@/app/components/ShipmentMonitoringScreen";
 import management from "@/app/components/Management.module.css";
@@ -277,7 +281,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
   const [summary, setSummary] = useState<any>({});
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState("");
-  const [activityRows, setActivityRows] = useState<any[]>([]);
+  const [activityRows, setActivityRows] = useState<AuditEntry[]>([]);
   const [roleRows, setRoleRows] = useState<any[]>([]);
   const [expandedRolePermissions, setExpandedRolePermissions] = useState<
     Record<string, boolean>
@@ -1201,21 +1205,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
       color: "#0E7490",
     },
   ];
-  const activityFeed = activityRows.map((event: any) => ({
+  const activityFeed = activityRows.map((event) => ({
     id:
       event.id ??
       [
-        event.action,
+        event.type ?? event.action,
         event.createdAt ?? event.created_at ?? event.at,
-        event.actor?.id ?? event.actor?.email,
+        typeof event.actor === "string"
+          ? event.actor
+          : (event.actor?.id ?? event.actor?.email),
       ].join(":"),
-    action: event.action ?? event.type ?? event.description ?? "Audit event",
-    time: event.createdAt ?? event.created_at ?? event.at ?? "N/A",
-    user:
-      event.actor?.name ??
-      event.actor?.email ??
-      event.actor ??
-      "Actor not provided",
+    ...adminAuditDisplay(event),
     icon: Activity,
     alert: /fail|reject|error/i.test(String(event.action ?? event.type ?? "")),
   }));
@@ -3577,12 +3577,17 @@ const AdminPage: React.FC<AdminPageProps> = ({ onNav }) => {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <div className={`text-sm ${headingText}`}>
-                              {item.action}
+                              {item.title}
                             </div>
-                            <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-[11px]">
+                            {item.detail && (
+                              <p className={`mt-1 wrap-break-word text-xs ${mutedText}`}>
+                                {item.detail}
+                              </p>
+                            )}
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                               <span className={mutedText}>{item.time}</span>
                               <span className={mutedText}>&middot;</span>
-                              <span className={mutedText}>{item.user}</span>
+                              <span className={mutedText}>{item.actor}</span>
                             </div>
                           </div>
                         </div>
